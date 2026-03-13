@@ -81,6 +81,34 @@ export function useInvoices() {
   });
 }
 
+export function useUpgradeEligibility() {
+  return useQuery({
+    queryKey: ["upgrade-eligibility"],
+    queryFn: () => api.checkUpgradeEligibility(),
+    refetchInterval: 60000,
+  });
+}
+
+export function useRequestUpgrade() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (targetPlanId: string) => api.requestUpgrade(targetPlanId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["upgrade-eligibility"] });
+      qc.invalidateQueries({ queryKey: ["my-upgrade-requests"] });
+      toast.success("Upgrade request submitted!");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useMyUpgradeRequests() {
+  return useQuery({
+    queryKey: ["my-upgrade-requests"],
+    queryFn: () => api.myUpgradeRequests(),
+  });
+}
+
 // ── Admin ───────────────────────────────────────────
 export function useAdminUsers(search: string) {
   return useQuery({
