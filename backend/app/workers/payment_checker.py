@@ -66,10 +66,12 @@ def check_payments():
         checked = 0
         paid = 0
 
+        loop = asyncio.new_event_loop()
+
         for invoice in pending:
             try:
                 gateway = get_gateway(invoice.provider.value)
-                result = asyncio.get_event_loop().run_until_complete(
+                result = loop.run_until_complete(
                     gateway.check_status(invoice.external_id)
                 )
                 checked += 1
@@ -119,6 +121,7 @@ def check_payments():
             except Exception as e:
                 logger.error(f"Error checking invoice {invoice.id}: {e}")
 
+        loop.close()
         db.commit()
     return f"Checked {checked} invoices, {paid} newly paid"
 
@@ -213,6 +216,10 @@ def generate_invoices():
                     issue_date=now,
                     due_date=due_date,
                 ))
+
+                # Advance next_billing_date to prevent duplicate generation
+                cycle = sub.billing_cycle_days or 30
+                sub.next_billing_date = sub.next_billing_date + timedelta(days=cycle)
                 created += 1
 
         db.commit()
