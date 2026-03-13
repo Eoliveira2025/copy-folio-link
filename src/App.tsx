@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import TermsOfService from "./pages/TermsOfService";
 import { DashboardLayout } from "./components/DashboardLayout";
 import DashboardHome from "./pages/dashboard/DashboardHome";
@@ -18,6 +19,7 @@ import Strategies from "./pages/dashboard/Strategies";
 import Financial from "./pages/dashboard/Financial";
 import SettingsPage from "./pages/dashboard/SettingsPage";
 import AdminPanel from "./pages/admin/AdminPanel";
+import OperationsDashboard from "./pages/admin/OperationsDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -41,6 +43,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route
               element={
@@ -59,6 +62,14 @@ const App = () => (
                 element={
                   <AdminRoute>
                     <AdminPanel />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/operations"
+                element={
+                  <AdminRoute>
+                    <OperationsDashboard />
                   </AdminRoute>
                 }
               />
