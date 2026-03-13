@@ -39,40 +39,29 @@ class ResultTracker(threading.Thread):
                 INSERT INTO trade_copies (
                     id, trade_event_id, mt5_account_id, client_ticket,
                     volume, price, status, error_message,
-                    latency_total_ms, latency_execution_ms,
-                    slippage_points, executed_price, master_price,
-                    executed_at
+                    latency_ms, executed_at
                 ) VALUES (
                     :id, :event_id, :mt5_id, :ticket,
                     :volume, :price, :status, :error,
-                    :latency_total, :latency_exec,
-                    :slippage, :exec_price, :master_price,
-                    :executed_at
+                    :latency_ms, :executed_at
                 )
-                ON CONFLICT (id) DO UPDATE SET
-                    status = :status,
-                    error_message = :error,
-                    latency_total_ms = :latency_total,
-                    slippage_points = :slippage,
-                    executed_at = :executed_at
+                ON CONFLICT (id, executed_at) DO UPDATE SET
+                    status = EXCLUDED.status,
+                    error_message = EXCLUDED.error_message,
+                    latency_ms = EXCLUDED.latency_ms
             """), {
                 "id": order.order_id,
                 "event_id": order.event_id,
                 "mt5_id": order.client_mt5_account_id,
                 "ticket": order.master_ticket,
                 "volume": order.volume,
-                "price": order.price,
+                "price": order.executed_price or order.price,
                 "status": order.status.value,
                 "error": order.error,
-                "latency_total": round(order.latency_total_ms, 2) if order.latency_total_ms else None,
-                "latency_exec": round(
-                    (order.executed_at - order.dequeued_at) * 1000, 2
-                ) if order.executed_at and order.dequeued_at else None,
-                "slippage": round(order.slippage_points, 2),
-                "exec_price": order.executed_price,
-                "master_price": order.master_price,
-                "executed_at": datetime.fromtimestamp(order.executed_at, tz=timezone.utc).isoformat()
-                    if order.executed_at else None,
+                "latency_ms": round(order.latency_total_ms) if order.latency_total_ms else None,
+                "executed_at": datetime.fromtimestamp(
+                    order.executed_at or time.time(), tz=timezone.utc
+                ).isoformat(),
             })
             db.commit()
 
