@@ -72,7 +72,8 @@
     "passwordResetDone": "Password Updated",
     "passwordResetDoneDesc": "Your password has been reset. You can now sign in with your new password.",
     "setNewPassword": "Set New Password",
-    "setNewPasswordDesc": "Enter your new password below"
+    "setNewPasswordDesc": "Enter your new password below",
+    "openBrokerAccount": "Open Broker Account"
   },
   "nav": {
     "menu": "Menu",
