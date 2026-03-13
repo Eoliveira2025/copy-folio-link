@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.api.deps import get_current_user
@@ -10,6 +11,7 @@ from app.models.user import User
 from app.models.mt5_account import MT5Account, MT5Status
 from app.models.strategy import Strategy, UserStrategy, MasterAccount, LOCKED_STRATEGIES
 from app.models.subscription import Subscription
+from app.models.plan import Plan
 from app.schemas.strategy import StrategyResponse, SelectStrategyRequest
 from app.services import copy_engine
 
@@ -18,12 +20,14 @@ router = APIRouter()
 
 async def _get_user_allowed_strategies(user_id, db: AsyncSession) -> set[str] | None:
     """Return set of allowed strategy levels from the user's active plan, or None if no plan."""
-    sub = await db.execute(
-        select(Subscription).where(Subscription.user_id == user_id).order_by(Subscription.created_at.desc())
+    sub_result = await db.execute(
+        select(Subscription)
+        .options(selectinload(Subscription.plan))
+        .where(Subscription.user_id == user_id)
+        .order_by(Subscription.created_at.desc())
     )
-    subscription = sub.scalar_one_or_none()
+    subscription = sub_result.scalar_one_or_none()
     if subscription and subscription.plan:
-        await db.refresh(subscription, ["plan"])
         return set(subscription.plan.allowed_strategies)
     return None
 

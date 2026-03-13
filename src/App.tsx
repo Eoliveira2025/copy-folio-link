@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AdminRoute } from "@/components/AdminRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -53,7 +54,14 @@ const App = () => (
               <Route path="/dashboard/strategies" element={<Strategies />} />
               <Route path="/dashboard/financial" element={<Financial />} />
               <Route path="/dashboard/settings" element={<SettingsPage />} />
-              <Route path="/admin" element={<AdminPanel />} />
+              <Route
+                path="/admin"
+                element={
+                  <AdminRoute>
+                    <AdminPanel />
+                  </AdminRoute>
+                }
+              />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
