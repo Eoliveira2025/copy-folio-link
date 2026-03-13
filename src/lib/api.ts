@@ -360,6 +360,25 @@ class ApiClient {
     return this.request<AdminTermsDetail>(`/admin/terms/${termsId}/content`);
   }
 
+  // ── Admin Operations ─────────────────────────────────
+  async adminGetOperations() {
+    return this.request<OperationsDashboard>("/admin/operations");
+  }
+
+  // ── Admin Dead Letter Queue ────────────────────────
+  async adminGetDeadLetterTrades(status?: string) {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+    return this.request<DeadLetterTrade[]>(`/admin/dead-letter${qs}`);
+  }
+
+  async adminRetryDeadLetter(tradeId: string) {
+    return this.request<{ message: string }>(`/admin/dead-letter/${tradeId}/retry`, { method: "POST" });
+  }
+
+  async adminResolveDeadLetter(tradeId: string, note: string = "") {
+    return this.request<{ message: string }>(`/admin/dead-letter/${tradeId}/resolve?note=${encodeURIComponent(note)}`, { method: "POST" });
+  }
+
   // ── Admin Risk Protection ───────────────────────────
   async adminGetRiskSettings() {
     return this.request<RiskSettings>("/admin/risk/settings");
