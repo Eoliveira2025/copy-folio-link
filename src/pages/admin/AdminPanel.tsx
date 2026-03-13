@@ -743,6 +743,11 @@ const AdminPanel = () => {
           )}
         </TabsContent>
 
+        {/* ── Risk Protection Tab ──────────────────────── */}
+        <TabsContent value="risk" className="mt-4 space-y-4">
+          <RiskProtectionTab />
+        </TabsContent>
+
         {/* ── Legal / Terms Tab ─────────────────────────── */}
         <TabsContent value="legal" className="mt-4 space-y-4">
           <div className="flex justify-between items-center">
