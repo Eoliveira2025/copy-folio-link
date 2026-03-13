@@ -1,8 +1,6 @@
 """
-Connection Health Monitor — periodically checks MT5 terminal connections
-and triggers reconnection when needed.
-
-Publishes health status to Redis for dashboard consumption.
+Connection Health Monitor — monitors MT5 connections with latency-aware checks.
+Publishes health status and triggers reconnection for stale connections.
 """
 
 from __future__ import annotations
@@ -14,6 +12,7 @@ from datetime import datetime, timezone
 import redis
 
 from engine.config import get_engine_settings
+from engine.metrics import get_metrics
 
 settings = get_engine_settings()
 logger = logging.getLogger("engine.health_monitor")
@@ -21,41 +20,17 @@ logger = logging.getLogger("engine.health_monitor")
 HEALTH_KEY_PREFIX = "copytrade:health"
 
 
-class HealthStatus:
-    def __init__(self, account_id: str, login: int, server: str):
-        self.account_id = account_id
-        self.login = login
-        self.server = server
-        self.is_connected = False
-        self.last_heartbeat: str = ""
-        self.uptime_seconds: int = 0
-        self.reconnect_count: int = 0
-        self.error: str | None = None
-
-    def to_dict(self) -> dict:
-        return {
-            "account_id": self.account_id,
-            "login": self.login,
-            "server": self.server,
-            "is_connected": self.is_connected,
-            "last_heartbeat": self.last_heartbeat,
-            "uptime_seconds": self.uptime_seconds,
-            "reconnect_count": self.reconnect_count,
-            "error": self.error,
-        }
-
-
 class HealthMonitor(threading.Thread):
     """
     Monitors all active MT5 connections by checking Redis heartbeat keys.
-    Workers and listeners update their heartbeat key periodically.
-    If a heartbeat goes stale, the monitor flags it for reconnection.
+    Publishes queue depth metrics for the metrics system.
     """
 
     def __init__(self):
         super().__init__(daemon=True, name="HealthMonitor")
         self.running = False
         self.redis_client = redis.from_url(settings.REDIS_URL)
+        self._metrics = get_metrics()
 
     def run(self):
         self.running = True
@@ -63,8 +38,9 @@ class HealthMonitor(threading.Thread):
 
         while self.running:
             try:
-                # Scan for all heartbeat keys
+                # Check heartbeats
                 keys = self.redis_client.keys(f"{HEALTH_KEY_PREFIX}:heartbeat:*")
+                stale_count = 0
 
                 for key in keys:
                     data = self.redis_client.get(key)
@@ -75,20 +51,30 @@ class HealthMonitor(threading.Thread):
                     last_beat = datetime.fromisoformat(info.get("timestamp", ""))
                     age = (datetime.now(timezone.utc) - last_beat).total_seconds()
 
-                    if age > settings.HEALTH_CHECK_INTERVAL_S * 3:
-                        # Connection is stale — flag for reconnection
+                    if age > settings.HEARTBEAT_TTL_S:
                         account_id = info.get("account_id", "")
-                        logger.warning(f"Stale connection detected: {account_id} (age={age:.0f}s)")
+                        logger.warning(f"Stale connection: {account_id} (age={age:.0f}s)")
                         self.redis_client.publish(
                             "copytrade:reconnect",
                             json.dumps({"account_id": account_id, "reason": "heartbeat_timeout"})
                         )
+                        stale_count += 1
 
-                # Publish aggregated health status
+                # Measure queue depths
+                queue_keys = self.redis_client.keys("copytrade:execute:*")
+                total_depth = 0
+                for qk in queue_keys:
+                    total_depth += self.redis_client.llen(qk)
+
+                self._metrics.set_gauges(queue_depth=total_depth)
+
+                # Publish summary
                 self.redis_client.set(
                     f"{HEALTH_KEY_PREFIX}:summary",
                     json.dumps({
                         "total_connections": len(keys),
+                        "stale_connections": stale_count,
+                        "total_queue_depth": total_depth,
                         "checked_at": datetime.now(timezone.utc).isoformat(),
                     }),
                     ex=settings.HEALTH_CHECK_INTERVAL_S * 5,
@@ -113,5 +99,5 @@ def send_heartbeat(redis_client: redis.Redis, account_id: str, login: int, role:
             "role": role,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }),
-        ex=settings.HEALTH_CHECK_INTERVAL_S * 5,
+        ex=settings.HEARTBEAT_TTL_S * 2,
     )
