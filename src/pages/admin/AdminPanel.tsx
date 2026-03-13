@@ -148,6 +148,9 @@ const AdminPanel = () => {
   const createTerms = useAdminCreateTerms();
   const updateTerms = useAdminUpdateTerms();
   const activateTerms = useAdminActivateTerms();
+  const { data: publicSettings } = usePublicSettings();
+  const updatePublicSettings = useAdminUpdatePublicSettings();
+  const [affiliateLink, setAffiliateLink] = useState("");
 
   const handleSearch = (val: string) => { setSearch(val); setTimeout(() => setDebouncedSearch(val), 300); };
 
