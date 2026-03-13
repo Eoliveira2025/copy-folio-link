@@ -8,6 +8,8 @@ import uuid
 class SubscriptionResponse(BaseModel):
     id: uuid.UUID
     status: str
+    plan_name: str | None = None
+    plan_price: float | None = None
     trial_start: datetime
     trial_end: datetime | None
     current_period_start: datetime | None

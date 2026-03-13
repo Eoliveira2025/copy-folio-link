@@ -3,6 +3,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import type { CreatePlanData } from "@/lib/api";
 import { toast } from "sonner";
 
 // ── MT5 Accounts ────────────────────────────────────
@@ -59,6 +60,13 @@ export function useSelectStrategy() {
 }
 
 // ── Billing ─────────────────────────────────────────
+export function usePlans() {
+  return useQuery({
+    queryKey: ["plans"],
+    queryFn: () => api.listPlans(),
+  });
+}
+
 export function useSubscription() {
   return useQuery({
     queryKey: ["subscription"],
@@ -127,5 +135,78 @@ export function useChangePassword() {
       api.changePassword(data.currentPassword, data.newPassword),
     onSuccess: () => toast.success("Password updated successfully"),
     onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+// ── Admin Plans ─────────────────────────────────────
+export function useAdminPlans() {
+  return useQuery({
+    queryKey: ["admin-plans"],
+    queryFn: () => api.adminListPlans(),
+  });
+}
+
+export function useAdminCreatePlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreatePlanData) => api.adminCreatePlan(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-plans"] });
+      toast.success("Plan created");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminUpdatePlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { planId: string; updates: Partial<CreatePlanData> }) =>
+      api.adminUpdatePlan(data.planId, data.updates),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-plans"] });
+      toast.success("Plan updated");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminDeletePlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (planId: string) => api.adminDeletePlan(planId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-plans"] });
+      toast.success("Plan deleted");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminChangeUserPlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { userId: string; planId: string }) =>
+      api.adminChangeUserPlan(data.userId, data.planId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      toast.success("User plan changed");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+// ── Admin Subscriptions & Invoices ──────────────────
+export function useAdminSubscriptions(status?: string) {
+  return useQuery({
+    queryKey: ["admin-subscriptions", status],
+    queryFn: () => api.adminListSubscriptions(status),
+  });
+}
+
+export function useAdminInvoices(status?: string) {
+  return useQuery({
+    queryKey: ["admin-invoices", status],
+    queryFn: () => api.adminListInvoices(status),
   });
 }

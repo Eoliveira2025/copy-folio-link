@@ -1,4 +1,4 @@
-"""Strategy listing and selection with Copy Engine auto-subscription."""
+"""Strategy listing and selection with plan-based validation and Copy Engine auto-subscription."""
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,10 +9,23 @@ from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.mt5_account import MT5Account, MT5Status
 from app.models.strategy import Strategy, UserStrategy, MasterAccount, LOCKED_STRATEGIES
+from app.models.subscription import Subscription
 from app.schemas.strategy import StrategyResponse, SelectStrategyRequest
 from app.services import copy_engine
 
 router = APIRouter()
+
+
+async def _get_user_allowed_strategies(user_id, db: AsyncSession) -> set[str] | None:
+    """Return set of allowed strategy levels from the user's active plan, or None if no plan."""
+    sub = await db.execute(
+        select(Subscription).where(Subscription.user_id == user_id).order_by(Subscription.created_at.desc())
+    )
+    subscription = sub.scalar_one_or_none()
+    if subscription and subscription.plan:
+        await db.refresh(subscription, ["plan"])
+        return set(subscription.plan.allowed_strategies)
+    return None
 
 
 @router.get("/", response_model=list[StrategyResponse])
@@ -27,11 +40,15 @@ async def list_strategies(user: User = Depends(get_current_user), db: AsyncSessi
     )
     unlocked_ids = {row[0] for row in unlocked.all()}
 
+    allowed = await _get_user_allowed_strategies(user.id, db)
+
     response = []
     for s in strategies:
-        is_available = s.level not in LOCKED_STRATEGIES or s.id in unlocked_ids
+        # Available if: (not locked OR admin-unlocked) AND (no plan constraint OR in plan's allowed list)
+        base_available = s.level not in LOCKED_STRATEGIES or s.id in unlocked_ids
+        plan_available = allowed is None or s.level.value in allowed
         resp = StrategyResponse.model_validate(s)
-        resp.is_available = is_available
+        resp.is_available = base_available and plan_available
         response.append(resp)
     return response
 
@@ -46,6 +63,11 @@ async def select_strategy(
     strategy = result.scalar_one_or_none()
     if not strategy:
         raise HTTPException(status_code=404, detail="Strategy not found")
+
+    # Plan-based validation
+    allowed = await _get_user_allowed_strategies(user.id, db)
+    if allowed is not None and strategy.level.value not in allowed:
+        raise HTTPException(status_code=403, detail="Your plan does not include this strategy. Please upgrade.")
 
     if strategy.level in LOCKED_STRATEGIES:
         unlocked = await db.execute(

@@ -184,6 +184,10 @@ class ApiClient {
   }
 
   // ── Billing ───────────────────────────────────────────
+  async listPlans() {
+    return this.request<PlanPublic[]>("/billing/plans");
+  }
+
   async getSubscription() {
     return this.request<Subscription>("/billing/subscription");
   }
@@ -238,6 +242,49 @@ class ApiClient {
   async adminGetDashboard() {
     return this.request<AdminDashboard>("/admin/dashboard");
   }
+
+  // ── Admin Plans ───────────────────────────────────────
+  async adminListPlans() {
+    return this.request<AdminPlan[]>("/admin/plans");
+  }
+
+  async adminCreatePlan(data: CreatePlanData) {
+    return this.request<AdminPlan>("/admin/plans", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminUpdatePlan(planId: string, data: Partial<CreatePlanData>) {
+    return this.request<AdminPlan>(`/admin/plans/${planId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminDeletePlan(planId: string) {
+    return this.request<{ message: string }>(`/admin/plans/${planId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async adminChangeUserPlan(userId: string, planId: string) {
+    return this.request<{ message: string }>(
+      `/admin/users/${userId}/change-plan`,
+      { method: "POST", body: JSON.stringify({ plan_id: planId }) }
+    );
+  }
+
+  // ── Admin Subscriptions & Invoices ────────────────────
+  async adminListSubscriptions(status?: string) {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+    return this.request<AdminSubscription[]>(`/admin/subscriptions${qs}`);
+  }
+
+  async adminListInvoices(status?: string) {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+    return this.request<AdminInvoice[]>(`/admin/invoices${qs}`);
+  }
 }
 
 // ── Error class ───────────────────────────────────────
@@ -278,9 +325,20 @@ export interface Strategy {
   is_available: boolean;
 }
 
+export interface PlanPublic {
+  id: string;
+  name: string;
+  price: number;
+  allowed_strategies: string[];
+  trial_days: number;
+  max_accounts: number;
+}
+
 export interface Subscription {
   id: string;
   status: string;
+  plan_name: string | null;
+  plan_price: number | null;
   trial_start: string;
   trial_end: string | null;
   current_period_start: string | null;
@@ -303,8 +361,9 @@ export interface AdminUser {
   id: string;
   email: string;
   is_active: boolean;
-  mt5_accounts: { login: number; server: string; status: string }[];
+  mt5_accounts: { id: string; login: number; server: string; status: string }[];
   subscription_status: string | null;
+  plan_name: string | null;
   active_strategy: string | null;
 }
 
@@ -315,6 +374,49 @@ export interface AdminDashboard {
   blocked_accounts: number;
   total_revenue: number;
   pending_invoices: number;
+  overdue_invoices: number;
+}
+
+export interface AdminPlan {
+  id: string;
+  name: string;
+  price: number;
+  allowed_strategies: string[];
+  trial_days: number;
+  max_accounts: number;
+  active: boolean;
+}
+
+export interface CreatePlanData {
+  name: string;
+  price: number;
+  allowed_strategies: string[];
+  trial_days: number;
+  max_accounts: number;
+  active: boolean;
+}
+
+export interface AdminSubscription {
+  id: string;
+  user_email: string;
+  user_id: string;
+  plan_name: string | null;
+  status: string;
+  trial_start: string | null;
+  trial_end: string | null;
+  created_at: string;
+}
+
+export interface AdminInvoice {
+  id: string;
+  user_email: string;
+  amount: number;
+  currency: string;
+  status: string;
+  issue_date: string;
+  due_date: string;
+  paid_at: string | null;
+  provider: string | null;
 }
 
 // Singleton
