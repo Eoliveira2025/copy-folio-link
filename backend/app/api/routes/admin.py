@@ -4,6 +4,7 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
+from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.security import hash_password
@@ -20,6 +21,7 @@ from app.schemas.plan import PlanCreate, PlanUpdate, PlanResponse, ChangePlanReq
 from app.schemas.billing import UpgradeRequestResponse, UpgradeRequestAction
 from app.schemas.legal import AdminTermsListItem, AdminCreateTerms, AdminUpdateTerms
 from app.services import copy_engine
+from app.services.strategy_switcher import switch_user_strategy_for_plan
 from app.services.payments import get_gateway, GatewayStatus
 
 router = APIRouter()
@@ -197,11 +199,15 @@ async def change_user_plan(
     if sub.status == SubscriptionStatus.BLOCKED:
         sub.status = SubscriptionStatus.ACTIVE
 
+    # Switch strategy to match new plan
+    switch_result = await switch_user_strategy_for_plan(user_id, plan, db)
+
     await db.commit()
     return {
         "message": f"User plan changed to '{plan.name}'",
         "old_plan_id": str(old_plan_id) if old_plan_id else None,
         "new_plan_id": str(plan.id),
+        "strategy_switch": switch_result,
     }
 
 
@@ -497,7 +503,7 @@ async def handle_upgrade_request(
     if body.action != "approve":
         raise HTTPException(status_code=400, detail="Action must be 'approve' or 'reject'")
 
-    # ── Approve: update plan, create invoice, switch strategy ──
+    # ── Approve: update plan, switch strategy, create invoice ──
     req.status = UpgradeRequestStatus.APPROVED
 
     # Get target plan
@@ -517,7 +523,8 @@ async def handle_upgrade_request(
     sub.plan_id = target_plan.id
     sub.status = SubscriptionStatus.ACTIVE
     sub.current_period_start = now
-    sub.current_period_end = now + timedelta(days=30)
+    sub.current_period_end = now + timedelta(days=sub.billing_cycle_days or 30)
+    sub.next_billing_date = now + timedelta(days=sub.billing_cycle_days or 30)
 
     # Generate invoice for new plan starting immediately
     invoice = Invoice(
@@ -530,10 +537,14 @@ async def handle_upgrade_request(
     )
     db.add(invoice)
 
+    # Switch user strategy to match new plan
+    switch_result = await switch_user_strategy_for_plan(req.user_id, target_plan, db)
+
     await db.commit()
     return {
         "message": f"Upgrade approved. User moved to '{target_plan.name}'. Invoice of ${target_plan.price} generated.",
         "invoice_id": str(invoice.id),
+        "strategy_switch": switch_result,
     }
 
 

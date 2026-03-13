@@ -79,12 +79,20 @@ def check_payments():
                     invoice.paid_at = datetime.now(timezone.utc)
                     paid += 1
 
-                    # Reactivate subscription
+                    # Reactivate subscription and advance billing date
                     sub = db.execute(
                         select(Subscription).where(Subscription.id == invoice.subscription_id)
                     ).scalar_one_or_none()
-                    if sub and sub.status == SubscriptionStatus.BLOCKED:
-                        sub.status = SubscriptionStatus.ACTIVE
+                    if sub:
+                        if sub.status == SubscriptionStatus.BLOCKED:
+                            sub.status = SubscriptionStatus.ACTIVE
+
+                        # Advance next_billing_date after successful payment
+                        now = datetime.now(timezone.utc)
+                        cycle = sub.billing_cycle_days or 30
+                        sub.current_period_start = now
+                        sub.current_period_end = now + timedelta(days=cycle)
+                        sub.next_billing_date = now + timedelta(days=cycle)
 
                         # Reconnect MT5 accounts
                         accounts = db.execute(
@@ -117,31 +125,37 @@ def check_payments():
 
 @celery_app.task
 def generate_invoices():
-    """Generate invoices for trials ending within INVOICE_GENERATE_BEFORE_DAYS.
-    
-    Uses plan price when available, falls back to SUBSCRIPTION_PRICE.
+    """Generate invoices based on next_billing_date for recurring billing.
+
+    Handles two scenarios:
+    1. Trial subscriptions approaching trial_end → generate first invoice, set next_billing_date
+    2. Active subscriptions where next_billing_date has arrived → generate recurring invoice
     """
     with Session(engine) as db:
         now = datetime.now(timezone.utc)
-        threshold = now + timedelta(days=settings.INVOICE_GENERATE_BEFORE_DAYS)
+        lookahead = now + timedelta(days=settings.INVOICE_GENERATE_BEFORE_DAYS)
+        created = 0
 
-        # Trials ending soon
+        # ── Scenario 1: Trial ending soon — first invoice ──────────
         trials = db.execute(
             select(Subscription).where(
                 Subscription.status == SubscriptionStatus.TRIAL,
-                Subscription.trial_end <= threshold,
+                Subscription.trial_end <= lookahead,
                 Subscription.trial_end > now,
+                Subscription.next_billing_date.is_(None),  # No billing date set yet
             )
         ).scalars().all()
 
-        created = 0
         for sub in trials:
-            existing = db.execute(
-                select(Invoice).where(Invoice.subscription_id == sub.id)
+            # Check no pending/unpaid invoice exists for this subscription
+            existing_pending = db.execute(
+                select(Invoice).where(
+                    Invoice.subscription_id == sub.id,
+                    Invoice.status.in_([InvoiceStatus.PENDING, InvoiceStatus.OVERDUE]),
+                )
             ).scalar_one_or_none()
 
-            if not existing:
-                # Determine price from plan or fallback
+            if not existing_pending:
                 price = settings.SUBSCRIPTION_PRICE
                 currency = settings.SUBSCRIPTION_CURRENCY
                 if sub.plan_id:
@@ -155,12 +169,54 @@ def generate_invoices():
                     amount=price,
                     currency=currency,
                     status=InvoiceStatus.PENDING,
+                    issue_date=now,
+                    due_date=due_date,
+                ))
+
+                # Initialize billing schedule
+                cycle = sub.billing_cycle_days or 30
+                sub.next_billing_date = sub.trial_end + timedelta(days=cycle)
+                created += 1
+
+        # ── Scenario 2: Recurring billing — next_billing_date reached ──
+        recurring = db.execute(
+            select(Subscription).where(
+                Subscription.status == SubscriptionStatus.ACTIVE,
+                Subscription.next_billing_date.isnot(None),
+                Subscription.next_billing_date <= lookahead,
+            )
+        ).scalars().all()
+
+        for sub in recurring:
+            # Only generate if no pending/overdue invoice exists
+            existing_pending = db.execute(
+                select(Invoice).where(
+                    Invoice.subscription_id == sub.id,
+                    Invoice.status.in_([InvoiceStatus.PENDING, InvoiceStatus.OVERDUE]),
+                )
+            ).scalar_one_or_none()
+
+            if not existing_pending:
+                price = settings.SUBSCRIPTION_PRICE
+                currency = settings.SUBSCRIPTION_CURRENCY
+                if sub.plan_id:
+                    plan = db.execute(select(Plan).where(Plan.id == sub.plan_id)).scalar_one_or_none()
+                    if plan:
+                        price = plan.price
+
+                due_date = sub.next_billing_date + timedelta(days=settings.INVOICE_DUE_AFTER_DAYS)
+                db.add(Invoice(
+                    subscription_id=sub.id,
+                    amount=price,
+                    currency=currency,
+                    status=InvoiceStatus.PENDING,
+                    issue_date=now,
                     due_date=due_date,
                 ))
                 created += 1
 
         db.commit()
-    return f"Created {created} invoices from {len(trials)} subscriptions"
+    return f"Created {created} invoices (trials: {len(trials)}, recurring: {len(recurring)})"
 
 
 @celery_app.task

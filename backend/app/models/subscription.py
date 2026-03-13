@@ -1,9 +1,9 @@
-"""Subscription model with plan linkage and free trial support."""
+"""Subscription model with plan linkage, free trial, and recurring billing support."""
 
 import uuid
 import enum
 from datetime import datetime, timezone
-from sqlalchemy import ForeignKey, DateTime, Enum as SAEnum, Boolean
+from sqlalchemy import ForeignKey, DateTime, Enum as SAEnum, Boolean, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
@@ -28,6 +28,10 @@ class Subscription(Base):
     current_period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     auto_renew: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+    # Recurring billing fields
+    next_billing_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    billing_cycle_days: Mapped[int] = mapped_column(Integer, default=30)
 
     user = relationship("User", back_populates="subscriptions")
     plan = relationship("Plan", back_populates="subscriptions")

@@ -15,6 +15,7 @@ from app.schemas.auth import (
     ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest,
     MessageResponse, UserProfileResponse,
 )
+from app.api.deps import get_current_user
 
 router = APIRouter()
 settings = get_settings()
@@ -36,13 +37,16 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     # Assign default role
     db.add(UserRoleMapping(user_id=user.id, role=UserRole.USER))
 
-    # Create free trial subscription
+    # Create free trial subscription with next_billing_date
     now = datetime.now(timezone.utc)
+    trial_end = now + timedelta(days=settings.FREE_TRIAL_DAYS)
     db.add(Subscription(
         user_id=user.id,
         status=SubscriptionStatus.TRIAL,
         trial_start=now,
-        trial_end=now + timedelta(days=settings.FREE_TRIAL_DAYS),
+        trial_end=trial_end,
+        next_billing_date=trial_end,
+        billing_cycle_days=30,
     ))
 
     await db.commit()
@@ -84,47 +88,6 @@ async def refresh_token(refresh_token: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/me", response_model=UserProfileResponse)
-async def get_me(db: AsyncSession = Depends(get_db)):
-    from app.api.deps import get_current_user
-    # This would normally use Depends but simplified for schema
-    pass
-
-
-@router.post("/change-password", response_model=MessageResponse)
-async def change_password(body: ChangePasswordRequest, db: AsyncSession = Depends(get_db)):
-    from app.api.deps import get_current_user
-    # Placeholder - wired via deps
-    pass
-
-
-@router.post("/forgot-password", response_model=MessageResponse)
-async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
-    return MessageResponse(message="If this email exists, a reset link has been sent.")
-
-
-@router.post("/reset-password", response_model=MessageResponse)
-async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
-    try:
-        payload = decode_token(body.token)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid or expired token")
-
-    result = await db.execute(select(User).where(User.id == payload["sub"]))
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    user.hashed_password = hash_password(body.new_password)
-    await db.commit()
-    return MessageResponse(message="Password updated successfully")
-
-
-# ── Properly wired endpoints with Depends ──────────────────
-
-from app.api.deps import get_current_user
-
-
-@router.get("/me", response_model=UserProfileResponse, name="get_current_profile")
 async def get_profile(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -143,7 +106,7 @@ async def get_profile(
     )
 
 
-@router.post("/change-password", response_model=MessageResponse, name="change_user_password")
+@router.post("/change-password", response_model=MessageResponse)
 async def change_user_password(
     body: ChangePasswordRequest,
     user: User = Depends(get_current_user),
@@ -151,6 +114,28 @@ async def change_user_password(
 ):
     if not verify_password(body.current_password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    user.hashed_password = hash_password(body.new_password)
+    await db.commit()
+    return MessageResponse(message="Password updated successfully")
+
+
+@router.post("/forgot-password", response_model=MessageResponse)
+async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    return MessageResponse(message="If this email exists, a reset link has been sent.")
+
+
+@router.post("/reset-password", response_model=MessageResponse)
+async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    try:
+        payload = decode_token(body.token)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+
+    result = await db.execute(select(User).where(User.id == payload["sub"]))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
     user.hashed_password = hash_password(body.new_password)
     await db.commit()
