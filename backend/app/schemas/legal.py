@@ -10,6 +10,7 @@ class TermsPublicResponse(BaseModel):
     content: str
     version: int
     company_name: str
+    language: str = "en"
     updated_at: str
 
 
@@ -36,6 +37,7 @@ class AdminTermsListItem(BaseModel):
     title: str
     version: int
     company_name: str
+    language: str = "en"
     is_active: bool
     created_at: str
     updated_at: str
@@ -47,9 +49,11 @@ class AdminCreateTerms(BaseModel):
     content: str
     version: int = Field(..., ge=1)
     company_name: str = Field(..., max_length=255)
+    language: str = Field("en", max_length=10)
 
 
 class AdminUpdateTerms(BaseModel):
     title: Optional[str] = Field(None, max_length=255)
     content: Optional[str] = None
     company_name: Optional[str] = Field(None, max_length=255)
+    language: Optional[str] = Field(None, max_length=10)

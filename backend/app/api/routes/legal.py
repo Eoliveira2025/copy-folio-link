@@ -1,6 +1,6 @@
 """Public legal endpoints for Terms and Conditions."""
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -14,12 +14,36 @@ router = APIRouter()
 
 
 @router.get("/terms", response_model=TermsPublicResponse)
-async def get_active_terms(db: AsyncSession = Depends(get_db)):
-    """Return the currently active Terms and Conditions."""
+async def get_active_terms(
+    lang: str = Query("en", description="Language code (en, pt)"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the currently active Terms and Conditions for the given language."""
     result = await db.execute(
-        select(TermsDocument).where(TermsDocument.is_active == True)
+        select(TermsDocument).where(
+            TermsDocument.is_active == True,
+            TermsDocument.language == lang,
+        )
     )
     terms = result.scalar_one_or_none()
+
+    # Fallback to English if no terms found for requested language
+    if not terms and lang != "en":
+        result = await db.execute(
+            select(TermsDocument).where(
+                TermsDocument.is_active == True,
+                TermsDocument.language == "en",
+            )
+        )
+        terms = result.scalar_one_or_none()
+
+    # Fallback to any active terms
+    if not terms:
+        result = await db.execute(
+            select(TermsDocument).where(TermsDocument.is_active == True)
+        )
+        terms = result.scalar_one_or_none()
+
     if not terms:
         raise HTTPException(status_code=404, detail="No active terms found")
 
@@ -29,6 +53,7 @@ async def get_active_terms(db: AsyncSession = Depends(get_db)):
         content=terms.content,
         version=terms.version,
         company_name=terms.company_name,
+        language=terms.language,
         updated_at=terms.updated_at.isoformat(),
     )
 
@@ -48,7 +73,6 @@ async def accept_terms(
     if not terms:
         raise HTTPException(status_code=404, detail="Terms document not found")
 
-    # Check if already accepted this version
     existing = await db.execute(
         select(TermsAcceptance).where(
             TermsAcceptance.user_id == user.id,
@@ -88,7 +112,6 @@ async def check_terms_acceptance(
     if not terms:
         return TermsCheckResponse(needs_acceptance=False)
 
-    # Check if user accepted this specific active terms version
     acceptance = await db.execute(
         select(TermsAcceptance).where(
             TermsAcceptance.user_id == user.id,
