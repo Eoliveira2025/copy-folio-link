@@ -3,7 +3,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { CreatePlanData, CreateTermsData, UpdateTermsData } from "@/lib/api";
+import type { CreatePlanData, CreateTermsData, UpdateTermsData, RiskSettingsUpdate } from "@/lib/api";
 import { toast } from "sonner";
 
 // ── MT5 Accounts ────────────────────────────────────
@@ -300,6 +300,55 @@ export function useAdminActivateTerms() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-terms"] });
       toast.success("Terms activated");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+// ── Admin Risk Protection ──────────────────────────
+export function useAdminRiskSettings() {
+  return useQuery({
+    queryKey: ["admin-risk-settings"],
+    queryFn: () => api.adminGetRiskSettings(),
+  });
+}
+
+export function useAdminRiskStatus() {
+  return useQuery({
+    queryKey: ["admin-risk-status"],
+    queryFn: () => api.adminGetRiskStatus(),
+    refetchInterval: 5000,
+  });
+}
+
+export function useAdminRiskIncidents() {
+  return useQuery({
+    queryKey: ["admin-risk-incidents"],
+    queryFn: () => api.adminGetRiskIncidents(),
+  });
+}
+
+export function useAdminUpdateRiskSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: RiskSettingsUpdate) => api.adminUpdateRiskSettings(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-risk-settings"] });
+      qc.invalidateQueries({ queryKey: ["admin-risk-status"] });
+      toast.success("Risk settings updated");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminResetEmergency() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.adminResetEmergency(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-risk-status"] });
+      qc.invalidateQueries({ queryKey: ["admin-risk-settings"] });
+      toast.success("Emergency state reset — trading re-enabled");
     },
     onError: (err: Error) => toast.error(err.message),
   });

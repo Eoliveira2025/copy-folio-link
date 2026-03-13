@@ -358,6 +358,32 @@ class ApiClient {
   async adminGetTermsContent(termsId: string) {
     return this.request<AdminTermsDetail>(`/admin/terms/${termsId}/content`);
   }
+
+  // ── Admin Risk Protection ───────────────────────────
+  async adminGetRiskSettings() {
+    return this.request<RiskSettings>("/admin/risk/settings");
+  }
+
+  async adminUpdateRiskSettings(data: RiskSettingsUpdate) {
+    return this.request<RiskSettings>("/admin/risk/settings", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminGetRiskStatus() {
+    return this.request<RiskStatus>("/admin/risk/status");
+  }
+
+  async adminGetRiskIncidents() {
+    return this.request<RiskIncident[]>("/admin/risk/incidents");
+  }
+
+  async adminResetEmergency() {
+    return this.request<{ message: string }>("/admin/risk/reset-emergency", {
+      method: "POST",
+    });
+  }
 }
 
 // ── Error class ───────────────────────────────────────
@@ -564,6 +590,37 @@ export interface UpdateTermsData {
   title?: string;
   content?: string;
   company_name?: string;
+}
+
+// ── Risk Protection Types ────────────────────────────
+export interface RiskSettings {
+  global_max_drawdown_percent: number;
+  protection_enabled: boolean;
+  updated_at: string;
+}
+
+export interface RiskSettingsUpdate {
+  global_max_drawdown_percent?: number;
+  protection_enabled?: boolean;
+}
+
+export interface RiskStatus {
+  total_balance: number;
+  total_equity: number;
+  current_drawdown_percent: number;
+  protection_enabled: boolean;
+  max_drawdown_percent: number;
+  emergency_active: boolean;
+  account_count: number;
+}
+
+export interface RiskIncident {
+  id: string;
+  incident_type: string;
+  drawdown_percent: number;
+  total_balance: number;
+  total_equity: number;
+  created_at: string;
 }
 
 // Singleton

@@ -66,6 +66,7 @@ import {
 import { StatCard } from "@/components/StatCard";
 import type { AdminPlan, CreatePlanData, AdminTermsItem } from "@/lib/api";
 import { api } from "@/lib/api";
+import { RiskProtectionTab } from "@/components/admin/RiskProtectionTab";
 
 const statusStyle: Record<string, string> = {
   active: "bg-success/15 text-success border-success/30 hover:bg-success/15",
@@ -300,6 +301,7 @@ const AdminPanel = () => {
           <TabsTrigger value="subscriptions" className="gap-2"><CreditCard className="w-4 h-4" /> Subscriptions</TabsTrigger>
           <TabsTrigger value="invoices" className="gap-2"><FileText className="w-4 h-4" /> Invoices</TabsTrigger>
           <TabsTrigger value="upgrades" className="gap-2"><ArrowUpCircle className="w-4 h-4" /> Upgrades</TabsTrigger>
+          <TabsTrigger value="risk" className="gap-2"><AlertTriangle className="w-4 h-4" /> Risk</TabsTrigger>
           <TabsTrigger value="legal" className="gap-2"><Scale className="w-4 h-4" /> Legal</TabsTrigger>
           <TabsTrigger value="servers" className="gap-2"><Server className="w-4 h-4" /> Servers</TabsTrigger>
         </TabsList>
@@ -735,6 +737,11 @@ const AdminPanel = () => {
               </div>
             </motion.div>
           )}
+        </TabsContent>
+
+        {/* ── Risk Protection Tab ──────────────────────── */}
+        <TabsContent value="risk" className="mt-4 space-y-4">
+          <RiskProtectionTab />
         </TabsContent>
 
         {/* ── Legal / Terms Tab ─────────────────────────── */}
