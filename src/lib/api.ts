@@ -385,6 +385,30 @@ export interface Invoice {
   provider: string | null;
 }
 
+export interface UpgradeEligibility {
+  eligible: boolean;
+  has_pending_request?: boolean;
+  reason?: string;
+  current_plan?: { id: string; name: string; price: number } | null;
+  next_plan?: { id: string; name: string; price: number } | null;
+  mt5_balance?: number;
+  min_balance_required?: number;
+}
+
+export interface UpgradeRequestItem {
+  id: string;
+  user_id: string;
+  user_email?: string;
+  current_plan_name: string | null;
+  target_plan_name: string | null;
+  target_plan_price: number | null;
+  mt5_balance: number;
+  status: string;
+  admin_note: string | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
 export interface AdminUser {
   id: string;
   email: string;
