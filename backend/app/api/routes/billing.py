@@ -1,10 +1,13 @@
 """Billing endpoints with plan-aware subscription, upgrade requests, and full payment gateway integration."""
 
+import logging
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+
+logger = logging.getLogger("app.billing")
 
 from app.core.database import get_db
 from app.api.deps import get_current_user
@@ -280,6 +283,11 @@ async def _process_gateway_webhook(provider: PaymentProvider, request: Request, 
         inv = await db.execute(select(Invoice).where(Invoice.external_id == result.gateway_id))
         invoice = inv.scalar_one_or_none()
         if invoice:
+            # Idempotency: skip if already paid
+            if invoice.status == InvoiceStatus.PAID:
+                logger.info(f"Duplicate webhook ignored for invoice {invoice.id} (already paid)")
+                return {"status": "ok", "note": "already_paid"}
+
             db.add(Payment(
                 invoice_id=invoice.id,
                 provider=provider,

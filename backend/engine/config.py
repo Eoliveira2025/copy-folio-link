@@ -29,7 +29,7 @@ class EngineSettings(BaseSettings):
     SLIPPAGE_REJECT_ENABLED: bool = True  # Reject orders exceeding max slippage
 
     # ── Workers ───────────────────────────────────────────────────
-    WORKER_COUNT: int = 8  # Parallel execution workers
+    WORKER_COUNT: int = 64  # Parallel execution workers (env: COPY_ENGINE_WORKERS)
     DISTRIBUTOR_THREAD_POOL_SIZE: int = 16  # Concurrent fan-out threads
     EXECUTOR_BATCH_SIZE: int = 10  # Process up to N orders per batch pop
 
@@ -50,6 +50,9 @@ class EngineSettings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        fields = {
+            "WORKER_COUNT": {"env": ["COPY_ENGINE_WORKERS", "WORKER_COUNT"]},
+        }
 
 
 @lru_cache()

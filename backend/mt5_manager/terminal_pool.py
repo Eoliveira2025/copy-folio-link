@@ -253,7 +253,7 @@ class TerminalPool:
         return self.spawn_terminal()
 
     def restart_terminal(self, terminal_id: str) -> bool:
-        """Restart a terminal, preserving its account list for re-login."""
+        """Non-blocking restart of a terminal, preserving its account list for re-login."""
         terminal = self.terminals.get(terminal_id)
         if not terminal:
             return False
@@ -261,21 +261,29 @@ class TerminalPool:
         terminal.restart_count += 1
         orphaned_accounts = list(terminal.accounts)
 
-        self.stop_terminal(terminal_id)
-        time.sleep(2)
-        new_id = self.spawn_terminal(terminal_id)
+        import threading
 
-        if new_id:
-            logger.info(f"Terminal {terminal_id} restarted, {len(orphaned_accounts)} accounts need re-login")
-            # Publish re-provision event for orphaned accounts
-            for account_id in orphaned_accounts:
-                self.redis_client.publish("mt5mgr:provision", json.dumps({
-                    "action": "reconnect",
-                    "account_id": account_id,
-                    "terminal_id": new_id,
-                }))
-            return True
-        return False
+        def _do_restart():
+            self.stop_terminal(terminal_id)
+            time.sleep(2)
+            new_id = self.spawn_terminal(terminal_id)
+            if new_id:
+                logger.info(f"Terminal {terminal_id} restarted, {len(orphaned_accounts)} accounts need re-login")
+                for account_id in orphaned_accounts:
+                    self.redis_client.publish("mt5mgr:provision", json.dumps({
+                        "action": "reconnect",
+                        "account_id": account_id,
+                        "terminal_id": new_id,
+                    }))
+            else:
+                logger.error(f"Terminal {terminal_id} restart failed")
+
+        restart_thread = threading.Thread(
+            target=_do_restart, name=f"restart-{terminal_id}", daemon=True
+        )
+        restart_thread.start()
+        logger.info(f"Terminal {terminal_id} restart initiated (non-blocking)")
+        return True
 
     def stop_all(self):
         """Stop all terminal subprocesses."""

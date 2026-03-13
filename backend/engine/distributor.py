@@ -199,29 +199,55 @@ class TradeDistributor(threading.Thread):
         )
 
     def run(self):
-        """Subscribe to all master event channels and distribute."""
+        """Subscribe to all master event channels and distribute with auto-reconnect."""
         self.running = True
-        pubsub = self.redis_client.pubsub()
-        pubsub.psubscribe("copytrade:events:*")
 
         logger.info(
             f"Trade Distributor started — pool: {settings.DISTRIBUTOR_THREAD_POOL_SIZE} threads, "
             f"subscribing to copytrade:events:*"
         )
 
-        for message in pubsub.listen():
-            if not self.running:
-                break
-
-            if message["type"] != "pmessage":
-                continue
-
+        while self.running:
+            pubsub = None
             try:
-                event = TradeEvent.from_json(message["data"])
-                # Submit to thread pool for parallel processing
-                self._executor.submit(self._safe_distribute, event)
+                pubsub = self.redis_client.pubsub()
+                pubsub.psubscribe("copytrade:events:*")
+                logger.info("Distributor subscribed to copytrade:events:*")
+
+                for message in pubsub.listen():
+                    if not self.running:
+                        break
+
+                    if message["type"] != "pmessage":
+                        continue
+
+                    try:
+                        event = TradeEvent.from_json(message["data"])
+                        self._executor.submit(self._safe_distribute, event)
+                    except Exception as e:
+                        logger.error(f"Event parse error: {e}", exc_info=True)
+
+            except redis.ConnectionError as e:
+                logger.warning(f"Redis connection lost in distributor: {e}. Reconnecting in 1s...")
+                time.sleep(1)
+                try:
+                    self.redis_client = redis.Redis.from_url(
+                        settings.REDIS_URL,
+                        socket_keepalive=True,
+                        socket_timeout=settings.REDIS_SOCKET_TIMEOUT,
+                    )
+                except Exception:
+                    pass
             except Exception as e:
-                logger.error(f"Event parse error: {e}", exc_info=True)
+                if self.running:
+                    logger.error(f"Distributor unexpected error: {e}", exc_info=True)
+                    time.sleep(1)
+            finally:
+                if pubsub:
+                    try:
+                        pubsub.close()
+                    except Exception:
+                        pass
 
     def _safe_distribute(self, event: TradeEvent):
         """Wrapper with error handling for thread pool."""
