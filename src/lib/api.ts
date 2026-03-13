@@ -643,5 +643,42 @@ export interface RiskIncident {
   created_at: string;
 }
 
+// ── Operations Types ──────────────────────────────────
+export interface OperationsDashboard {
+  connected_mt5_accounts: number;
+  total_mt5_accounts: number;
+  master_accounts: number;
+  copied_trades_today: number;
+  failed_trades_today: number;
+  avg_latency_ms: number;
+  dlq_pending: number;
+  total_balance: number;
+  total_equity: number;
+  global_drawdown_percent: number;
+  protection_enabled: boolean;
+  emergency_active: boolean;
+  active_subscriptions: number;
+  trial_subscriptions: number;
+  overdue_invoices: number;
+  services: Record<string, string>;
+}
+
+export interface DeadLetterTrade {
+  id: string;
+  order_id: string;
+  symbol: string;
+  action: string;
+  direction: string;
+  volume: number;
+  master_ticket: number;
+  client_mt5_id: string;
+  error_message: string;
+  attempt_count: number;
+  status: string;
+  resolution_note: string | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
 // Singleton
 export const api = new ApiClient();
