@@ -305,6 +305,27 @@ export function useAdminActivateTerms() {
   });
 }
 
+// ── Public Settings ────────────────────────────────
+export function usePublicSettings() {
+  return useQuery({
+    queryKey: ["public-settings"],
+    queryFn: () => api.getPublicSettings(),
+  });
+}
+
+export function useAdminUpdatePublicSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { affiliate_broker_link: string | null }) =>
+      api.adminUpdatePublicSettings(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["public-settings"] });
+      toast.success("Settings updated");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
 // ── Admin Risk Protection ──────────────────────────
 export function useAdminRiskSettings() {
   return useQuery({

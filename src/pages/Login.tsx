@@ -3,12 +3,13 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, TrendingUp } from "lucide-react";
+import { Eye, EyeOff, TrendingUp, ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { usePublicSettings } from "@/hooks/use-api";
 
 const Login = () => {
   const { t } = useTranslation();
@@ -18,6 +19,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { data: publicSettings } = usePublicSettings();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,6 +95,17 @@ const Login = () => {
               {isLoading ? t("auth.signingIn") : t("auth.login")}
             </Button>
           </form>
+
+          {publicSettings?.affiliate_broker_link && (
+            <Button
+              variant="outline"
+              className="w-full h-11 mt-3 gap-2 border-primary/30 text-primary hover:bg-primary/10"
+              onClick={() => window.open(publicSettings.affiliate_broker_link!, "_blank", "noopener,noreferrer")}
+            >
+              <ExternalLink className="w-4 h-4" />
+              {t("auth.openBrokerAccount")}
+            </Button>
+          )}
 
           <p className="text-center text-muted-foreground mt-6 text-sm">
             {t("auth.noAccount")}{" "}

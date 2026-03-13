@@ -189,6 +189,7 @@ const AdminPanel = () => {
           <TabsTrigger value="risk" className="gap-2"><AlertTriangle className="w-4 h-4" /> {t("admin.risk")}</TabsTrigger>
           <TabsTrigger value="legal" className="gap-2"><Scale className="w-4 h-4" /> {t("admin.legal")}</TabsTrigger>
           <TabsTrigger value="servers" className="gap-2"><Server className="w-4 h-4" /> {t("admin.servers")}</TabsTrigger>
+          <TabsTrigger value="settings" className="gap-2"><Settings className="w-4 h-4" /> {t("settings.title")}</TabsTrigger>
         </TabsList>
 
         {/* Users Tab */}
