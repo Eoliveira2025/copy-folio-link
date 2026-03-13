@@ -315,8 +315,9 @@ class ApiClient {
   }
 
   // ── Legal / Terms ────────────────────────────────────
-  async getActiveTerms() {
-    return this.request<TermsPublic>("/legal/terms");
+  async getActiveTerms(lang?: string) {
+    const langParam = lang || localStorage.getItem("i18n_language") || "en";
+    return this.request<TermsPublic>(`/legal/terms?lang=${langParam}`);
   }
 
   async acceptTerms(termsId: string) {
