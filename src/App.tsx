@@ -3,8 +3,18 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import Index from "./pages/Index";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import { DashboardLayout } from "./components/DashboardLayout";
+import DashboardHome from "./pages/dashboard/DashboardHome";
+import ConnectMT5 from "./pages/dashboard/ConnectMT5";
+import Strategies from "./pages/dashboard/Strategies";
+import Financial from "./pages/dashboard/Financial";
+import SettingsPage from "./pages/dashboard/SettingsPage";
+import AdminPanel from "./pages/admin/AdminPanel";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -16,7 +26,17 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route element={<DashboardLayout />}>
+            <Route path="/dashboard" element={<DashboardHome />} />
+            <Route path="/dashboard/connect" element={<ConnectMT5 />} />
+            <Route path="/dashboard/strategies" element={<Strategies />} />
+            <Route path="/dashboard/financial" element={<Financial />} />
+            <Route path="/dashboard/settings" element={<SettingsPage />} />
+            <Route path="/admin" element={<AdminPanel />} />
+          </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
