@@ -1,0 +1,364 @@
+version: "3.9"
+
+services:
+  # ═══════════════════════════════════════════════════════
+  # REVERSE PROXY & SSL
+  # ═══════════════════════════════════════════════════════
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: ct-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - static_files:/var/www/static:ro
+    depends_on:
+      - api
+    networks:
+      - copytrade
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: ct-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - copytrade
+
+  # ═══════════════════════════════════════════════════════
+  # API SERVER
+  # ═══════════════════════════════════════════════════════
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ct-api
+    restart: always
+    env_file: .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - DATABASE_URL_SYNC=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - api_logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - copytrade
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+
+  # ═══════════════════════════════════════════════════════
+  # COPY TRADING ENGINE
+  # ═══════════════════════════════════════════════════════
+  copy-engine:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ct-engine
+    restart: always
+    command: python -m engine.main
+    env_file: .env
+    environment:
+      - DATABASE_URL_SYNC=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - engine_logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - copytrade
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+
+  # ═══════════════════════════════════════════════════════
+  # MT5 TERMINAL MANAGER
+  # ═══════════════════════════════════════════════════════
+  mt5-manager:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.mt5
+    container_name: ct-mt5
+    restart: always
+    env_file: .env
+    environment:
+      - DATABASE_URL_SYNC=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - mt5_data:/root/.wine
+      - mt5_logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - copytrade
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4G
+
+  # ═══════════════════════════════════════════════════════
+  # CELERY WORKERS & SCHEDULER
+  # ═══════════════════════════════════════════════════════
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ct-celery-worker
+    restart: always
+    command: celery -A app.workers.payment_checker worker --loglevel=info --concurrency=4
+    env_file: .env
+    environment:
+      - DATABASE_URL_SYNC=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - celery_logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - copytrade
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ct-celery-beat
+    restart: always
+    command: celery -A app.workers.payment_checker beat --loglevel=info
+    env_file: .env
+    environment:
+      - DATABASE_URL_SYNC=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - copytrade
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  # ═══════════════════════════════════════════════════════
+  # DATABASES
+  # ═══════════════════════════════════════════════════════
+  db:
+    image: postgres:16-alpine
+    container_name: ct-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - pg_backups:/backups
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    networks:
+      - copytrade
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+
+  redis:
+    image: redis:7-alpine
+    container_name: ct-redis
+    restart: always
+    command: >
+      redis-server
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+      --appendfsync everysec
+      --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    networks:
+      - copytrade
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 768M
+
+  # ═══════════════════════════════════════════════════════
+  # MONITORING & LOGGING
+  # ═══════════════════════════════════════════════════════
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: ct-prometheus
+    restart: always
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=30d"
+      - "--storage.tsdb.retention.size=5GB"
+    networks:
+      - copytrade
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: ct-grafana
+    restart: always
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_SERVER_ROOT_URL=https://${DOMAIN}/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    networks:
+      - copytrade
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  loki:
+    image: grafana/loki:2.9.5
+    container_name: ct-loki
+    restart: always
+    volumes:
+      - ./monitoring/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/loki.yml
+    networks:
+      - copytrade
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  promtail:
+    image: grafana/promtail:2.9.5
+    container_name: ct-promtail
+    restart: always
+    volumes:
+      - ./monitoring/promtail.yml:/etc/promtail/promtail.yml:ro
+      - api_logs:/var/log/api:ro
+      - engine_logs:/var/log/engine:ro
+      - mt5_logs:/var/log/mt5:ro
+      - celery_logs:/var/log/celery:ro
+      - /var/log:/var/log/host:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/promtail.yml
+    depends_on:
+      - loki
+    networks:
+      - copytrade
+
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: ct-node-exporter
+    restart: always
+    command:
+      - "--path.rootfs=/host"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    volumes:
+      - /:/host:ro,rslave
+    networks:
+      - copytrade
+
+  # ═══════════════════════════════════════════════════════
+  # DATABASE BACKUP
+  # ═══════════════════════════════════════════════════════
+  db-backup:
+    image: postgres:16-alpine
+    container_name: ct-db-backup
+    restart: always
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+    volumes:
+      - pg_backups:/backups
+      - ./scripts/backup.sh:/backup.sh:ro
+    entrypoint: "/bin/sh -c 'chmod +x /backup.sh && crond -f -d 8'"
+    command: []
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - copytrade
+
+networks:
+  copytrade:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redis_data:
+  mt5_data:
+  api_logs:
+  engine_logs:
+  mt5_logs:
+  celery_logs:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+  static_files:
+  pg_backups:
