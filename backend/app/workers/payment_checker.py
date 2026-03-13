@@ -216,6 +216,10 @@ def generate_invoices():
                     issue_date=now,
                     due_date=due_date,
                 ))
+
+                # Advance next_billing_date to prevent duplicate generation
+                cycle = sub.billing_cycle_days or 30
+                sub.next_billing_date = sub.next_billing_date + timedelta(days=cycle)
                 created += 1
 
         db.commit()
