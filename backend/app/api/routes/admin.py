@@ -15,8 +15,10 @@ from app.models.plan import Plan
 from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.upgrade_request import UpgradeRequest, UpgradeRequestStatus
+from app.models.terms import TermsDocument, TermsAcceptance
 from app.schemas.plan import PlanCreate, PlanUpdate, PlanResponse, ChangePlanRequest
 from app.schemas.billing import UpgradeRequestResponse, UpgradeRequestAction
+from app.schemas.legal import AdminTermsListItem, AdminCreateTerms, AdminUpdateTerms
 from app.services import copy_engine
 from app.services.payments import get_gateway, GatewayStatus
 
