@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { CreditCard } from "lucide-react";
+import { CreditCard, Package } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSubscription, useInvoices } from "@/hooks/use-api";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -64,13 +64,18 @@ const Financial = () => {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
             <div>
               <span className="text-muted-foreground block">Plan</span>
-              <span className="font-medium">
-                {subscription.status === "trial" ? "Free Trial" : "Professional"}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <Package className="w-3.5 h-3.5 text-primary" />
+                <span className="font-medium">
+                  {subscription.plan_name || (subscription.status === "trial" ? "Free Trial" : "Standard")}
+                </span>
+              </div>
             </div>
             <div>
               <span className="text-muted-foreground block">Price</span>
-              <span className="font-mono font-medium">$49.90/mo</span>
+              <span className="font-mono font-medium">
+                ${subscription.plan_price != null ? subscription.plan_price.toFixed(2) : "49.90"}/mo
+              </span>
             </div>
             <div>
               <span className="text-muted-foreground block">
