@@ -1,7 +1,8 @@
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, Package } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CreditCard, Package, ArrowUpCircle } from "lucide-react";
 import { motion } from "framer-motion";
-import { useSubscription, useInvoices } from "@/hooks/use-api";
+import { useSubscription, useInvoices, useMyUpgradeRequests } from "@/hooks/use-api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 
@@ -10,6 +11,8 @@ const statusStyle: Record<string, string> = {
   pending: "bg-warning/15 text-warning border-warning/30 hover:bg-warning/15",
   overdue: "bg-danger/15 text-danger border-danger/30 hover:bg-danger/15",
   cancelled: "bg-muted text-muted-foreground border-border hover:bg-muted",
+  approved: "bg-success/15 text-success border-success/30 hover:bg-success/15",
+  rejected: "bg-danger/15 text-danger border-danger/30 hover:bg-danger/15",
 };
 
 const subStatusStyle: Record<string, string> = {
@@ -22,6 +25,7 @@ const subStatusStyle: Record<string, string> = {
 const Financial = () => {
   const { data: subscription, isLoading: subLoading } = useSubscription();
   const { data: invoices, isLoading: invLoading } = useInvoices();
+  const { data: upgradeRequests, isLoading: upgradeLoading } = useMyUpgradeRequests();
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "—";
@@ -94,6 +98,44 @@ const Financial = () => {
           </div>
         </motion.div>
       ) : null}
+
+      {/* Upgrade Requests */}
+      {!upgradeLoading && upgradeRequests && upgradeRequests.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="card-glass rounded-lg p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <ArrowUpCircle className="w-5 h-5 text-primary" />
+            <h2 className="font-semibold">Upgrade Requests</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-muted-foreground text-left border-b border-border">
+                  <th className="pb-3 font-medium">From</th>
+                  <th className="pb-3 font-medium">To</th>
+                  <th className="pb-3 font-medium">Balance</th>
+                  <th className="pb-3 font-medium">Status</th>
+                  <th className="pb-3 font-medium">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {upgradeRequests.map((req) => (
+                  <tr key={req.id} className="border-b border-border/50 last:border-0">
+                    <td className="py-3">{req.current_plan_name || "—"}</td>
+                    <td className="py-3 font-medium text-primary">{req.target_plan_name}</td>
+                    <td className="py-3 font-mono">${req.mt5_balance.toFixed(2)}</td>
+                    <td className="py-3">
+                      <Badge className={statusStyle[req.status] || statusStyle.pending}>
+                        {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
+                      </Badge>
+                    </td>
+                    <td className="py-3 text-muted-foreground">{formatDate(req.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
+      )}
 
       {/* Invoices */}
       {invLoading ? (

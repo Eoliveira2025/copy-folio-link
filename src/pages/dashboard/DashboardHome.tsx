@@ -1,14 +1,17 @@
 import { StatCard } from "@/components/StatCard";
-import { Link2, BarChart3, CreditCard, Activity, Copy } from "lucide-react";
+import { Link2, BarChart3, CreditCard, Activity, Copy, ArrowUpCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { useMT5Accounts, useSubscription, useStrategies } from "@/hooks/use-api";
+import { useMT5Accounts, useSubscription, useStrategies, useUpgradeEligibility, useRequestUpgrade } from "@/hooks/use-api";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const DashboardHome = () => {
   const { data: accounts, isLoading: mt5Loading } = useMT5Accounts();
   const { data: subscription, isLoading: subLoading } = useSubscription();
   const { data: strategies } = useStrategies();
+  const { data: upgradeCheck } = useUpgradeEligibility();
+  const requestUpgrade = useRequestUpgrade();
 
   const account = accounts?.[0];
   const isLoading = mt5Loading || subLoading;
@@ -44,6 +47,50 @@ const DashboardHome = () => {
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground text-sm">Overview of your copy trading account</p>
       </div>
+
+      {/* Upgrade Notification */}
+      {upgradeCheck?.eligible && !upgradeCheck.has_pending_request && upgradeCheck.next_plan && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-lg border border-primary/30 bg-primary/5 p-4 flex items-center justify-between gap-4"
+        >
+          <div className="flex items-center gap-3">
+            <ArrowUpCircle className="w-6 h-6 text-primary shrink-0" />
+            <div>
+              <p className="font-medium text-sm">
+                Upgrade Available — Your balance (${upgradeCheck.mt5_balance?.toFixed(2)}) qualifies for{" "}
+                <span className="text-primary font-semibold">{upgradeCheck.next_plan.name}</span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                ${upgradeCheck.next_plan.price}/mo · Min balance: ${upgradeCheck.min_balance_required?.toFixed(2)}
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => requestUpgrade.mutate(upgradeCheck.next_plan!.id)}
+            disabled={requestUpgrade.isPending}
+            className="shrink-0 gap-1.5"
+          >
+            <ArrowUpCircle className="w-4 h-4" />
+            {requestUpgrade.isPending ? "Requesting..." : "Request Plan Upgrade"}
+          </Button>
+        </motion.div>
+      )}
+
+      {upgradeCheck?.has_pending_request && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-lg border border-warning/30 bg-warning/5 p-4 flex items-center gap-3"
+        >
+          <ArrowUpCircle className="w-5 h-5 text-warning shrink-0" />
+          <p className="text-sm text-warning">
+            Your upgrade request is pending admin approval.
+          </p>
+        </motion.div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
