@@ -1,0 +1,28 @@
+# MT5 Terminal Manager Dockerfile
+# Uses Wine to run MetaTrader 5 terminals on Linux
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install Wine for MT5 terminal support
+RUN dpkg --add-architecture i386 && \
+    apt-get update && apt-get install -y --no-install-recommends \
+    wine64 wine32 \
+    xvfb \
+    curl \
+    libpq-dev \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Virtual display for headless MT5 terminals
+ENV DISPLAY=:99
+ENV WINEARCH=win64
+ENV WINEPREFIX=/root/.wine
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+# Start Xvfb + MT5 Manager
+CMD ["sh", "-c", "Xvfb :99 -screen 0 1024x768x16 & python -m mt5_manager.main"]
