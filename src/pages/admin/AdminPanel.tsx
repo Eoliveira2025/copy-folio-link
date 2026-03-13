@@ -485,6 +485,36 @@ const AdminPanel = () => {
             </div>
           </motion.div>
         </TabsContent>
+
+        {/* Settings Tab */}
+        <TabsContent value="settings" className="mt-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card-glass rounded-lg p-6 space-y-6">
+            <h3 className="font-semibold text-lg">{t("admin.publicSettings")}</h3>
+            <div className="space-y-2 max-w-lg">
+              <Label>{t("admin.brokerAffiliateLink")}</Label>
+              <p className="text-xs text-muted-foreground">{t("admin.brokerAffiliateLinkDesc")}</p>
+              <Input
+                type="url"
+                placeholder="https://www.exness.com/a/xxxxx"
+                value={affiliateLink || publicSettings?.affiliate_broker_link || ""}
+                onChange={(e) => setAffiliateLink(e.target.value)}
+                className="bg-secondary border-border"
+              />
+              <Button
+                className="mt-2"
+                disabled={updatePublicSettings.isPending}
+                onClick={() => {
+                  const link = affiliateLink || publicSettings?.affiliate_broker_link || "";
+                  updatePublicSettings.mutate({
+                    affiliate_broker_link: link.trim() || null,
+                  });
+                }}
+              >
+                {updatePublicSettings.isPending ? t("common.loading") : t("common.save")}
+              </Button>
+            </div>
+          </motion.div>
+        </TabsContent>
       </Tabs>
     </div>
   );
