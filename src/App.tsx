@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
+import TermsOfService from "./pages/TermsOfService";
 import { DashboardLayout } from "./components/DashboardLayout";
 import DashboardHome from "./pages/dashboard/DashboardHome";
 import ConnectMT5 from "./pages/dashboard/ConnectMT5";
