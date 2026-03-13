@@ -4,6 +4,7 @@ import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { Bell, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export function DashboardLayout() {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ export function DashboardLayout() {
           <header className="h-14 flex items-center justify-between border-b border-border px-4">
             <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
             <div className="flex items-center gap-2">
+              <LanguageSwitcher />
               <span className="text-sm text-muted-foreground hidden sm:inline">{user?.email}</span>
               <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground relative">
                 <Bell className="w-4 h-4" />

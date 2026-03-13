@@ -15,6 +15,7 @@ class TermsDocument(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     company_name: Mapped[str] = mapped_column(String(255), nullable=False, default="CopyTrade Pro")
+    language: Mapped[str] = mapped_column(String(10), nullable=False, default="en")
     is_active: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

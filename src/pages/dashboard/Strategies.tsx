@@ -1,10 +1,11 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Lock, Check, BarChart3 } from "lucide-react";
+import { Lock, BarChart3 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useStrategies, useSelectStrategy } from "@/hooks/use-api";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "react-i18next";
 
 const riskInfo: Record<string, { risk: string; expectedReturn: string }> = {
   low: { risk: "Low", expectedReturn: "5-10% / month" },
@@ -23,13 +24,22 @@ const riskColors: Record<string, string> = {
   Extreme: "text-danger border-danger/30",
 };
 
+const riskTranslationKeys: Record<string, string> = {
+  Low: "strategies.low",
+  Medium: "strategies.medium",
+  High: "strategies.high",
+  "Very High": "strategies.veryHigh",
+  Extreme: "strategies.extreme",
+};
+
 const Strategies = () => {
+  const { t } = useTranslation();
   const { data: strategies, isLoading } = useStrategies();
   const selectMutation = useSelectStrategy();
 
   const handleSelect = (id: string, available: boolean, locked: boolean) => {
     if (locked && !available) {
-      toast.error("This strategy is locked. Contact admin to unlock.");
+      toast.error(t("strategies.lockedMessage"));
       return;
     }
     selectMutation.mutate(id);
@@ -49,8 +59,8 @@ const Strategies = () => {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-bold">Strategies</h1>
-        <p className="text-muted-foreground text-sm">Choose a copy trading strategy level</p>
+        <h1 className="text-2xl font-bold">{t("strategies.title")}</h1>
+        <p className="text-muted-foreground text-sm">{t("strategies.subtitle")}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -80,15 +90,15 @@ const Strategies = () => {
 
               <div className="space-y-2 text-sm mb-4">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Risk Level</span>
-                  <Badge variant="outline" className={riskColors[info.risk]}>{info.risk}</Badge>
+                  <span className="text-muted-foreground">{t("strategies.riskLevel")}</span>
+                  <Badge variant="outline" className={riskColors[info.risk]}>{t(riskTranslationKeys[info.risk] || "strategies.medium")}</Badge>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Expected Return</span>
+                  <span className="text-muted-foreground">{t("strategies.expectedReturn")}</span>
                   <span className="font-mono text-success">{info.expectedReturn}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Multiplier</span>
+                  <span className="text-muted-foreground">{t("strategies.multiplier")}</span>
                   <span className="font-mono">{s.risk_multiplier}x</span>
                 </div>
               </div>
@@ -99,7 +109,7 @@ const Strategies = () => {
                 disabled={isLocked || selectMutation.isPending}
                 onClick={() => handleSelect(s.id, s.is_available, s.requires_unlock)}
               >
-                {isLocked ? "Locked" : "Select"}
+                {isLocked ? t("strategies.locked") : t("strategies.select")}
               </Button>
             </motion.div>
           );

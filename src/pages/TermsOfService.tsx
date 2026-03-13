@@ -5,8 +5,10 @@ import { motion } from "framer-motion";
 import { api } from "@/lib/api";
 import type { TermsPublic } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "react-i18next";
 
 const TermsOfService = () => {
+  const { t } = useTranslation();
   const [terms, setTerms] = useState<TermsPublic | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -14,9 +16,9 @@ const TermsOfService = () => {
   useEffect(() => {
     api.getActiveTerms()
       .then(setTerms)
-      .catch((err) => setError(err.message || "Failed to load terms"))
+      .catch((err) => setError(err.message || t("terms.failedLoad")))
       .finally(() => setLoading(false));
-  }, []);
+  }, [t]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -25,7 +27,7 @@ const TermsOfService = () => {
           <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
             <TrendingUp className="w-6 h-6 text-primary-foreground" />
           </div>
-          <span className="text-2xl font-bold">CopyTrade Pro</span>
+          <span className="text-2xl font-bold">{t("common.appName")}</span>
         </Link>
 
         {loading ? (
@@ -42,11 +44,8 @@ const TermsOfService = () => {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <h1 className="text-3xl font-bold mb-2">{terms.title}</h1>
             <p className="text-sm text-muted-foreground mb-8">
-              Version {terms.version} · {terms.company_name} · Last updated{" "}
-              {new Date(terms.updated_at).toLocaleDateString("en-US", {
-                month: "long",
-                day: "numeric",
-                year: "numeric",
+              {t("common.version")} {terms.version} · {terms.company_name} · {new Date(terms.updated_at).toLocaleDateString("en-US", {
+                month: "long", day: "numeric", year: "numeric",
               })}
             </p>
             <div

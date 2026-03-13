@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AlertTriangle, Shield, DollarSign, TrendingDown, Activity, RotateCcw } from "lucide-react";
 import { motion } from "framer-motion";
 import { StatCard } from "@/components/StatCard";
+import { useTranslation } from "react-i18next";
 import {
   useAdminRiskSettings,
   useAdminRiskStatus,
@@ -17,6 +18,7 @@ import {
 } from "@/hooks/use-api";
 
 export function RiskProtectionTab() {
+  const { t } = useTranslation();
   const { data: riskSettings, isLoading: settingsLoading } = useAdminRiskSettings();
   const { data: riskStatus, isLoading: statusLoading } = useAdminRiskStatus();
   const { data: incidents, isLoading: incidentsLoading } = useAdminRiskIncidents();
@@ -26,7 +28,6 @@ export function RiskProtectionTab() {
   const [maxDrawdown, setMaxDrawdown] = useState<string>("");
   const [protectionEnabled, setProtectionEnabled] = useState<boolean | null>(null);
 
-  // Sync local state from fetched settings
   const currentMaxDD = maxDrawdown || String(riskSettings?.global_max_drawdown_percent ?? 50);
   const currentEnabled = protectionEnabled ?? riskSettings?.protection_enabled ?? true;
 
@@ -48,10 +49,9 @@ export function RiskProtectionTab() {
 
   return (
     <div className="space-y-6">
-      {/* ── Live Status ── */}
       <div>
         <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-          <Activity className="w-5 h-5 text-primary" /> Live Risk Status
+          <Activity className="w-5 h-5 text-primary" /> {t("risk.liveStatus")}
         </h3>
         {statusLoading ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -60,34 +60,12 @@ export function RiskProtectionTab() {
         ) : riskStatus ? (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard
-                title="Total Balance"
-                value={formatCurrency(riskStatus.total_balance)}
-                icon={DollarSign}
-                delay={0}
-              />
-              <StatCard
-                title="Total Equity"
-                value={formatCurrency(riskStatus.total_equity)}
-                icon={TrendingDown}
-                delay={0.05}
-              />
-              <StatCard
-                title="Drawdown"
-                value={`${riskStatus.current_drawdown_percent}%`}
-                icon={AlertTriangle}
-                trend={riskStatus.current_drawdown_percent >= 20 ? "down" : "neutral"}
-                delay={0.1}
-              />
-              <StatCard
-                title="Accounts"
-                value={String(riskStatus.account_count)}
-                icon={Shield}
-                delay={0.15}
-              />
+              <StatCard title={t("risk.totalBalance")} value={formatCurrency(riskStatus.total_balance)} icon={DollarSign} delay={0} />
+              <StatCard title={t("risk.totalEquity")} value={formatCurrency(riskStatus.total_equity)} icon={TrendingDown} delay={0.05} />
+              <StatCard title={t("risk.drawdown")} value={`${riskStatus.current_drawdown_percent}%`} icon={AlertTriangle} trend={riskStatus.current_drawdown_percent >= 20 ? "down" : "neutral"} delay={0.1} />
+              <StatCard title={t("risk.accounts")} value={String(riskStatus.account_count)} icon={Shield} delay={0.15} />
             </div>
 
-            {/* Emergency Banner */}
             {riskStatus.emergency_active && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
@@ -97,8 +75,8 @@ export function RiskProtectionTab() {
                 <div className="flex items-center gap-3">
                   <AlertTriangle className="w-6 h-6 text-danger animate-pulse" />
                   <div>
-                    <p className="font-bold text-danger">⚠ EMERGENCY STOP ACTIVE</p>
-                    <p className="text-sm text-muted-foreground">All trading has been halted. Review and reset when safe.</p>
+                    <p className="font-bold text-danger">{t("risk.emergencyActive")}</p>
+                    <p className="text-sm text-muted-foreground">{t("risk.emergencyDescription")}</p>
                   </div>
                 </div>
                 <Button
@@ -108,15 +86,14 @@ export function RiskProtectionTab() {
                   className="gap-2"
                 >
                   <RotateCcw className="w-4 h-4" />
-                  {resetEmergency.isPending ? "Resetting..." : "Reset Emergency"}
+                  {resetEmergency.isPending ? t("risk.resetting") : t("risk.resetEmergency")}
                 </Button>
               </motion.div>
             )}
 
-            {/* Drawdown Progress Bar */}
             <div className="mt-4 card-glass rounded-lg p-4">
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-muted-foreground">Current Drawdown</span>
+                <span className="text-muted-foreground">{t("risk.currentDrawdown")}</span>
                 <span className={drawdownColor(riskStatus.current_drawdown_percent)}>
                   {riskStatus.current_drawdown_percent}% / {riskStatus.max_drawdown_percent}%
                 </span>
@@ -143,10 +120,9 @@ export function RiskProtectionTab() {
         ) : null}
       </div>
 
-      {/* ── Configuration ── */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card-glass rounded-lg p-6 space-y-5">
         <h3 className="font-semibold text-lg flex items-center gap-2">
-          <Shield className="w-5 h-5 text-primary" /> Global Risk Protection
+          <Shield className="w-5 h-5 text-primary" /> {t("risk.globalProtection")}
         </h3>
 
         {settingsLoading ? (
@@ -155,48 +131,28 @@ export function RiskProtectionTab() {
           <>
             <div className="flex items-center justify-between">
               <div>
-                <Label className="text-base">Enable Protection</Label>
-                <p className="text-sm text-muted-foreground">
-                  Automatically close all trades when drawdown threshold is breached
-                </p>
+                <Label className="text-base">{t("risk.enableProtection")}</Label>
+                <p className="text-sm text-muted-foreground">{t("risk.enableProtectionDesc")}</p>
               </div>
-              <Switch
-                checked={currentEnabled}
-                onCheckedChange={(v) => setProtectionEnabled(v)}
-              />
+              <Switch checked={currentEnabled} onCheckedChange={(v) => setProtectionEnabled(v)} />
             </div>
 
             <div className="space-y-2 max-w-xs">
-              <Label>Global Max Loss (%)</Label>
-              <Input
-                type="number"
-                min={1}
-                max={100}
-                value={currentMaxDD}
-                onChange={(e) => setMaxDrawdown(e.target.value)}
-                className="bg-secondary"
-                placeholder="50"
-              />
-              <p className="text-xs text-muted-foreground">
-                Emergency will trigger when total equity loss reaches this percentage
-              </p>
+              <Label>{t("risk.globalMaxLoss")}</Label>
+              <Input type="number" min={1} max={100} value={currentMaxDD} onChange={(e) => setMaxDrawdown(e.target.value)} className="bg-secondary" placeholder="50" />
+              <p className="text-xs text-muted-foreground">{t("risk.maxLossDescription")}</p>
             </div>
 
-            <Button
-              onClick={handleSave}
-              disabled={updateSettings.isPending}
-              className="w-full sm:w-auto"
-            >
-              {updateSettings.isPending ? "Saving..." : "Save Protection Settings"}
+            <Button onClick={handleSave} disabled={updateSettings.isPending} className="w-full sm:w-auto">
+              {updateSettings.isPending ? t("risk.saving") : t("risk.saveSettings")}
             </Button>
           </>
         )}
       </motion.div>
 
-      {/* ── Incident Log ── */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card-glass rounded-lg p-6 space-y-4">
         <h3 className="font-semibold text-lg flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 text-warning" /> Incident History
+          <AlertTriangle className="w-5 h-5 text-warning" /> {t("risk.incidentHistory")}
         </h3>
 
         {incidentsLoading ? (
@@ -206,11 +162,11 @@ export function RiskProtectionTab() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-muted-foreground text-left border-b border-border bg-muted/30">
-                  <th className="p-3 font-medium">Date</th>
-                  <th className="p-3 font-medium">Type</th>
-                  <th className="p-3 font-medium">Drawdown</th>
-                  <th className="p-3 font-medium">Balance</th>
-                  <th className="p-3 font-medium">Equity</th>
+                  <th className="p-3 font-medium">{t("risk.dateCol")}</th>
+                  <th className="p-3 font-medium">{t("risk.type")}</th>
+                  <th className="p-3 font-medium">{t("risk.drawdownCol")}</th>
+                  <th className="p-3 font-medium">{t("risk.balanceCol")}</th>
+                  <th className="p-3 font-medium">{t("risk.equityCol")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -236,9 +192,7 @@ export function RiskProtectionTab() {
             </table>
           </div>
         ) : (
-          <div className="p-6 text-center text-muted-foreground">
-            No risk incidents recorded. System operating normally.
-          </div>
+          <div className="p-6 text-center text-muted-foreground">{t("risk.noIncidents")}</div>
         )}
       </motion.div>
     </div>
