@@ -35,6 +35,9 @@ import {
   ArrowUpCircle,
   Check,
   X,
+  Scale,
+  Power,
+  Eye,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
