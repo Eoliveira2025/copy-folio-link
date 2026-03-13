@@ -30,12 +30,6 @@ class EngineSettings(BaseSettings):
 
     # ── Workers ───────────────────────────────────────────────────
     WORKER_COUNT: int = 64  # Parallel execution workers (env: COPY_ENGINE_WORKERS)
-
-    class Config:
-        env_file = ".env"
-        fields = {
-            "WORKER_COUNT": {"env": ["COPY_ENGINE_WORKERS", "WORKER_COUNT"]},
-        }
     DISTRIBUTOR_THREAD_POOL_SIZE: int = 16  # Concurrent fan-out threads
     EXECUTOR_BATCH_SIZE: int = 10  # Process up to N orders per batch pop
 
@@ -54,7 +48,11 @@ class EngineSettings(BaseSettings):
     REDIS_SOCKET_TIMEOUT: int = 5
     REDIS_CONNECTION_POOL_SIZE: int = 50
 
-    # Note: Config class defined above with WORKER_COUNT env alias
+    class Config:
+        env_file = ".env"
+        fields = {
+            "WORKER_COUNT": {"env": ["COPY_ENGINE_WORKERS", "WORKER_COUNT"]},
+        }
 
 
 @lru_cache()

@@ -1,10 +1,13 @@
 """Billing endpoints with plan-aware subscription, upgrade requests, and full payment gateway integration."""
 
+import logging
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+
+logger = logging.getLogger("app.billing")
 
 from app.core.database import get_db
 from app.api.deps import get_current_user
