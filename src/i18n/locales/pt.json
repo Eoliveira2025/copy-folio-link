@@ -63,7 +63,16 @@
     "passwordMinPlaceholder": "Mínimo 8 caracteres",
     "repeatPassword": "Repetir senha",
     "currentPassword": "Senha Atual",
-    "newPassword": "Nova Senha"
+    "newPassword": "Nova Senha",
+    "passwordResetSuccess": "Senha redefinida com sucesso!",
+    "resetFailed": "Falha ao redefinir senha",
+    "invalidResetLink": "Link Inválido",
+    "invalidResetLinkDesc": "Este link de redefinição é inválido ou expirou.",
+    "requestNewLink": "Solicitar Novo Link",
+    "passwordResetDone": "Senha Atualizada",
+    "passwordResetDoneDesc": "Sua senha foi redefinida. Agora você pode entrar com sua nova senha.",
+    "setNewPassword": "Definir Nova Senha",
+    "setNewPasswordDesc": "Digite sua nova senha abaixo"
   },
   "nav": {
     "menu": "Menu",

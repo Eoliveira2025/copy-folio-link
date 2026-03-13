@@ -63,7 +63,16 @@
     "passwordMinPlaceholder": "Min 8 characters",
     "repeatPassword": "Repeat password",
     "currentPassword": "Current Password",
-    "newPassword": "New Password"
+    "newPassword": "New Password",
+    "passwordResetSuccess": "Password reset successfully!",
+    "resetFailed": "Password reset failed",
+    "invalidResetLink": "Invalid Reset Link",
+    "invalidResetLinkDesc": "This password reset link is invalid or has expired.",
+    "requestNewLink": "Request New Link",
+    "passwordResetDone": "Password Updated",
+    "passwordResetDoneDesc": "Your password has been reset. You can now sign in with your new password.",
+    "setNewPassword": "Set New Password",
+    "setNewPasswordDesc": "Enter your new password below"
   },
   "nav": {
     "menu": "Menu",
