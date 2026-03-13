@@ -424,3 +424,112 @@ async def user_payment_history(
         }
         for i in invoices
     ]
+
+
+# ── Upgrade Requests ────────────────────────────────────
+
+@router.get("/upgrade-requests")
+async def list_upgrade_requests(
+    status: str = Query("", description="Filter by status: pending, approved, rejected"),
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(UpgradeRequest).order_by(UpgradeRequest.created_at.desc())
+    if status:
+        query = query.where(UpgradeRequest.status == UpgradeRequestStatus(status))
+    result = await db.execute(query.limit(100))
+    requests = result.scalars().all()
+
+    response = []
+    for r in requests:
+        user_result = await db.execute(select(User).where(User.id == r.user_id))
+        user = user_result.scalar_one_or_none()
+        current_name = None
+        target_name = None
+        target_price = None
+        if r.current_plan_id:
+            cp = await db.execute(select(Plan).where(Plan.id == r.current_plan_id))
+            p = cp.scalar_one_or_none()
+            current_name = p.name if p else None
+        if r.target_plan_id:
+            tp = await db.execute(select(Plan).where(Plan.id == r.target_plan_id))
+            p = tp.scalar_one_or_none()
+            if p:
+                target_name = p.name
+                target_price = p.price
+        response.append(UpgradeRequestResponse(
+            id=r.id, user_id=r.user_id,
+            user_email=user.email if user else "unknown",
+            current_plan_name=current_name, target_plan_name=target_name,
+            target_plan_price=target_price, mt5_balance=r.mt5_balance,
+            status=r.status.value, admin_note=r.admin_note,
+            created_at=r.created_at, resolved_at=r.resolved_at,
+        ))
+    return response
+
+
+@router.post("/upgrade-requests/{request_id}")
+async def handle_upgrade_request(
+    request_id: str,
+    body: UpgradeRequestAction,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Approve or reject an upgrade request."""
+    result = await db.execute(select(UpgradeRequest).where(UpgradeRequest.id == request_id))
+    req = result.scalar_one_or_none()
+    if not req:
+        raise HTTPException(status_code=404, detail="Upgrade request not found")
+    if req.status != UpgradeRequestStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Request already processed")
+
+    now = datetime.now(timezone.utc)
+    req.resolved_at = now
+    req.admin_note = body.note
+
+    if body.action == "reject":
+        req.status = UpgradeRequestStatus.REJECTED
+        await db.commit()
+        return {"message": "Upgrade request rejected"}
+
+    if body.action != "approve":
+        raise HTTPException(status_code=400, detail="Action must be 'approve' or 'reject'")
+
+    # ── Approve: update plan, create invoice, switch strategy ──
+    req.status = UpgradeRequestStatus.APPROVED
+
+    # Get target plan
+    target_result = await db.execute(select(Plan).where(Plan.id == req.target_plan_id))
+    target_plan = target_result.scalar_one_or_none()
+    if not target_plan:
+        raise HTTPException(status_code=404, detail="Target plan no longer exists")
+
+    # Update subscription
+    sub_result = await db.execute(
+        select(Subscription).where(Subscription.user_id == req.user_id).order_by(Subscription.created_at.desc())
+    )
+    sub = sub_result.scalar_one_or_none()
+    if not sub:
+        raise HTTPException(status_code=404, detail="User has no subscription")
+
+    sub.plan_id = target_plan.id
+    sub.status = SubscriptionStatus.ACTIVE
+    sub.current_period_start = now
+    sub.current_period_end = now + timedelta(days=30)
+
+    # Generate invoice for new plan starting immediately
+    invoice = Invoice(
+        subscription_id=sub.id,
+        amount=target_plan.price,
+        currency="USD",
+        status=InvoiceStatus.PENDING,
+        issue_date=now,
+        due_date=now + timedelta(days=5),
+    )
+    db.add(invoice)
+
+    await db.commit()
+    return {
+        "message": f"Upgrade approved. User moved to '{target_plan.name}'. Invoice of ${target_plan.price} generated.",
+        "invoice_id": str(invoice.id),
+    }
