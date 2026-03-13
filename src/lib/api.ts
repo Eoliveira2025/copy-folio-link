@@ -360,6 +360,18 @@ class ApiClient {
     return this.request<AdminTermsDetail>(`/admin/terms/${termsId}/content`);
   }
 
+  // ── Public Settings (no auth) ─────────────────────────
+  async getPublicSettings() {
+    return this.request<PublicSettings>("/admin/settings/public");
+  }
+
+  async adminUpdatePublicSettings(data: { affiliate_broker_link: string | null }) {
+    return this.request<PublicSettings>("/admin/settings/public", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
   // ── Admin Operations ─────────────────────────────────
   async adminGetOperations() {
     return this.request<OperationsDashboard>("/admin/operations");
@@ -641,6 +653,11 @@ export interface RiskIncident {
   total_balance: number;
   total_equity: number;
   created_at: string;
+}
+
+// ── Public Settings Types ──────────────────────────────
+export interface PublicSettings {
+  affiliate_broker_link: string | null;
 }
 
 // ── Operations Types ──────────────────────────────────

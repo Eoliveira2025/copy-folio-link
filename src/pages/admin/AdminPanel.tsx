@@ -12,7 +12,7 @@ import {
 import {
   Search, RefreshCw, Users, BarChart3, Server, Shield, CreditCard,
   FileText, Package, Plus, Pencil, Trash2, ArrowUpDown, AlertTriangle,
-  ArrowUpCircle, Check, X, Scale, Power, Eye,
+  ArrowUpCircle, Check, X, Scale, Power, Eye, Settings,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,6 +26,7 @@ import {
   useAdminChangeUserPlan, useAdminSubscriptions, useAdminInvoices,
   useAdminUpgradeRequests, useAdminHandleUpgradeRequest,
   useAdminTerms, useAdminCreateTerms, useAdminUpdateTerms, useAdminActivateTerms,
+  usePublicSettings, useAdminUpdatePublicSettings,
 } from "@/hooks/use-api";
 import { StatCard } from "@/components/StatCard";
 import type { AdminPlan, CreatePlanData, AdminTermsItem } from "@/lib/api";
@@ -147,6 +148,9 @@ const AdminPanel = () => {
   const createTerms = useAdminCreateTerms();
   const updateTerms = useAdminUpdateTerms();
   const activateTerms = useAdminActivateTerms();
+  const { data: publicSettings } = usePublicSettings();
+  const updatePublicSettings = useAdminUpdatePublicSettings();
+  const [affiliateLink, setAffiliateLink] = useState("");
 
   const handleSearch = (val: string) => { setSearch(val); setTimeout(() => setDebouncedSearch(val), 300); };
 
@@ -189,6 +193,7 @@ const AdminPanel = () => {
           <TabsTrigger value="risk" className="gap-2"><AlertTriangle className="w-4 h-4" /> {t("admin.risk")}</TabsTrigger>
           <TabsTrigger value="legal" className="gap-2"><Scale className="w-4 h-4" /> {t("admin.legal")}</TabsTrigger>
           <TabsTrigger value="servers" className="gap-2"><Server className="w-4 h-4" /> {t("admin.servers")}</TabsTrigger>
+          <TabsTrigger value="settings" className="gap-2"><Settings className="w-4 h-4" /> {t("settings.title")}</TabsTrigger>
         </TabsList>
 
         {/* Users Tab */}
@@ -477,6 +482,36 @@ const AdminPanel = () => {
                   <Badge className="bg-success/15 text-success border-success/30 hover:bg-success/15">{t("common.active")}</Badge>
                 </div>
               ))}
+            </div>
+          </motion.div>
+        </TabsContent>
+
+        {/* Settings Tab */}
+        <TabsContent value="settings" className="mt-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card-glass rounded-lg p-6 space-y-6">
+            <h3 className="font-semibold text-lg">{t("admin.publicSettings")}</h3>
+            <div className="space-y-2 max-w-lg">
+              <Label>{t("admin.brokerAffiliateLink")}</Label>
+              <p className="text-xs text-muted-foreground">{t("admin.brokerAffiliateLinkDesc")}</p>
+              <Input
+                type="url"
+                placeholder="https://www.exness.com/a/xxxxx"
+                value={affiliateLink || publicSettings?.affiliate_broker_link || ""}
+                onChange={(e) => setAffiliateLink(e.target.value)}
+                className="bg-secondary border-border"
+              />
+              <Button
+                className="mt-2"
+                disabled={updatePublicSettings.isPending}
+                onClick={() => {
+                  const link = affiliateLink || publicSettings?.affiliate_broker_link || "";
+                  updatePublicSettings.mutate({
+                    affiliate_broker_link: link.trim() || null,
+                  });
+                }}
+              >
+                {updatePublicSettings.isPending ? t("common.loading") : t("common.save")}
+              </Button>
             </div>
           </motion.div>
         </TabsContent>
