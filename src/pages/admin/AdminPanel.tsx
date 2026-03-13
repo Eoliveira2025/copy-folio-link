@@ -58,6 +58,10 @@ import {
   useAdminInvoices,
   useAdminUpgradeRequests,
   useAdminHandleUpgradeRequest,
+  useAdminTerms,
+  useAdminCreateTerms,
+  useAdminUpdateTerms,
+  useAdminActivateTerms,
 } from "@/hooks/use-api";
 import { StatCard } from "@/components/StatCard";
 import type { AdminPlan, CreatePlanData } from "@/lib/api";
