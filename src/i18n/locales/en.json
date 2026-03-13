@@ -83,7 +83,8 @@
     "settings": "Settings",
     "admin": "Admin",
     "adminPanel": "Admin Panel",
-    "engineActive": "v1.0.0 · Copy Engine Active"
+    "engineActive": "v1.0.0 · Copy Engine Active",
+    "operations": "Operations"
   },
   "dashboard": {
     "title": "Dashboard",

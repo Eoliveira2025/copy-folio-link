@@ -83,7 +83,8 @@
     "settings": "Configurações",
     "admin": "Admin",
     "adminPanel": "Painel Admin",
-    "engineActive": "v1.0.0 · Motor de Cópia Ativo"
+    "engineActive": "v1.0.0 · Motor de Cópia Ativo",
+    "operations": "Operações"
   },
   "dashboard": {
     "title": "Painel",
