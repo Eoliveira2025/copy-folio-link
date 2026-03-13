@@ -66,10 +66,12 @@ def check_payments():
         checked = 0
         paid = 0
 
+        loop = asyncio.new_event_loop()
+
         for invoice in pending:
             try:
                 gateway = get_gateway(invoice.provider.value)
-                result = asyncio.get_event_loop().run_until_complete(
+                result = loop.run_until_complete(
                     gateway.check_status(invoice.external_id)
                 )
                 checked += 1
