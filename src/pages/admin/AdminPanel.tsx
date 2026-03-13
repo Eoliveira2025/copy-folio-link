@@ -64,7 +64,8 @@ import {
   useAdminActivateTerms,
 } from "@/hooks/use-api";
 import { StatCard } from "@/components/StatCard";
-import type { AdminPlan, CreatePlanData, AdminTermsItem, CreateTermsData } from "@/lib/api";
+import type { AdminPlan, CreatePlanData, AdminTermsItem } from "@/lib/api";
+import { api } from "@/lib/api";
 
 const statusStyle: Record<string, string> = {
   active: "bg-success/15 text-success border-success/30 hover:bg-success/15",
