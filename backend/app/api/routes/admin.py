@@ -1,6 +1,6 @@
-"""Admin endpoints: user management, plan management, subscriptions, invoices."""
+"""Admin endpoints: user management, plan management, subscriptions, invoices, upgrade requests."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
@@ -14,7 +14,9 @@ from app.models.strategy import Strategy, UserStrategy, MasterAccount, LOCKED_ST
 from app.models.plan import Plan
 from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.invoice import Invoice, InvoiceStatus
+from app.models.upgrade_request import UpgradeRequest, UpgradeRequestStatus
 from app.schemas.plan import PlanCreate, PlanUpdate, PlanResponse, ChangePlanRequest
+from app.schemas.billing import UpgradeRequestResponse, UpgradeRequestAction
 from app.services import copy_engine
 from app.services.payments import get_gateway, GatewayStatus
 
