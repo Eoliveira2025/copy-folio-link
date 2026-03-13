@@ -238,3 +238,24 @@ export function useAdminInvoices(status?: string) {
     queryFn: () => api.adminListInvoices(status),
   });
 }
+
+// ── Admin Upgrade Requests ─────────────────────────
+export function useAdminUpgradeRequests(status?: string) {
+  return useQuery({
+    queryKey: ["admin-upgrade-requests", status],
+    queryFn: () => api.adminListUpgradeRequests(status),
+  });
+}
+
+export function useAdminHandleUpgradeRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { requestId: string; action: "approve" | "reject"; note?: string }) =>
+      api.adminHandleUpgradeRequest(data.requestId, data.action, data.note),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["admin-upgrade-requests"] });
+      toast.success(data.message);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
