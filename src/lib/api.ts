@@ -196,6 +196,21 @@ class ApiClient {
     return this.request<Invoice[]>("/billing/invoices");
   }
 
+  async checkUpgradeEligibility() {
+    return this.request<UpgradeEligibility>("/billing/upgrade-check");
+  }
+
+  async requestUpgrade(targetPlanId: string) {
+    return this.request<{ message: string; request_id: string }>("/billing/upgrade-request", {
+      method: "POST",
+      body: JSON.stringify({ target_plan_id: targetPlanId }),
+    });
+  }
+
+  async myUpgradeRequests() {
+    return this.request<UpgradeRequestItem[]>("/billing/upgrade-requests");
+  }
+
   // ── Admin ─────────────────────────────────────────────
   async adminSearchUsers(query: string = "") {
     return this.request<AdminUser[]>(`/admin/users?q=${encodeURIComponent(query)}`);
@@ -284,6 +299,19 @@ class ApiClient {
   async adminListInvoices(status?: string) {
     const qs = status ? `?status=${encodeURIComponent(status)}` : "";
     return this.request<AdminInvoice[]>(`/admin/invoices${qs}`);
+  }
+
+  // ── Admin Upgrade Requests ────────────────────────────
+  async adminListUpgradeRequests(status?: string) {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+    return this.request<UpgradeRequestItem[]>(`/admin/upgrade-requests${qs}`);
+  }
+
+  async adminHandleUpgradeRequest(requestId: string, action: "approve" | "reject", note?: string) {
+    return this.request<{ message: string }>(`/admin/upgrade-requests/${requestId}`, {
+      method: "POST",
+      body: JSON.stringify({ action, note }),
+    });
   }
 }
 
