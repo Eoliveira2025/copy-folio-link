@@ -14,6 +14,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.models.plan import Plan
 from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.mt5_account import MT5Account, MT5Status
@@ -116,7 +117,10 @@ def check_payments():
 
 @celery_app.task
 def generate_invoices():
-    """Generate invoices for trials ending within INVOICE_GENERATE_BEFORE_DAYS."""
+    """Generate invoices for trials ending within INVOICE_GENERATE_BEFORE_DAYS.
+    
+    Uses plan price when available, falls back to SUBSCRIPTION_PRICE.
+    """
     with Session(engine) as db:
         now = datetime.now(timezone.utc)
         threshold = now + timedelta(days=settings.INVOICE_GENERATE_BEFORE_DAYS)
@@ -137,11 +141,19 @@ def generate_invoices():
             ).scalar_one_or_none()
 
             if not existing:
+                # Determine price from plan or fallback
+                price = settings.SUBSCRIPTION_PRICE
+                currency = settings.SUBSCRIPTION_CURRENCY
+                if sub.plan_id:
+                    plan = db.execute(select(Plan).where(Plan.id == sub.plan_id)).scalar_one_or_none()
+                    if plan:
+                        price = plan.price
+
                 due_date = sub.trial_end + timedelta(days=settings.INVOICE_DUE_AFTER_DAYS)
                 db.add(Invoice(
                     subscription_id=sub.id,
-                    amount=settings.SUBSCRIPTION_PRICE,
-                    currency=settings.SUBSCRIPTION_CURRENCY,
+                    amount=price,
+                    currency=currency,
                     status=InvoiceStatus.PENDING,
                     due_date=due_date,
                 ))

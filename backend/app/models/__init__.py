@@ -3,6 +3,7 @@
 from app.models.user import User
 from app.models.mt5_account import MT5Account
 from app.models.strategy import Strategy, MasterAccount, UserStrategy
+from app.models.plan import Plan
 from app.models.subscription import Subscription
 from app.models.invoice import Invoice, Payment
 from app.models.trade import TradeEvent, TradeCopy
@@ -13,6 +14,7 @@ __all__ = [
     "Strategy",
     "MasterAccount",
     "UserStrategy",
+    "Plan",
     "Subscription",
     "Invoice",
     "Payment",
