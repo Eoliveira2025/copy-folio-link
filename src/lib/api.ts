@@ -313,6 +313,51 @@ class ApiClient {
       body: JSON.stringify({ action, note }),
     });
   }
+
+  // ── Legal / Terms ────────────────────────────────────
+  async getActiveTerms() {
+    return this.request<TermsPublic>("/legal/terms");
+  }
+
+  async acceptTerms(termsId: string) {
+    return this.request<{ message: string; acceptance_id: string }>("/legal/terms/accept", {
+      method: "POST",
+      body: JSON.stringify({ terms_id: termsId }),
+    });
+  }
+
+  async checkTermsAcceptance() {
+    return this.request<TermsCheckResult>("/legal/terms/check");
+  }
+
+  // ── Admin Terms ──────────────────────────────────────
+  async adminListTerms() {
+    return this.request<AdminTermsItem[]>("/admin/terms");
+  }
+
+  async adminCreateTerms(data: CreateTermsData) {
+    return this.request<{ message: string; id: string }>("/admin/terms", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminUpdateTerms(termsId: string, data: UpdateTermsData) {
+    return this.request<{ message: string }>(`/admin/terms/${termsId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminActivateTerms(termsId: string) {
+    return this.request<{ message: string }>(`/admin/terms/${termsId}/activate`, {
+      method: "POST",
+    });
+  }
+
+  async adminGetTermsContent(termsId: string) {
+    return this.request<AdminTermsDetail>(`/admin/terms/${termsId}/content`);
+  }
 }
 
 // ── Error class ───────────────────────────────────────
