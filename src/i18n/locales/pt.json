@@ -63,7 +63,16 @@
     "passwordMinPlaceholder": "Mínimo 8 caracteres",
     "repeatPassword": "Repetir senha",
     "currentPassword": "Senha Atual",
-    "newPassword": "Nova Senha"
+    "newPassword": "Nova Senha",
+    "passwordResetSuccess": "Senha redefinida com sucesso!",
+    "resetFailed": "Falha ao redefinir senha",
+    "invalidResetLink": "Link Inválido",
+    "invalidResetLinkDesc": "Este link de redefinição é inválido ou expirou.",
+    "requestNewLink": "Solicitar Novo Link",
+    "passwordResetDone": "Senha Atualizada",
+    "passwordResetDoneDesc": "Sua senha foi redefinida. Agora você pode entrar com sua nova senha.",
+    "setNewPassword": "Definir Nova Senha",
+    "setNewPasswordDesc": "Digite sua nova senha abaixo"
   },
   "nav": {
     "menu": "Menu",
@@ -74,7 +83,8 @@
     "settings": "Configurações",
     "admin": "Admin",
     "adminPanel": "Painel Admin",
-    "engineActive": "v1.0.0 · Motor de Cópia Ativo"
+    "engineActive": "v1.0.0 · Motor de Cópia Ativo",
+    "operations": "Operações"
   },
   "dashboard": {
     "title": "Painel",
@@ -297,5 +307,30 @@
     "title": "404",
     "message": "Ops! Página não encontrada",
     "returnHome": "Voltar para o Início"
+  },
+  "operations": {
+    "title": "Painel de Operações",
+    "subtitle": "Métricas de saúde do sistema e trading em tempo real",
+    "tradingMetrics": "Métricas de Trading",
+    "connectedMT5": "MT5 Conectados",
+    "masterAccounts": "Contas Master",
+    "copiedToday": "Copiadas Hoje",
+    "failedToday": "Falhas Hoje",
+    "performance": "Performance",
+    "avgLatency": "Latência Média",
+    "dlqPending": "DLQ Pendente",
+    "activeSubs": "Assinaturas Ativas",
+    "overdueInvoices": "Faturas Vencidas",
+    "equityRisk": "Patrimônio & Risco",
+    "serviceHealth": "Saúde dos Serviços",
+    "deadLetterQueue": "Fila de Falhas",
+    "orderId": "ID do Pedido",
+    "symbol": "Símbolo",
+    "action": "Ação",
+    "error": "Erro",
+    "attempts": "Tentativas",
+    "retry": "Retentar",
+    "resolve": "Resolver",
+    "noDLQ": "Nenhuma operação falha na fila. Sistema operando normalmente."
   }
 }

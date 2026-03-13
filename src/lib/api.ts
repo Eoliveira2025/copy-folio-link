@@ -360,6 +360,25 @@ class ApiClient {
     return this.request<AdminTermsDetail>(`/admin/terms/${termsId}/content`);
   }
 
+  // ── Admin Operations ─────────────────────────────────
+  async adminGetOperations() {
+    return this.request<OperationsDashboard>("/admin/operations");
+  }
+
+  // ── Admin Dead Letter Queue ────────────────────────
+  async adminGetDeadLetterTrades(status?: string) {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+    return this.request<DeadLetterTrade[]>(`/admin/dead-letter${qs}`);
+  }
+
+  async adminRetryDeadLetter(tradeId: string) {
+    return this.request<{ message: string }>(`/admin/dead-letter/${tradeId}/retry`, { method: "POST" });
+  }
+
+  async adminResolveDeadLetter(tradeId: string, note: string = "") {
+    return this.request<{ message: string }>(`/admin/dead-letter/${tradeId}/resolve?note=${encodeURIComponent(note)}`, { method: "POST" });
+  }
+
   // ── Admin Risk Protection ───────────────────────────
   async adminGetRiskSettings() {
     return this.request<RiskSettings>("/admin/risk/settings");
@@ -622,6 +641,43 @@ export interface RiskIncident {
   total_balance: number;
   total_equity: number;
   created_at: string;
+}
+
+// ── Operations Types ──────────────────────────────────
+export interface OperationsDashboard {
+  connected_mt5_accounts: number;
+  total_mt5_accounts: number;
+  master_accounts: number;
+  copied_trades_today: number;
+  failed_trades_today: number;
+  avg_latency_ms: number;
+  dlq_pending: number;
+  total_balance: number;
+  total_equity: number;
+  global_drawdown_percent: number;
+  protection_enabled: boolean;
+  emergency_active: boolean;
+  active_subscriptions: number;
+  trial_subscriptions: number;
+  overdue_invoices: number;
+  services: Record<string, string>;
+}
+
+export interface DeadLetterTrade {
+  id: string;
+  order_id: string;
+  symbol: string;
+  action: string;
+  direction: string;
+  volume: number;
+  master_ticket: number;
+  client_mt5_id: string;
+  error_message: string;
+  attempt_count: number;
+  status: string;
+  resolution_note: string | null;
+  created_at: string;
+  resolved_at: string | null;
 }
 
 // Singleton

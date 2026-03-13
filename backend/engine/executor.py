@@ -329,6 +329,18 @@ class ExecutionWorker:
                 order = self.process_order(order)
                 self._orders_processed += 1
 
+                # Push to dead letter queue if failed after all retries
+                if order.status == CopyStatus.FAILED:
+                    try:
+                        dlq_entry = order.to_json()
+                        pipe = self.redis_client.pipeline(transaction=False)
+                        pipe.lpush("copytrade:dead_letter", dlq_entry)
+                        pipe.ltrim("copytrade:dead_letter", 0, 9999)
+                        pipe.execute()
+                        logger.warning(f"[{self.login}] Order {order.order_id[:8]} moved to dead letter queue")
+                    except Exception as dlq_err:
+                        logger.error(f"[{self.login}] Failed to push to DLQ: {dlq_err}")
+
                 # Publish result
                 result_json = order.to_json()
                 pipe = self.redis_client.pipeline(transaction=False)
