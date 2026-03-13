@@ -224,6 +224,12 @@ const AdminPanel = () => {
   const [editingPlan, setEditingPlan] = useState<AdminPlan | undefined>();
   const [changePlanUser, setChangePlanUser] = useState<{ id: string; email: string } | null>(null);
   const [upgradeNote, setUpgradeNote] = useState("");
+  const [termsDialogOpen, setTermsDialogOpen] = useState(false);
+  const [editingTerms, setEditingTerms] = useState<AdminTermsItem | undefined>();
+  const [termsTitle, setTermsTitle] = useState("");
+  const [termsContent, setTermsContent] = useState("");
+  const [termsVersion, setTermsVersion] = useState("1");
+  const [termsCompany, setTermsCompany] = useState("CopyTrade Pro");
 
   const { data: users, isLoading: usersLoading } = useAdminUsers(debouncedSearch);
   const { data: dashboard, isLoading: dashLoading } = useAdminDashboard();
@@ -231,10 +237,14 @@ const AdminPanel = () => {
   const { data: subscriptions, isLoading: subsLoading } = useAdminSubscriptions(subStatusFilter || undefined);
   const { data: invoices, isLoading: invsLoading } = useAdminInvoices(invStatusFilter || undefined);
   const { data: upgradeRequests, isLoading: upgradesLoading } = useAdminUpgradeRequests(upgradeStatusFilter || undefined);
+  const { data: termsDocuments, isLoading: termsLoading } = useAdminTerms();
   const checkPayments = useAdminCheckPayments();
   const unblockUser = useAdminUnblockUser();
   const deletePlan = useAdminDeletePlan();
   const handleUpgrade = useAdminHandleUpgradeRequest();
+  const createTerms = useAdminCreateTerms();
+  const updateTerms = useAdminUpdateTerms();
+  const activateTerms = useAdminActivateTerms();
 
   const handleSearch = (val: string) => {
     setSearch(val);
