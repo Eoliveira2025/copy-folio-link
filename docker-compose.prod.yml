@@ -212,7 +212,7 @@ services:
     command: >
       redis-server
       --maxmemory 512mb
-      --maxmemory-policy allkeys-lru
+      --maxmemory-policy noeviction
       --appendonly yes
       --appendfsync everysec
       --requirepass ${REDIS_PASSWORD}

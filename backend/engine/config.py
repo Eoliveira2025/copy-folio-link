@@ -54,8 +54,7 @@ class EngineSettings(BaseSettings):
     REDIS_SOCKET_TIMEOUT: int = 5
     REDIS_CONNECTION_POOL_SIZE: int = 50
 
-    class Config:
-        env_file = ".env"
+    # Note: Config class defined above with WORKER_COUNT env alias
 
 
 @lru_cache()

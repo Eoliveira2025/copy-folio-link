@@ -280,6 +280,11 @@ async def _process_gateway_webhook(provider: PaymentProvider, request: Request, 
         inv = await db.execute(select(Invoice).where(Invoice.external_id == result.gateway_id))
         invoice = inv.scalar_one_or_none()
         if invoice:
+            # Idempotency: skip if already paid
+            if invoice.status == InvoiceStatus.PAID:
+                logger.info(f"Duplicate webhook ignored for invoice {invoice.id} (already paid)")
+                return {"status": "ok", "note": "already_paid"}
+
             db.add(Payment(
                 invoice_id=invoice.id,
                 provider=provider,
