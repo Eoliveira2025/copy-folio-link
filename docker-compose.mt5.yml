@@ -1,0 +1,62 @@
+version: "3.9"
+
+# ═══════════════════════════════════════════════════════════════
+# MT5 EXECUTION SERVICES
+# Deploy separately on a Windows VPS or Linux host with Wine.
+# Connects to the same PostgreSQL and Redis as the Linux stack.
+#
+# Required env vars:
+#   DATABASE_URL_SYNC  — points to production PostgreSQL
+#   REDIS_URL          — points to production Redis
+#   MT5_CREDENTIAL_KEY — encryption key for MT5 credentials
+# ═══════════════════════════════════════════════════════════════
+
+services:
+  # ═══════════════════════════════════════════════════════
+  # COPY TRADING ENGINE (requires MT5 API)
+  # ═══════════════════════════════════════════════════════
+  copy-engine:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.mt5
+    container_name: ct-engine
+    restart: always
+    command: ["sh", "-c", "Xvfb :99 -screen 0 1024x768x16 & sleep 2 && python -m engine.main"]
+    env_file: .env.mt5
+    environment:
+      - DATABASE_URL_SYNC=${DATABASE_URL_SYNC}
+      - REDIS_URL=${REDIS_URL}
+    volumes:
+      - engine_logs:/app/logs
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+
+  # ═══════════════════════════════════════════════════════
+  # MT5 TERMINAL MANAGER (requires MT5 API)
+  # ═══════════════════════════════════════════════════════
+  mt5-manager:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.mt5
+    container_name: ct-mt5
+    restart: always
+    env_file: .env.mt5
+    environment:
+      - DATABASE_URL_SYNC=${DATABASE_URL_SYNC}
+      - REDIS_URL=${REDIS_URL}
+    volumes:
+      - mt5_data:/root/.wine
+      - mt5_logs:/app/logs
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4G
+
+volumes:
+  engine_logs:
+  mt5_data:
+  mt5_logs:

@@ -1,0 +1,4 @@
+# MT5-dependent services (copy-engine, mt5-manager)
+# Install ON TOP of base requirements.txt
+# Requires Windows or Wine+Xvfb on Linux
+MetaTrader5==5.0.4230
