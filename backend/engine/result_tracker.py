@@ -3,14 +3,12 @@ Result Tracker — consumes execution results with full latency data
 and persists to DB for audit trail and dashboard.
 """
 
-import time
-
 from __future__ import annotations
 import logging
+import time
 import threading
-import json
 import redis
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 
@@ -36,7 +34,6 @@ class ResultTracker(threading.Thread):
     def _persist_result(self, order: CopyOrder):
         """Write copy result with latency data."""
         with Session(self.db_engine) as db:
-            from sqlalchemy import text
             db.execute(text("""
                 INSERT INTO trade_copies (
                     id, trade_event_id, mt5_account_id, client_ticket,
@@ -68,29 +65,51 @@ class ResultTracker(threading.Thread):
             db.commit()
 
     def run(self):
+        """Subscribe to results with auto-reconnect on Redis failure."""
         self.running = True
-        pubsub = self.redis_client.pubsub()
-        pubsub.subscribe("copytrade:results")
-
         logger.info("Result Tracker started")
 
-        for message in pubsub.listen():
-            if not self.running:
-                break
-            if message["type"] != "message":
-                continue
-
+        while self.running:
+            pubsub = None
             try:
-                order = CopyOrder.from_json(message["data"])
-                self._persist_result(order)
+                pubsub = self.redis_client.pubsub()
+                pubsub.subscribe("copytrade:results")
 
-                if order.latency_total_ms > 0:
-                    logger.info(
-                        f"Result: {order.order_id[:8]} {order.status.value} "
-                        f"total={order.latency_total_ms:.1f}ms slip={order.slippage_points:.1f}pts"
-                    )
+                for message in pubsub.listen():
+                    if not self.running:
+                        break
+                    if message["type"] != "message":
+                        continue
+
+                    try:
+                        order = CopyOrder.from_json(message["data"])
+                        self._persist_result(order)
+
+                        if order.latency_total_ms > 0:
+                            logger.info(
+                                f"Result: {order.order_id[:8]} {order.status.value} "
+                                f"total={order.latency_total_ms:.1f}ms slip={order.slippage_points:.1f}pts"
+                            )
+                    except Exception as e:
+                        logger.error(f"Error persisting result: {e}", exc_info=True)
+
+            except redis.ConnectionError as e:
+                logger.warning(f"Redis connection lost in ResultTracker: {e}. Reconnecting in 1s...")
+                time.sleep(1)
+                try:
+                    self.redis_client = redis.from_url(settings.REDIS_URL)
+                except Exception:
+                    pass
             except Exception as e:
-                logger.error(f"Error persisting result: {e}", exc_info=True)
+                if self.running:
+                    logger.error(f"ResultTracker unexpected error: {e}", exc_info=True)
+                    time.sleep(1)
+            finally:
+                if pubsub:
+                    try:
+                        pubsub.close()
+                    except Exception:
+                        pass
 
     def stop(self):
         self.running = False
