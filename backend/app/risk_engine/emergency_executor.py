@@ -43,12 +43,18 @@ class EmergencyExecutor:
     def execute_emergency_close(cls):
         """
         Close all open trades on all connected MT5 accounts.
-        Non-blocking — dispatches commands via Redis.
+        Non-blocking, idempotent — uses Redis SETNX to prevent duplicate execution.
         """
+        r = cls._get_redis()
+
+        # Idempotency guard: only one emergency close per incident
+        if not r.set("copytrade:emergency_close_lock", "1", nx=True, ex=300):
+            logger.warning("Emergency close already in progress — skipping duplicate")
+            return
+
         logger.critical("Executing EMERGENCY CLOSE on all accounts")
 
         engine = cls._get_db()
-        r = cls._get_redis()
 
         # 1. Fetch all connected MT5 accounts
         with Session(engine) as db:
