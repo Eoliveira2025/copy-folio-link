@@ -210,3 +210,56 @@ async def reset_emergency(
 
     logger.info("Emergency state reset by admin — trading re-enabled")
     return {"message": "Emergency state cleared, trading re-enabled"}
+
+
+# ── Public Settings (no auth) ──────────────────────────
+
+@router.get("/settings/public")
+async def get_public_settings(db: AsyncSession = Depends(get_db)):
+    """Public settings accessible without auth (e.g. affiliate link)."""
+    result = await db.execute(
+        select(SystemSettings).order_by(desc(SystemSettings.created_at)).limit(1)
+    )
+    settings = result.scalar_one_or_none()
+    return {
+        "affiliate_broker_link": settings.affiliate_broker_link if settings else None,
+    }
+
+
+# ── Admin Public Settings ──────────────────────────────
+
+class PublicSettingsUpdate(BaseModel):
+    affiliate_broker_link: str | None = None
+
+
+@router.put("/settings/public")
+async def update_public_settings(
+    body: PublicSettingsUpdate,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update public settings (affiliate link, etc.)."""
+    # Validate URL if provided
+    if body.affiliate_broker_link:
+        import re
+        url_pattern = re.compile(r'^https?://[^\s<>"{}|\\^`\[\]]+$')
+        if not url_pattern.match(body.affiliate_broker_link):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail="Invalid URL format")
+
+    result = await db.execute(
+        select(SystemSettings).order_by(desc(SystemSettings.created_at)).limit(1)
+    )
+    settings = result.scalar_one_or_none()
+    if not settings:
+        settings = SystemSettings()
+        db.add(settings)
+
+    settings.affiliate_broker_link = body.affiliate_broker_link
+    settings.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(settings)
+
+    return {
+        "affiliate_broker_link": settings.affiliate_broker_link,
+    }

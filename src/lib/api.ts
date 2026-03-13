@@ -360,6 +360,18 @@ class ApiClient {
     return this.request<AdminTermsDetail>(`/admin/terms/${termsId}/content`);
   }
 
+  // ── Public Settings (no auth) ─────────────────────────
+  async getPublicSettings() {
+    return this.request<PublicSettings>("/admin/settings/public");
+  }
+
+  async adminUpdatePublicSettings(data: { affiliate_broker_link: string | null }) {
+    return this.request<PublicSettings>("/admin/settings/public", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
   // ── Admin Operations ─────────────────────────────────
   async adminGetOperations() {
     return this.request<OperationsDashboard>("/admin/operations");
