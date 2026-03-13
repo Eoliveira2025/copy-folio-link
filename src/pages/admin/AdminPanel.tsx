@@ -35,6 +35,9 @@ import {
   ArrowUpCircle,
   Check,
   X,
+  Scale,
+  Power,
+  Eye,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -55,9 +58,14 @@ import {
   useAdminInvoices,
   useAdminUpgradeRequests,
   useAdminHandleUpgradeRequest,
+  useAdminTerms,
+  useAdminCreateTerms,
+  useAdminUpdateTerms,
+  useAdminActivateTerms,
 } from "@/hooks/use-api";
 import { StatCard } from "@/components/StatCard";
-import type { AdminPlan, CreatePlanData } from "@/lib/api";
+import type { AdminPlan, CreatePlanData, AdminTermsItem } from "@/lib/api";
+import { api } from "@/lib/api";
 
 const statusStyle: Record<string, string> = {
   active: "bg-success/15 text-success border-success/30 hover:bg-success/15",
@@ -217,6 +225,12 @@ const AdminPanel = () => {
   const [editingPlan, setEditingPlan] = useState<AdminPlan | undefined>();
   const [changePlanUser, setChangePlanUser] = useState<{ id: string; email: string } | null>(null);
   const [upgradeNote, setUpgradeNote] = useState("");
+  const [termsDialogOpen, setTermsDialogOpen] = useState(false);
+  const [editingTerms, setEditingTerms] = useState<AdminTermsItem | undefined>();
+  const [termsTitle, setTermsTitle] = useState("");
+  const [termsContent, setTermsContent] = useState("");
+  const [termsVersion, setTermsVersion] = useState("1");
+  const [termsCompany, setTermsCompany] = useState("CopyTrade Pro");
 
   const { data: users, isLoading: usersLoading } = useAdminUsers(debouncedSearch);
   const { data: dashboard, isLoading: dashLoading } = useAdminDashboard();
@@ -224,10 +238,14 @@ const AdminPanel = () => {
   const { data: subscriptions, isLoading: subsLoading } = useAdminSubscriptions(subStatusFilter || undefined);
   const { data: invoices, isLoading: invsLoading } = useAdminInvoices(invStatusFilter || undefined);
   const { data: upgradeRequests, isLoading: upgradesLoading } = useAdminUpgradeRequests(upgradeStatusFilter || undefined);
+  const { data: termsDocuments, isLoading: termsLoading } = useAdminTerms();
   const checkPayments = useAdminCheckPayments();
   const unblockUser = useAdminUnblockUser();
   const deletePlan = useAdminDeletePlan();
   const handleUpgrade = useAdminHandleUpgradeRequest();
+  const createTerms = useAdminCreateTerms();
+  const updateTerms = useAdminUpdateTerms();
+  const activateTerms = useAdminActivateTerms();
 
   const handleSearch = (val: string) => {
     setSearch(val);
@@ -282,6 +300,7 @@ const AdminPanel = () => {
           <TabsTrigger value="subscriptions" className="gap-2"><CreditCard className="w-4 h-4" /> Subscriptions</TabsTrigger>
           <TabsTrigger value="invoices" className="gap-2"><FileText className="w-4 h-4" /> Invoices</TabsTrigger>
           <TabsTrigger value="upgrades" className="gap-2"><ArrowUpCircle className="w-4 h-4" /> Upgrades</TabsTrigger>
+          <TabsTrigger value="legal" className="gap-2"><Scale className="w-4 h-4" /> Legal</TabsTrigger>
           <TabsTrigger value="servers" className="gap-2"><Server className="w-4 h-4" /> Servers</TabsTrigger>
         </TabsList>
 
@@ -715,6 +734,151 @@ const AdminPanel = () => {
                 </table>
               </div>
             </motion.div>
+          )}
+        </TabsContent>
+
+        {/* ── Legal / Terms Tab ─────────────────────────── */}
+        <TabsContent value="legal" className="mt-4 space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold text-lg">Terms & Conditions</h3>
+            <Dialog open={termsDialogOpen} onOpenChange={(open) => { setTermsDialogOpen(open); if (!open) setEditingTerms(undefined); }}>
+              <DialogTrigger asChild>
+                <Button className="gap-2" onClick={() => {
+                  setEditingTerms(undefined);
+                  setTermsTitle("");
+                  setTermsContent("");
+                  setTermsVersion(String((termsDocuments?.length || 0) + 1));
+                  setTermsCompany("CopyTrade Pro");
+                  setTermsDialogOpen(true);
+                }}>
+                  <Plus className="w-4 h-4" /> New Version
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{editingTerms ? "Edit Terms" : "Create Terms Version"}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>Title</Label>
+                      <Input value={termsTitle} onChange={(e) => setTermsTitle(e.target.value)} placeholder="Terms and Conditions" className="bg-secondary" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Company Name</Label>
+                      <Input value={termsCompany} onChange={(e) => setTermsCompany(e.target.value)} placeholder="CopyTrade Pro" className="bg-secondary" />
+                    </div>
+                  </div>
+                  {!editingTerms && (
+                    <div className="space-y-2">
+                      <Label>Version Number</Label>
+                      <Input type="number" value={termsVersion} onChange={(e) => setTermsVersion(e.target.value)} className="bg-secondary w-32" />
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label>Content (HTML)</Label>
+                    <Textarea
+                      value={termsContent}
+                      onChange={(e) => setTermsContent(e.target.value)}
+                      placeholder="<h2>1. General Terms</h2><p>...</p>"
+                      className="bg-secondary min-h-[300px] font-mono text-xs"
+                    />
+                  </div>
+                  <Button
+                    onClick={() => {
+                      if (editingTerms) {
+                        updateTerms.mutate(
+                          { termsId: editingTerms.id, updates: { title: termsTitle, content: termsContent, company_name: termsCompany } },
+                          { onSuccess: () => setTermsDialogOpen(false) }
+                        );
+                      } else {
+                        createTerms.mutate(
+                          { title: termsTitle, content: termsContent, version: parseInt(termsVersion), company_name: termsCompany },
+                          { onSuccess: () => setTermsDialogOpen(false) }
+                        );
+                      }
+                    }}
+                    disabled={createTerms.isPending || updateTerms.isPending || !termsTitle || !termsContent}
+                    className="w-full"
+                  >
+                    {editingTerms ? "Update Terms" : "Create Terms"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {termsLoading ? (
+            <Skeleton className="h-48" />
+          ) : (
+            <div className="space-y-3">
+              {termsDocuments?.map((doc) => (
+                <motion.div
+                  key={doc.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="card-glass rounded-lg p-5"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-3">
+                        <h4 className="font-semibold">{doc.title}</h4>
+                        <Badge variant="outline" className="text-xs">v{doc.version}</Badge>
+                        {doc.is_active && (
+                          <Badge className="bg-success/15 text-success border-success/30 hover:bg-success/15 text-xs">Active</Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {doc.company_name} · {doc.acceptance_count} acceptance{doc.acceptance_count !== 1 ? "s" : ""} · Updated {formatDate(doc.updated_at)}
+                      </p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs gap-1"
+                        onClick={async () => {
+                          try {
+                            const detail = await api.adminGetTermsContent(doc.id);
+                            setEditingTerms(doc);
+                            setTermsTitle(detail.title);
+                            setTermsContent(detail.content);
+                            setTermsCompany(detail.company_name);
+                            setTermsDialogOpen(true);
+                          } catch {}
+                        }}
+                      >
+                        <Pencil className="w-3 h-3" /> Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs gap-1"
+                        onClick={() => window.open("/terms-of-service", "_blank")}
+                      >
+                        <Eye className="w-3 h-3" /> Preview
+                      </Button>
+                      {!doc.is_active && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-xs gap-1 text-primary hover:text-primary"
+                          onClick={() => activateTerms.mutate(doc.id)}
+                          disabled={activateTerms.isPending}
+                        >
+                          <Power className="w-3 h-3" /> Activate
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+              {(!termsDocuments || termsDocuments.length === 0) && (
+                <div className="card-glass rounded-lg p-8 text-center text-muted-foreground">
+                  No terms documents yet. Click "New Version" to create one.
+                </div>
+              )}
+            </div>
           )}
         </TabsContent>
 

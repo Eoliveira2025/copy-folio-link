@@ -3,7 +3,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { CreatePlanData } from "@/lib/api";
+import type { CreatePlanData, CreateTermsData, UpdateTermsData } from "@/lib/api";
 import { toast } from "sonner";
 
 // ── MT5 Accounts ────────────────────────────────────
@@ -255,6 +255,51 @@ export function useAdminHandleUpgradeRequest() {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["admin-upgrade-requests"] });
       toast.success(data.message);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+// ── Admin Terms ────────────────────────────────────────
+export function useAdminTerms() {
+  return useQuery({
+    queryKey: ["admin-terms"],
+    queryFn: () => api.adminListTerms(),
+  });
+}
+
+export function useAdminCreateTerms() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateTermsData) => api.adminCreateTerms(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-terms"] });
+      toast.success("Terms created");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminUpdateTerms() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { termsId: string; updates: UpdateTermsData }) =>
+      api.adminUpdateTerms(data.termsId, data.updates),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-terms"] });
+      toast.success("Terms updated");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminActivateTerms() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (termsId: string) => api.adminActivateTerms(termsId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-terms"] });
+      toast.success("Terms activated");
     },
     onError: (err: Error) => toast.error(err.message),
   });

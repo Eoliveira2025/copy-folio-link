@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { TermsAcceptanceModal } from "@/components/TermsAcceptanceModal";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
+  const [termsKey, setTermsKey] = useState(0);
 
   if (isLoading) {
     return (
@@ -16,5 +19,10 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <TermsAcceptanceModal key={termsKey} onAccepted={() => setTermsKey((k) => k + 1)} />
+      {children}
+    </>
+  );
 }
