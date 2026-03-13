@@ -1,4 +1,4 @@
-"""Subscription and Invoice schemas."""
+"""Subscription, Invoice, and Upgrade Request schemas."""
 
 from pydantic import BaseModel
 from datetime import datetime
@@ -32,3 +32,26 @@ class InvoiceResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class UpgradeRequestCreate(BaseModel):
+    target_plan_id: uuid.UUID
+
+
+class UpgradeRequestResponse(BaseModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    user_email: str | None = None
+    current_plan_name: str | None = None
+    target_plan_name: str | None = None
+    target_plan_price: float | None = None
+    mt5_balance: float
+    status: str
+    admin_note: str | None = None
+    created_at: datetime
+    resolved_at: datetime | None = None
+
+
+class UpgradeRequestAction(BaseModel):
+    action: str  # "approve" or "reject"
+    note: str | None = None

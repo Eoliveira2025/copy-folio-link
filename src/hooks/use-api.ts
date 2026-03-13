@@ -81,6 +81,34 @@ export function useInvoices() {
   });
 }
 
+export function useUpgradeEligibility() {
+  return useQuery({
+    queryKey: ["upgrade-eligibility"],
+    queryFn: () => api.checkUpgradeEligibility(),
+    refetchInterval: 60000,
+  });
+}
+
+export function useRequestUpgrade() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (targetPlanId: string) => api.requestUpgrade(targetPlanId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["upgrade-eligibility"] });
+      qc.invalidateQueries({ queryKey: ["my-upgrade-requests"] });
+      toast.success("Upgrade request submitted!");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useMyUpgradeRequests() {
+  return useQuery({
+    queryKey: ["my-upgrade-requests"],
+    queryFn: () => api.myUpgradeRequests(),
+  });
+}
+
 // ── Admin ───────────────────────────────────────────
 export function useAdminUsers(search: string) {
   return useQuery({
@@ -208,5 +236,26 @@ export function useAdminInvoices(status?: string) {
   return useQuery({
     queryKey: ["admin-invoices", status],
     queryFn: () => api.adminListInvoices(status),
+  });
+}
+
+// ── Admin Upgrade Requests ─────────────────────────
+export function useAdminUpgradeRequests(status?: string) {
+  return useQuery({
+    queryKey: ["admin-upgrade-requests", status],
+    queryFn: () => api.adminListUpgradeRequests(status),
+  });
+}
+
+export function useAdminHandleUpgradeRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { requestId: string; action: "approve" | "reject"; note?: string }) =>
+      api.adminHandleUpgradeRequest(data.requestId, data.action, data.note),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["admin-upgrade-requests"] });
+      toast.success(data.message);
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 }

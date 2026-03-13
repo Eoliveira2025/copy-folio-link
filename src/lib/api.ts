@@ -196,6 +196,21 @@ class ApiClient {
     return this.request<Invoice[]>("/billing/invoices");
   }
 
+  async checkUpgradeEligibility() {
+    return this.request<UpgradeEligibility>("/billing/upgrade-check");
+  }
+
+  async requestUpgrade(targetPlanId: string) {
+    return this.request<{ message: string; request_id: string }>("/billing/upgrade-request", {
+      method: "POST",
+      body: JSON.stringify({ target_plan_id: targetPlanId }),
+    });
+  }
+
+  async myUpgradeRequests() {
+    return this.request<UpgradeRequestItem[]>("/billing/upgrade-requests");
+  }
+
   // ── Admin ─────────────────────────────────────────────
   async adminSearchUsers(query: string = "") {
     return this.request<AdminUser[]>(`/admin/users?q=${encodeURIComponent(query)}`);
@@ -285,6 +300,19 @@ class ApiClient {
     const qs = status ? `?status=${encodeURIComponent(status)}` : "";
     return this.request<AdminInvoice[]>(`/admin/invoices${qs}`);
   }
+
+  // ── Admin Upgrade Requests ────────────────────────────
+  async adminListUpgradeRequests(status?: string) {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+    return this.request<UpgradeRequestItem[]>(`/admin/upgrade-requests${qs}`);
+  }
+
+  async adminHandleUpgradeRequest(requestId: string, action: "approve" | "reject", note?: string) {
+    return this.request<{ message: string }>(`/admin/upgrade-requests/${requestId}`, {
+      method: "POST",
+      body: JSON.stringify({ action, note }),
+    });
+  }
 }
 
 // ── Error class ───────────────────────────────────────
@@ -355,6 +383,30 @@ export interface Invoice {
   due_date: string;
   paid_at: string | null;
   provider: string | null;
+}
+
+export interface UpgradeEligibility {
+  eligible: boolean;
+  has_pending_request?: boolean;
+  reason?: string;
+  current_plan?: { id: string; name: string; price: number } | null;
+  next_plan?: { id: string; name: string; price: number } | null;
+  mt5_balance?: number;
+  min_balance_required?: number;
+}
+
+export interface UpgradeRequestItem {
+  id: string;
+  user_id: string;
+  user_email?: string;
+  current_plan_name: string | null;
+  target_plan_name: string | null;
+  target_plan_price: number | null;
+  mt5_balance: number;
+  status: string;
+  admin_note: string | null;
+  created_at: string;
+  resolved_at: string | null;
 }
 
 export interface AdminUser {

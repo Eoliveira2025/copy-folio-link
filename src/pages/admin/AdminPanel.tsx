@@ -32,11 +32,15 @@ import {
   Trash2,
   ArrowUpDown,
   AlertTriangle,
+  ArrowUpCircle,
+  Check,
+  X,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   useAdminUsers,
   useAdminCheckPayments,
@@ -49,6 +53,8 @@ import {
   useAdminChangeUserPlan,
   useAdminSubscriptions,
   useAdminInvoices,
+  useAdminUpgradeRequests,
+  useAdminHandleUpgradeRequest,
 } from "@/hooks/use-api";
 import { StatCard } from "@/components/StatCard";
 import type { AdminPlan, CreatePlanData } from "@/lib/api";
@@ -206,18 +212,22 @@ const AdminPanel = () => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [subStatusFilter, setSubStatusFilter] = useState("");
   const [invStatusFilter, setInvStatusFilter] = useState("");
+  const [upgradeStatusFilter, setUpgradeStatusFilter] = useState("");
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<AdminPlan | undefined>();
   const [changePlanUser, setChangePlanUser] = useState<{ id: string; email: string } | null>(null);
+  const [upgradeNote, setUpgradeNote] = useState("");
 
   const { data: users, isLoading: usersLoading } = useAdminUsers(debouncedSearch);
   const { data: dashboard, isLoading: dashLoading } = useAdminDashboard();
   const { data: plans, isLoading: plansLoading } = useAdminPlans();
   const { data: subscriptions, isLoading: subsLoading } = useAdminSubscriptions(subStatusFilter || undefined);
   const { data: invoices, isLoading: invsLoading } = useAdminInvoices(invStatusFilter || undefined);
+  const { data: upgradeRequests, isLoading: upgradesLoading } = useAdminUpgradeRequests(upgradeStatusFilter || undefined);
   const checkPayments = useAdminCheckPayments();
   const unblockUser = useAdminUnblockUser();
   const deletePlan = useAdminDeletePlan();
+  const handleUpgrade = useAdminHandleUpgradeRequest();
 
   const handleSearch = (val: string) => {
     setSearch(val);
@@ -271,6 +281,7 @@ const AdminPanel = () => {
           <TabsTrigger value="plans" className="gap-2"><Package className="w-4 h-4" /> Plans</TabsTrigger>
           <TabsTrigger value="subscriptions" className="gap-2"><CreditCard className="w-4 h-4" /> Subscriptions</TabsTrigger>
           <TabsTrigger value="invoices" className="gap-2"><FileText className="w-4 h-4" /> Invoices</TabsTrigger>
+          <TabsTrigger value="upgrades" className="gap-2"><ArrowUpCircle className="w-4 h-4" /> Upgrades</TabsTrigger>
           <TabsTrigger value="servers" className="gap-2"><Server className="w-4 h-4" /> Servers</TabsTrigger>
         </TabsList>
 
@@ -582,6 +593,122 @@ const AdminPanel = () => {
                     {(!invoices || invoices.length === 0) && (
                       <tr>
                         <td colSpan={7} className="p-6 text-center text-muted-foreground">No invoices found</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
+          )}
+        </TabsContent>
+
+        {/* ── Upgrade Requests Tab ──────────────────────── */}
+        <TabsContent value="upgrades" className="mt-4 space-y-4">
+          <div className="flex gap-2">
+            {["", "pending", "approved", "rejected"].map((s) => (
+              <Button
+                key={s}
+                variant={upgradeStatusFilter === s ? "default" : "outline"}
+                size="sm"
+                onClick={() => setUpgradeStatusFilter(s)}
+                className="text-xs"
+              >
+                {s || "All"}
+              </Button>
+            ))}
+          </div>
+
+          {upgradesLoading ? (
+            <Skeleton className="h-48" />
+          ) : (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card-glass rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-muted-foreground text-left border-b border-border bg-muted/30">
+                      <th className="p-3 font-medium">User</th>
+                      <th className="p-3 font-medium">Current Plan</th>
+                      <th className="p-3 font-medium">Target Plan</th>
+                      <th className="p-3 font-medium">Balance</th>
+                      <th className="p-3 font-medium">Status</th>
+                      <th className="p-3 font-medium">Date</th>
+                      <th className="p-3 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {upgradeRequests?.map((req) => (
+                      <tr key={req.id} className="border-b border-border/50 last:border-0 hover:bg-muted/20">
+                        <td className="p-3">{req.user_email || "—"}</td>
+                        <td className="p-3">{req.current_plan_name || "—"}</td>
+                        <td className="p-3 font-medium text-primary">{req.target_plan_name}</td>
+                        <td className="p-3 font-mono">${req.mt5_balance.toFixed(2)}</td>
+                        <td className="p-3">
+                          <Badge className={
+                            req.status === "approved" ? "bg-success/15 text-success border-success/30 hover:bg-success/15" :
+                            req.status === "rejected" ? "bg-danger/15 text-danger border-danger/30 hover:bg-danger/15" :
+                            "bg-warning/15 text-warning border-warning/30 hover:bg-warning/15"
+                          }>
+                            {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
+                          </Badge>
+                        </td>
+                        <td className="p-3 text-muted-foreground">{formatDate(req.created_at)}</td>
+                        <td className="p-3">
+                          {req.status === "pending" ? (
+                            <div className="flex gap-1">
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-success hover:text-success">
+                                    <Check className="w-3 h-3" /> Approve
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Approve Upgrade</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="space-y-3">
+                                    <p className="text-sm text-muted-foreground">
+                                      Approve <span className="text-foreground font-medium">{req.user_email}</span> upgrade to{" "}
+                                      <span className="text-primary font-medium">{req.target_plan_name}</span> (${req.target_plan_price}/mo)?
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">This will update their plan, generate a new invoice, and start billing immediately.</p>
+                                    <Textarea
+                                      placeholder="Optional note..."
+                                      value={upgradeNote}
+                                      onChange={(e) => setUpgradeNote(e.target.value)}
+                                      className="bg-secondary"
+                                    />
+                                    <Button
+                                      onClick={() => {
+                                        handleUpgrade.mutate({ requestId: req.id, action: "approve", note: upgradeNote || undefined });
+                                        setUpgradeNote("");
+                                      }}
+                                      disabled={handleUpgrade.isPending}
+                                      className="w-full"
+                                    >
+                                      {handleUpgrade.isPending ? "Approving..." : "Confirm Approval"}
+                                    </Button>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs gap-1 text-danger hover:text-danger"
+                                onClick={() => handleUpgrade.mutate({ requestId: req.id, action: "reject" })}
+                                disabled={handleUpgrade.isPending}
+                              >
+                                <X className="w-3 h-3" /> Reject
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">{req.admin_note || "—"}</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {(!upgradeRequests || upgradeRequests.length === 0) && (
+                      <tr>
+                        <td colSpan={7} className="p-6 text-center text-muted-foreground">No upgrade requests found</td>
                       </tr>
                     )}
                   </tbody>

@@ -1,6 +1,6 @@
-"""Billing endpoints with plan-aware subscription and full payment gateway integration."""
+"""Billing endpoints with plan-aware subscription, upgrade requests, and full payment gateway integration."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -11,7 +11,9 @@ from app.models.user import User
 from app.models.plan import Plan
 from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.invoice import Invoice, InvoiceStatus, Payment, PaymentProvider
-from app.schemas.billing import SubscriptionResponse, InvoiceResponse
+from app.models.mt5_account import MT5Account
+from app.models.upgrade_request import UpgradeRequest, UpgradeRequestStatus
+from app.schemas.billing import SubscriptionResponse, InvoiceResponse, UpgradeRequestCreate, UpgradeRequestResponse
 from app.services.payments import get_gateway, GatewayStatus
 from app.services import copy_engine
 
@@ -78,6 +80,140 @@ async def list_invoices(user: User = Depends(get_current_user), db: AsyncSession
     return result.scalars().all()
 
 
+# ── Upgrade Requests ────────────────────────────────────
+
+@router.get("/upgrade-check")
+async def check_upgrade_eligibility(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """Check if user's MT5 balance qualifies for a plan upgrade."""
+    # Get current subscription and plan
+    sub_result = await db.execute(
+        select(Subscription).where(Subscription.user_id == user.id).order_by(Subscription.created_at.desc())
+    )
+    sub = sub_result.scalar_one_or_none()
+    if not sub or not sub.plan_id:
+        return {"eligible": False, "reason": "No active plan"}
+
+    current_plan_result = await db.execute(select(Plan).where(Plan.id == sub.plan_id))
+    current_plan = current_plan_result.scalar_one_or_none()
+
+    # Get MT5 balance
+    mt5_result = await db.execute(select(MT5Account).where(MT5Account.user_id == user.id))
+    mt5 = mt5_result.scalars().first()
+    balance = mt5.balance if mt5 and mt5.balance else 0.0
+
+    # Find next plan by price
+    next_plan_result = await db.execute(
+        select(Plan).where(
+            Plan.active == True,
+            Plan.price > (current_plan.price if current_plan else 0)
+        ).order_by(Plan.price).limit(1)
+    )
+    next_plan = next_plan_result.scalar_one_or_none()
+    if not next_plan:
+        return {"eligible": False, "reason": "Already on highest plan"}
+
+    # Check if there's a pending request already
+    pending = await db.execute(
+        select(UpgradeRequest).where(
+            UpgradeRequest.user_id == user.id,
+            UpgradeRequest.status == UpgradeRequestStatus.PENDING,
+        )
+    )
+    has_pending = pending.scalar_one_or_none() is not None
+
+    # Simple eligibility: balance > next plan price * 10 (configurable threshold)
+    min_balance = next_plan.price * 10
+    eligible = balance >= min_balance
+
+    return {
+        "eligible": eligible,
+        "has_pending_request": has_pending,
+        "current_plan": {"id": str(current_plan.id), "name": current_plan.name, "price": current_plan.price} if current_plan else None,
+        "next_plan": {"id": str(next_plan.id), "name": next_plan.name, "price": next_plan.price},
+        "mt5_balance": balance,
+        "min_balance_required": min_balance,
+    }
+
+
+@router.post("/upgrade-request")
+async def request_upgrade(
+    body: UpgradeRequestCreate,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """User requests a plan upgrade. Creates a pending request for admin approval."""
+    # Check no pending request exists
+    pending = await db.execute(
+        select(UpgradeRequest).where(
+            UpgradeRequest.user_id == user.id,
+            UpgradeRequest.status == UpgradeRequestStatus.PENDING,
+        )
+    )
+    if pending.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="You already have a pending upgrade request")
+
+    # Validate target plan
+    target_result = await db.execute(select(Plan).where(Plan.id == body.target_plan_id, Plan.active == True))
+    target_plan = target_result.scalar_one_or_none()
+    if not target_plan:
+        raise HTTPException(status_code=404, detail="Target plan not found or inactive")
+
+    # Get current plan
+    sub_result = await db.execute(
+        select(Subscription).where(Subscription.user_id == user.id).order_by(Subscription.created_at.desc())
+    )
+    sub = sub_result.scalar_one_or_none()
+    current_plan_id = sub.plan_id if sub else None
+
+    # Get MT5 balance
+    mt5_result = await db.execute(select(MT5Account).where(MT5Account.user_id == user.id))
+    mt5 = mt5_result.scalars().first()
+    balance = mt5.balance if mt5 and mt5.balance else 0.0
+
+    request = UpgradeRequest(
+        user_id=user.id,
+        current_plan_id=current_plan_id,
+        target_plan_id=target_plan.id,
+        mt5_balance=balance,
+    )
+    db.add(request)
+    await db.commit()
+    await db.refresh(request)
+
+    return {"message": "Upgrade request submitted", "request_id": str(request.id)}
+
+
+@router.get("/upgrade-requests")
+async def my_upgrade_requests(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """List user's own upgrade requests."""
+    result = await db.execute(
+        select(UpgradeRequest).where(UpgradeRequest.user_id == user.id).order_by(UpgradeRequest.created_at.desc())
+    )
+    requests = result.scalars().all()
+    response = []
+    for r in requests:
+        current_name = None
+        target_name = None
+        target_price = None
+        if r.current_plan_id:
+            cp = await db.execute(select(Plan).where(Plan.id == r.current_plan_id))
+            p = cp.scalar_one_or_none()
+            current_name = p.name if p else None
+        if r.target_plan_id:
+            tp = await db.execute(select(Plan).where(Plan.id == r.target_plan_id))
+            p = tp.scalar_one_or_none()
+            if p:
+                target_name = p.name
+                target_price = p.price
+        response.append(UpgradeRequestResponse(
+            id=r.id, user_id=r.user_id, current_plan_name=current_name,
+            target_plan_name=target_name, target_plan_price=target_price,
+            mt5_balance=r.mt5_balance, status=r.status.value,
+            admin_note=r.admin_note, created_at=r.created_at, resolved_at=r.resolved_at,
+        ))
+    return response
+
+
 async def _handle_payment_confirmation(invoice: Invoice, db: AsyncSession):
     """Shared logic for marking invoice paid and reactivating subscription."""
     invoice.status = InvoiceStatus.PAID
@@ -88,7 +224,7 @@ async def _handle_payment_confirmation(invoice: Invoice, db: AsyncSession):
     if subscription and subscription.status == SubscriptionStatus.BLOCKED:
         subscription.status = SubscriptionStatus.ACTIVE
 
-        from app.models.mt5_account import MT5Account, MT5Status
+        from app.models.mt5_account import MT5Status
         from app.models.strategy import Strategy, MasterAccount, UserStrategy
 
         mt5_result = await db.execute(
