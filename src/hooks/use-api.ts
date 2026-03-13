@@ -353,3 +353,48 @@ export function useAdminResetEmergency() {
     onError: (err: Error) => toast.error(err.message),
   });
 }
+
+// ── Admin Operations ───────────────────────────────
+export function useAdminOperations() {
+  return useQuery({
+    queryKey: ["admin-operations"],
+    queryFn: () => api.adminGetOperations(),
+    refetchInterval: 10000,
+  });
+}
+
+// ── Admin Dead Letter Queue ────────────────────────
+export function useAdminDeadLetterTrades(status?: string) {
+  return useQuery({
+    queryKey: ["admin-dead-letter", status],
+    queryFn: () => api.adminGetDeadLetterTrades(status),
+    refetchInterval: 15000,
+  });
+}
+
+export function useAdminRetryDeadLetter() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (tradeId: string) => api.adminRetryDeadLetter(tradeId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-dead-letter"] });
+      qc.invalidateQueries({ queryKey: ["admin-operations"] });
+      toast.success("Trade re-enqueued for execution");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminResolveDeadLetter() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { tradeId: string; note: string }) =>
+      api.adminResolveDeadLetter(data.tradeId, data.note),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-dead-letter"] });
+      qc.invalidateQueries({ queryKey: ["admin-operations"] });
+      toast.success("Trade marked as resolved");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
