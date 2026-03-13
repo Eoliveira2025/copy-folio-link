@@ -31,12 +31,22 @@ class Settings(BaseSettings):
     STRIPE_WEBHOOK_SECRET: str = ""
     ASAAS_API_KEY: str = ""
     MERCADOPAGO_ACCESS_TOKEN: str = ""
+    CELCOIN_CLIENT_ID: str = ""
+    CELCOIN_CLIENT_SECRET: str = ""
 
     # Free trial
     FREE_TRIAL_DAYS: int = 30
     INVOICE_GENERATE_BEFORE_DAYS: int = 10
     INVOICE_DUE_AFTER_DAYS: int = 2
     BLOCK_AFTER_OVERDUE_DAYS: int = 2
+
+    # Subscription pricing
+    SUBSCRIPTION_PRICE: float = 49.90
+    SUBSCRIPTION_CURRENCY: str = "USD"
+
+    # Rate limiting
+    LOGIN_RATE_LIMIT: int = 5  # max attempts per window
+    LOGIN_RATE_WINDOW: int = 300  # 5 minutes
 
     class Config:
         env_file = ".env"

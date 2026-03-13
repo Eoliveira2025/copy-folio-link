@@ -1,4 +1,4 @@
-"""Invoice and Payment models."""
+"""Invoice model with Celcoin support."""
 
 import uuid
 import enum
@@ -48,8 +48,8 @@ class Payment(Base):
     provider: Mapped[PaymentProvider] = mapped_column(SAEnum(PaymentProvider), nullable=False)
     provider_payment_id: Mapped[str] = mapped_column(String(255), nullable=False)
     amount: Mapped[float] = mapped_column(Float, nullable=False)
-    status: Mapped[str] = mapped_column(String(50), nullable=False)  # provider-specific
-    raw_webhook: Mapped[str | None] = mapped_column(String(5000))  # JSON payload
+    status: Mapped[str] = mapped_column(String(50), nullable=False)
+    raw_webhook: Mapped[str | None] = mapped_column(String(5000))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     invoice = relationship("Invoice", back_populates="payments")

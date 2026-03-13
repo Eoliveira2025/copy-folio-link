@@ -1,4 +1,4 @@
-"""FastAPI application entrypoint."""
+"""FastAPI application entrypoint with rate limiting middleware."""
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
