@@ -1,7 +1,7 @@
 """Authentication endpoints: register, login, refresh, forgot/reset/change password, profile."""
 
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 

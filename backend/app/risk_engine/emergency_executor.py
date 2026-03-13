@@ -105,7 +105,7 @@ class EmergencyExecutor:
 
             db.commit()
 
-        # 4. Block new trades by setting a Redis flag
+        # 4. Block new trades by setting a Redis flag (no expiry — must be manually cleared)
         r.set("copytrade:trading_blocked", "1")
 
-        logger.critical("System state set to EMERGENCY_STOP — all new trades blocked")
+        logger.critical(f"System state set to EMERGENCY_STOP — all new trades blocked, {len(accounts)} accounts notified")
