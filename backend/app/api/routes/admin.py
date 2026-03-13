@@ -1,4 +1,4 @@
-"""Admin endpoints: user management, plan management, subscriptions, invoices, upgrade requests."""
+"""Admin endpoints: user management, plan management, subscriptions, invoices, upgrade requests, terms."""
 
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
