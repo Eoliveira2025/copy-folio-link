@@ -62,6 +62,11 @@ import {
   useAdminCreateTerms,
   useAdminUpdateTerms,
   useAdminActivateTerms,
+  useAdminRiskSettings,
+  useAdminRiskStatus,
+  useAdminRiskIncidents,
+  useAdminUpdateRiskSettings,
+  useAdminResetEmergency,
 } from "@/hooks/use-api";
 import { StatCard } from "@/components/StatCard";
 import type { AdminPlan, CreatePlanData, AdminTermsItem } from "@/lib/api";
