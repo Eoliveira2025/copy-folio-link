@@ -516,5 +516,55 @@ export interface AdminInvoice {
   provider: string | null;
 }
 
+// ── Terms Types ───────────────────────────────────────
+export interface TermsPublic {
+  id: string;
+  title: string;
+  content: string;
+  version: number;
+  company_name: string;
+  updated_at: string;
+}
+
+export interface TermsCheckResult {
+  needs_acceptance: boolean;
+  terms_id?: string;
+  version?: number;
+  title?: string;
+}
+
+export interface AdminTermsItem {
+  id: string;
+  title: string;
+  version: number;
+  company_name: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  acceptance_count: number;
+}
+
+export interface AdminTermsDetail {
+  id: string;
+  title: string;
+  content: string;
+  version: number;
+  company_name: string;
+  is_active: boolean;
+}
+
+export interface CreateTermsData {
+  title: string;
+  content: string;
+  version: number;
+  company_name: string;
+}
+
+export interface UpdateTermsData {
+  title?: string;
+  content?: string;
+  company_name?: string;
+}
+
 // Singleton
 export const api = new ApiClient();
