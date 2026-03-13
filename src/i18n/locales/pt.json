@@ -264,7 +264,10 @@
     "overdue": "vencidas",
     "termsLanguage": "Idioma",
     "termsLanguageEn": "Inglês",
-    "termsLanguagePt": "Português"
+    "termsLanguagePt": "Português",
+    "publicSettings": "Configurações Públicas",
+    "brokerAffiliateLink": "Link de Afiliado da Corretora",
+    "brokerAffiliateLinkDesc": "Os usuários verão um botão 'Abrir Conta na Corretora' na página de login com este link."
   },
   "risk": {
     "liveStatus": "Status de Risco ao Vivo",
