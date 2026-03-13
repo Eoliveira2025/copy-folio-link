@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "CopyTrade Pro API"
     DEBUG: bool = False
     API_PREFIX: str = "/api/v1"
+    ENVIRONMENT: str = "development"  # development | production
 
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/copytrade"
@@ -47,6 +48,19 @@ class Settings(BaseSettings):
     # Rate limiting
     LOGIN_RATE_LIMIT: int = 5  # max attempts per window
     LOGIN_RATE_WINDOW: int = 300  # 5 minutes
+
+    # CORS
+    ALLOWED_ORIGINS: str = ""  # Comma-separated origins, e.g. "https://app.example.com,https://admin.example.com"
+
+    # SMTP / Email
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = ""
+
+    # Frontend URL (for reset links)
+    FRONTEND_URL: str = "http://localhost:5173"
 
     class Config:
         env_file = ".env"
