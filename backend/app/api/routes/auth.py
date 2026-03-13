@@ -58,7 +58,18 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(
+    body: LoginRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    # Rate limit login by IP
+    from app.middleware.rate_limit import rate_limiter
+    client_ip = request.client.host if request.client else "unknown"
+    rate_key = f"rate_limit:login:{client_ip}"
+    if not rate_limiter.check_rate_limit(rate_key, settings.LOGIN_RATE_LIMIT, settings.LOGIN_RATE_WINDOW):
+        raise HTTPException(status_code=429, detail="Too many login attempts. Try again later.")
+
     result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
     if not user or not verify_password(body.password, user.hashed_password):
