@@ -265,7 +265,10 @@
     "overdue": "overdue",
     "termsLanguage": "Language",
     "termsLanguageEn": "English",
-    "termsLanguagePt": "Portuguese"
+    "termsLanguagePt": "Portuguese",
+    "publicSettings": "Public Settings",
+    "brokerAffiliateLink": "Broker Affiliate Signup Link",
+    "brokerAffiliateLinkDesc": "Users will see an 'Open Broker Account' button on the login page linking to this URL."
   },
   "risk": {
     "liveStatus": "Live Risk Status",
