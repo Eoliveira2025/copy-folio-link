@@ -8,6 +8,7 @@ from app.models.subscription import Subscription
 from app.models.invoice import Invoice, Payment
 from app.models.trade import TradeEvent, TradeCopy
 from app.models.upgrade_request import UpgradeRequest
+from app.models.terms import TermsDocument, TermsAcceptance
 
 __all__ = [
     "User",
@@ -22,4 +23,6 @@ __all__ = [
     "TradeEvent",
     "TradeCopy",
     "UpgradeRequest",
+    "TermsDocument",
+    "TermsAcceptance",
 ]
