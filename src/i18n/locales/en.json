@@ -298,5 +298,30 @@
     "title": "404",
     "message": "Oops! Page not found",
     "returnHome": "Return to Home"
+  },
+  "operations": {
+    "title": "Operations Dashboard",
+    "subtitle": "Real-time system health and trading metrics",
+    "tradingMetrics": "Trading Metrics",
+    "connectedMT5": "Connected MT5",
+    "masterAccounts": "Master Accounts",
+    "copiedToday": "Copied Today",
+    "failedToday": "Failed Today",
+    "performance": "Performance",
+    "avgLatency": "Avg Latency",
+    "dlqPending": "DLQ Pending",
+    "activeSubs": "Active Subs",
+    "overdueInvoices": "Overdue Invoices",
+    "equityRisk": "Equity & Risk",
+    "serviceHealth": "Service Health",
+    "deadLetterQueue": "Dead Letter Queue",
+    "orderId": "Order ID",
+    "symbol": "Symbol",
+    "action": "Action",
+    "error": "Error",
+    "attempts": "Attempts",
+    "retry": "Retry",
+    "resolve": "Resolve",
+    "noDLQ": "No failed trades in the dead letter queue. System operating normally."
   }
 }
