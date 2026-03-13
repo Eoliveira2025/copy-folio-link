@@ -30,5 +30,19 @@ class ResetPasswordRequest(BaseModel):
     new_password: str
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
 class MessageResponse(BaseModel):
     message: str
+
+
+class UserProfileResponse(BaseModel):
+    id: str
+    email: str
+    full_name: str | None
+    is_active: bool
+    created_at: str
+    role: str

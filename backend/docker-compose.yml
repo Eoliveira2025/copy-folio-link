@@ -28,6 +28,30 @@ services:
     depends_on:
       - redis
 
+  copy-engine:
+    build: .
+    command: python -m engine.main
+    env_file: .env
+    depends_on:
+      - db
+      - redis
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  mt5-manager:
+    build: .
+    command: python -m mt5_manager.main
+    env_file: .env
+    depends_on:
+      - db
+      - redis
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+
   db:
     image: postgres:16-alpine
     environment:
@@ -43,6 +67,7 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
 
 volumes:
   pgdata:

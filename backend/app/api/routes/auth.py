@@ -1,4 +1,4 @@
-"""Authentication endpoints: register, login, refresh, forgot/reset password."""
+"""Authentication endpoints: register, login, refresh, forgot/reset/change password, profile."""
 
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -12,7 +12,8 @@ from app.models.user import User, UserRoleMapping, UserRole
 from app.models.subscription import Subscription, SubscriptionStatus
 from app.schemas.auth import (
     RegisterRequest, LoginRequest, TokenResponse,
-    ForgotPasswordRequest, ResetPasswordRequest, MessageResponse,
+    ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest,
+    MessageResponse, UserProfileResponse,
 )
 
 router = APIRouter()
@@ -82,11 +83,22 @@ async def refresh_token(refresh_token: str, db: AsyncSession = Depends(get_db)):
     )
 
 
+@router.get("/me", response_model=UserProfileResponse)
+async def get_me(db: AsyncSession = Depends(get_db)):
+    from app.api.deps import get_current_user
+    # This would normally use Depends but simplified for schema
+    pass
+
+
+@router.post("/change-password", response_model=MessageResponse)
+async def change_password(body: ChangePasswordRequest, db: AsyncSession = Depends(get_db)):
+    from app.api.deps import get_current_user
+    # Placeholder - wired via deps
+    pass
+
+
 @router.post("/forgot-password", response_model=MessageResponse)
 async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
-    # In production: send email with reset link containing a short-lived JWT
-    result = await db.execute(select(User).where(User.email == body.email))
-    # Always return success to prevent email enumeration
     return MessageResponse(message="If this email exists, a reset link has been sent.")
 
 
@@ -101,6 +113,44 @@ async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    user.hashed_password = hash_password(body.new_password)
+    await db.commit()
+    return MessageResponse(message="Password updated successfully")
+
+
+# ── Properly wired endpoints with Depends ──────────────────
+
+from app.api.deps import get_current_user
+
+
+@router.get("/me", response_model=UserProfileResponse, name="get_current_profile")
+async def get_profile(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    role_result = await db.execute(
+        select(UserRoleMapping).where(UserRoleMapping.user_id == user.id)
+    )
+    role_mapping = role_result.scalar_one_or_none()
+    return UserProfileResponse(
+        id=str(user.id),
+        email=user.email,
+        full_name=user.full_name,
+        is_active=user.is_active,
+        created_at=user.created_at.isoformat(),
+        role=role_mapping.role.value if role_mapping else "user",
+    )
+
+
+@router.post("/change-password", response_model=MessageResponse, name="change_user_password")
+async def change_user_password(
+    body: ChangePasswordRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not verify_password(body.current_password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
 
     user.hashed_password = hash_password(body.new_password)
     await db.commit()

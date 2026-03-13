@@ -1,4 +1,4 @@
-"""MT5 Account connection endpoints."""
+"""MT5 Account connection endpoints with Copy Engine integration."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,7 +9,9 @@ from app.core.security import encrypt_mt5_password
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.mt5_account import MT5Account, MT5Status
+from app.models.strategy import Strategy, MasterAccount, UserStrategy
 from app.schemas.mt5 import ConnectMT5Request, MT5AccountResponse
+from app.services import copy_engine
 
 router = APIRouter()
 
@@ -32,19 +34,76 @@ async def connect_mt5(
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="This MT5 account is already connected")
 
+    # Check subscription is not blocked
+    from app.models.subscription import Subscription, SubscriptionStatus
+    sub_result = await db.execute(
+        select(Subscription).where(Subscription.user_id == user.id).order_by(Subscription.created_at.desc())
+    )
+    sub = sub_result.scalar_one_or_none()
+    if sub and sub.status == SubscriptionStatus.BLOCKED:
+        raise HTTPException(status_code=403, detail="Account is blocked due to unpaid invoice. Please pay your invoice first.")
+
+    encrypted_pass = encrypt_mt5_password(body.password)
     account = MT5Account(
         user_id=user.id,
         login=body.login,
-        encrypted_password=encrypt_mt5_password(body.password),
+        encrypted_password=encrypted_pass,
         server=body.server,
         status=MT5Status.CONNECTED,
     )
     db.add(account)
-    await db.commit()
+    await db.flush()
     await db.refresh(account)
 
-    # TODO: dispatch to Copy Engine via Redis to establish MT5 terminal connection
+    # Get user's active strategy to auto-subscribe
+    strategy_result = await db.execute(
+        select(UserStrategy).where(UserStrategy.user_id == user.id, UserStrategy.is_active == True)
+    )
+    active_us = strategy_result.scalar_one_or_none()
 
+    master_login = None
+    strategy_level = None
+    risk_multiplier = 1.0
+
+    if active_us:
+        strat = await db.execute(select(Strategy).where(Strategy.id == active_us.strategy_id))
+        strategy = strat.scalar_one_or_none()
+        if strategy:
+            strategy_level = strategy.level.value
+            risk_multiplier = strategy.risk_multiplier
+            # Get master account for this strategy
+            ma_result = await db.execute(
+                select(MasterAccount).where(MasterAccount.strategy_id == strategy.id)
+            )
+            master = ma_result.scalar_one_or_none()
+            if master:
+                master_login = master.login
+
+    # Dispatch to Copy Engine via Redis
+    try:
+        copy_engine.dispatch_connect_terminal(
+            account_id=str(account.id),
+            login=body.login,
+            encrypted_password=encrypted_pass,
+            server=body.server,
+            strategy_level=strategy_level,
+            master_login=master_login,
+        )
+
+        if strategy_level and master_login:
+            copy_engine.dispatch_subscribe_strategy(
+                account_id=str(account.id),
+                client_login=body.login,
+                strategy_level=strategy_level,
+                master_login=master_login,
+                risk_multiplier=risk_multiplier,
+            )
+    except Exception as e:
+        # Don't fail the connection if Redis is down, just log
+        import logging
+        logging.getLogger(__name__).error(f"Failed to dispatch to copy engine: {e}")
+
+    await db.commit()
     return account
 
 
@@ -67,6 +126,11 @@ async def disconnect_mt5(
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
 
-    # TODO: notify Copy Engine to tear down terminal connection
+    # Notify Copy Engine to tear down terminal
+    try:
+        copy_engine.dispatch_disconnect_terminal(str(account.id), account.login)
+    except Exception:
+        pass
+
     await db.delete(account)
     await db.commit()

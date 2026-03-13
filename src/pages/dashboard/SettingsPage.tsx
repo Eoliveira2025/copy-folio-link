@@ -1,10 +1,36 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
+import { useChangePassword } from "@/hooks/use-api";
 
 const SettingsPage = () => {
+  const { user } = useAuth();
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const changePassword = useChangePassword();
+
+  const handleUpdatePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      return;
+    }
+    changePassword.mutate(
+      { currentPassword, newPassword },
+      {
+        onSuccess: () => {
+          setCurrentPassword("");
+          setNewPassword("");
+          setConfirmPassword("");
+        },
+      }
+    );
+  };
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
@@ -17,19 +43,27 @@ const SettingsPage = () => {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Email</Label>
-            <Input defaultValue="trader@example.com" className="h-11 bg-secondary border-border" disabled />
+            <Input defaultValue={user?.email || ""} className="h-11 bg-secondary border-border" disabled />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={handleUpdatePassword} className="space-y-4">
             <div className="space-y-2">
-              <Label>New Password</Label>
-              <Input type="password" placeholder="••••••••" className="h-11 bg-secondary border-border" />
+              <Label>Current Password</Label>
+              <Input type="password" placeholder="••••••••" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="h-11 bg-secondary border-border" required />
             </div>
-            <div className="space-y-2">
-              <Label>Confirm Password</Label>
-              <Input type="password" placeholder="••••••••" className="h-11 bg-secondary border-border" />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>New Password</Label>
+                <Input type="password" placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="h-11 bg-secondary border-border" required />
+              </div>
+              <div className="space-y-2">
+                <Label>Confirm Password</Label>
+                <Input type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="h-11 bg-secondary border-border" required />
+              </div>
             </div>
-          </div>
-          <Button>Update Password</Button>
+            <Button type="submit" disabled={changePassword.isPending}>
+              {changePassword.isPending ? "Updating..." : "Update Password"}
+            </Button>
+          </form>
         </div>
       </motion.div>
 

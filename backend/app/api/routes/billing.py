@@ -1,5 +1,6 @@
-"""Billing endpoints: subscription status, invoices, webhook handler."""
+"""Billing endpoints with full payment gateway integration."""
 
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -7,9 +8,11 @@ from sqlalchemy import select
 from app.core.database import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
-from app.models.subscription import Subscription
-from app.models.invoice import Invoice, InvoiceStatus
+from app.models.subscription import Subscription, SubscriptionStatus
+from app.models.invoice import Invoice, InvoiceStatus, Payment, PaymentProvider
 from app.schemas.billing import SubscriptionResponse, InvoiceResponse
+from app.services.payments import get_gateway, GatewayStatus
+from app.services import copy_engine
 
 router = APIRouter()
 
@@ -36,31 +39,74 @@ async def list_invoices(user: User = Depends(get_current_user), db: AsyncSession
     return result.scalars().all()
 
 
+async def _handle_payment_confirmation(invoice: Invoice, db: AsyncSession):
+    """Shared logic for marking invoice paid and reactivating subscription."""
+    invoice.status = InvoiceStatus.PAID
+    invoice.paid_at = datetime.now(timezone.utc)
+
+    # Reactivate subscription if blocked
+    sub = await db.execute(select(Subscription).where(Subscription.id == invoice.subscription_id))
+    subscription = sub.scalar_one_or_none()
+    if subscription and subscription.status == SubscriptionStatus.BLOCKED:
+        subscription.status = SubscriptionStatus.ACTIVE
+
+        # Reactivate MT5 accounts
+        from app.models.mt5_account import MT5Account, MT5Status
+        from app.models.strategy import Strategy, MasterAccount, UserStrategy
+
+        mt5_result = await db.execute(
+            select(MT5Account).where(MT5Account.user_id == subscription.user_id)
+        )
+        for account in mt5_result.scalars().all():
+            account.status = MT5Status.CONNECTED
+
+            # Get strategy info for reconnection
+            us_result = await db.execute(
+                select(UserStrategy).where(
+                    UserStrategy.user_id == subscription.user_id, UserStrategy.is_active == True
+                )
+            )
+            active_us = us_result.scalar_one_or_none()
+            if active_us:
+                strat = await db.execute(select(Strategy).where(Strategy.id == active_us.strategy_id))
+                strategy = strat.scalar_one_or_none()
+                if strategy:
+                    ma = await db.execute(select(MasterAccount).where(MasterAccount.strategy_id == strategy.id))
+                    master = ma.scalar_one_or_none()
+                    if master:
+                        try:
+                            copy_engine.dispatch_unblock_account(
+                                account_id=str(account.id),
+                                login=account.login,
+                                encrypted_password=account.encrypted_password,
+                                server=account.server,
+                                strategy_level=strategy.level.value,
+                                master_login=master.login,
+                                risk_multiplier=strategy.risk_multiplier,
+                            )
+                        except Exception:
+                            pass
+
+
 @router.post("/webhooks/stripe")
 async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
-    """Handle Stripe payment confirmation webhooks."""
-    payload = await request.body()
-    # TODO: verify Stripe signature with settings.STRIPE_WEBHOOK_SECRET
+    payload = await request.json()
+    gateway = get_gateway("stripe")
+    result = await gateway.process_webhook(payload)
 
-    import json
-    event = json.loads(payload)
-
-    if event.get("type") == "invoice.paid":
-        external_id = event["data"]["object"]["id"]
-        result = await db.execute(select(Invoice).where(Invoice.external_id == external_id))
-        invoice = result.scalar_one_or_none()
+    if result.status == GatewayStatus.PAID and result.gateway_id:
+        inv = await db.execute(select(Invoice).where(Invoice.external_id == result.gateway_id))
+        invoice = inv.scalar_one_or_none()
         if invoice:
-            invoice.status = InvoiceStatus.PAID
-            from datetime import datetime, timezone
-            invoice.paid_at = datetime.now(timezone.utc)
-
-            # Reactivate subscription if blocked
-            sub_result = await db.execute(select(Subscription).where(Subscription.id == invoice.subscription_id))
-            sub = sub_result.scalar_one_or_none()
-            if sub and sub.status.value == "blocked":
-                sub.status = "active"
-                # TODO: notify Copy Engine to reconnect MT5 account
-
+            db.add(Payment(
+                invoice_id=invoice.id,
+                provider=PaymentProvider.STRIPE,
+                provider_payment_id=result.gateway_id,
+                amount=result.amount,
+                status="paid",
+                raw_webhook=str(result.raw_data)[:5000],
+            ))
+            await _handle_payment_confirmation(invoice, db)
             await db.commit()
 
     return {"status": "ok"}
@@ -68,15 +114,71 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
 
 @router.post("/webhooks/asaas")
 async def asaas_webhook(request: Request, db: AsyncSession = Depends(get_db)):
-    """Handle ASAAS payment webhooks."""
     payload = await request.json()
-    # TODO: implement ASAAS-specific webhook handling
+    gateway = get_gateway("asaas")
+    result = await gateway.process_webhook(payload)
+
+    if result.status == GatewayStatus.PAID and result.gateway_id:
+        inv = await db.execute(select(Invoice).where(Invoice.external_id == result.gateway_id))
+        invoice = inv.scalar_one_or_none()
+        if invoice:
+            db.add(Payment(
+                invoice_id=invoice.id,
+                provider=PaymentProvider.ASAAS,
+                provider_payment_id=result.gateway_id,
+                amount=result.amount,
+                status="paid",
+                raw_webhook=str(result.raw_data)[:5000],
+            ))
+            await _handle_payment_confirmation(invoice, db)
+            await db.commit()
+
     return {"status": "ok"}
 
 
 @router.post("/webhooks/mercadopago")
 async def mercadopago_webhook(request: Request, db: AsyncSession = Depends(get_db)):
-    """Handle Mercado Pago payment webhooks."""
     payload = await request.json()
-    # TODO: implement Mercado Pago-specific webhook handling
+    gateway = get_gateway("mercadopago")
+    result = await gateway.process_webhook(payload)
+
+    if result.status == GatewayStatus.PAID and result.gateway_id:
+        inv = await db.execute(select(Invoice).where(Invoice.external_id == result.gateway_id))
+        invoice = inv.scalar_one_or_none()
+        if invoice:
+            db.add(Payment(
+                invoice_id=invoice.id,
+                provider=PaymentProvider.MERCADOPAGO,
+                provider_payment_id=result.gateway_id,
+                amount=result.amount,
+                status="paid",
+                raw_webhook=str(result.raw_data)[:5000],
+            ))
+            await _handle_payment_confirmation(invoice, db)
+            await db.commit()
+
+    return {"status": "ok"}
+
+
+@router.post("/webhooks/celcoin")
+async def celcoin_webhook(request: Request, db: AsyncSession = Depends(get_db)):
+    payload = await request.json()
+    gateway = get_gateway("celcoin")
+    result = await gateway.process_webhook(payload)
+
+    if result.status == GatewayStatus.PAID and result.gateway_id:
+        inv = await db.execute(select(Invoice).where(Invoice.external_id == result.gateway_id))
+        invoice = inv.scalar_one_or_none()
+        if invoice:
+            db.add(Payment(
+                invoice_id=invoice.id,
+                provider=PaymentProvider.CELCOIN,
+                provider_payment_id=result.gateway_id,
+                amount=result.amount,
+                status="paid",
+                raw_webhook=str(result.raw_data)[:5000],
+            ))
+            await _handle_payment_confirmation(invoice, db)
+            await db.commit()
+
     return {"status": "ok"}
