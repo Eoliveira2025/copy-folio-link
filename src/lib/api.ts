@@ -592,5 +592,36 @@ export interface UpdateTermsData {
   company_name?: string;
 }
 
+// ── Risk Protection Types ────────────────────────────
+export interface RiskSettings {
+  global_max_drawdown_percent: number;
+  protection_enabled: boolean;
+  updated_at: string;
+}
+
+export interface RiskSettingsUpdate {
+  global_max_drawdown_percent?: number;
+  protection_enabled?: boolean;
+}
+
+export interface RiskStatus {
+  total_balance: number;
+  total_equity: number;
+  current_drawdown_percent: number;
+  protection_enabled: boolean;
+  max_drawdown_percent: number;
+  emergency_active: boolean;
+  account_count: number;
+}
+
+export interface RiskIncident {
+  id: string;
+  incident_type: string;
+  drawdown_percent: number;
+  total_balance: number;
+  total_equity: number;
+  created_at: string;
+}
+
 // Singleton
 export const api = new ApiClient();
