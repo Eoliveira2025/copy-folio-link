@@ -4,6 +4,7 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.api.deps import get_current_user
@@ -11,7 +12,7 @@ from app.models.user import User
 from app.models.plan import Plan
 from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.invoice import Invoice, InvoiceStatus, Payment, PaymentProvider
-from app.models.mt5_account import MT5Account
+from app.models.mt5_account import MT5Account, MT5Status
 from app.models.upgrade_request import UpgradeRequest, UpgradeRequestStatus
 from app.schemas.billing import SubscriptionResponse, InvoiceResponse, UpgradeRequestCreate, UpgradeRequestResponse
 from app.services.payments import get_gateway, GatewayStatus
@@ -41,20 +42,17 @@ async def list_available_plans(db: AsyncSession = Depends(get_db)):
 @router.get("/subscription")
 async def get_subscription(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     result = await db.execute(
-        select(Subscription).where(Subscription.user_id == user.id).order_by(Subscription.created_at.desc())
+        select(Subscription)
+        .options(selectinload(Subscription.plan))
+        .where(Subscription.user_id == user.id)
+        .order_by(Subscription.created_at.desc())
     )
     sub = result.scalar_one_or_none()
     if not sub:
         raise HTTPException(status_code=404, detail="No subscription found")
 
-    plan_name = None
-    plan_price = None
-    if sub.plan_id:
-        plan_result = await db.execute(select(Plan).where(Plan.id == sub.plan_id))
-        plan = plan_result.scalar_one_or_none()
-        if plan:
-            plan_name = plan.name
-            plan_price = plan.price
+    plan_name = sub.plan.name if sub.plan else None
+    plan_price = sub.plan.price if sub.plan else None
 
     return SubscriptionResponse(
         id=sub.id,
@@ -85,16 +83,17 @@ async def list_invoices(user: User = Depends(get_current_user), db: AsyncSession
 @router.get("/upgrade-check")
 async def check_upgrade_eligibility(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Check if user's MT5 balance qualifies for a plan upgrade."""
-    # Get current subscription and plan
     sub_result = await db.execute(
-        select(Subscription).where(Subscription.user_id == user.id).order_by(Subscription.created_at.desc())
+        select(Subscription)
+        .options(selectinload(Subscription.plan))
+        .where(Subscription.user_id == user.id)
+        .order_by(Subscription.created_at.desc())
     )
     sub = sub_result.scalar_one_or_none()
     if not sub or not sub.plan_id:
         return {"eligible": False, "reason": "No active plan"}
 
-    current_plan_result = await db.execute(select(Plan).where(Plan.id == sub.plan_id))
-    current_plan = current_plan_result.scalar_one_or_none()
+    current_plan = sub.plan
 
     # Get MT5 balance
     mt5_result = await db.execute(select(MT5Account).where(MT5Account.user_id == user.id))
@@ -215,49 +214,60 @@ async def my_upgrade_requests(user: User = Depends(get_current_user), db: AsyncS
 
 
 async def _handle_payment_confirmation(invoice: Invoice, db: AsyncSession):
-    """Shared logic for marking invoice paid and reactivating subscription."""
+    """Shared logic for marking invoice paid, advancing billing date, and reactivating subscription."""
     invoice.status = InvoiceStatus.PAID
     invoice.paid_at = datetime.now(timezone.utc)
 
     sub = await db.execute(select(Subscription).where(Subscription.id == invoice.subscription_id))
     subscription = sub.scalar_one_or_none()
-    if subscription and subscription.status == SubscriptionStatus.BLOCKED:
-        subscription.status = SubscriptionStatus.ACTIVE
+    if subscription:
+        now = datetime.now(timezone.utc)
+        cycle = subscription.billing_cycle_days or 30
 
-        from app.models.mt5_account import MT5Status
-        from app.models.strategy import Strategy, MasterAccount, UserStrategy
+        # Advance billing schedule
+        subscription.current_period_start = now
+        subscription.current_period_end = now + timedelta(days=cycle)
+        subscription.next_billing_date = now + timedelta(days=cycle)
+
+        if subscription.status == SubscriptionStatus.BLOCKED:
+            subscription.status = SubscriptionStatus.ACTIVE
+
+        if subscription.status == SubscriptionStatus.TRIAL:
+            subscription.status = SubscriptionStatus.ACTIVE
 
         mt5_result = await db.execute(
             select(MT5Account).where(MT5Account.user_id == subscription.user_id)
         )
         for account in mt5_result.scalars().all():
-            account.status = MT5Status.CONNECTED
+            if account.status == MT5Status.BLOCKED:
+                account.status = MT5Status.CONNECTED
 
-            us_result = await db.execute(
-                select(UserStrategy).where(
-                    UserStrategy.user_id == subscription.user_id, UserStrategy.is_active == True
+                from app.models.strategy import Strategy, MasterAccount, UserStrategy
+                us_result = await db.execute(
+                    select(UserStrategy).where(
+                        UserStrategy.user_id == subscription.user_id, UserStrategy.is_active == True
+                    )
                 )
-            )
-            active_us = us_result.scalar_one_or_none()
-            if active_us:
-                strat = await db.execute(select(Strategy).where(Strategy.id == active_us.strategy_id))
-                strategy = strat.scalar_one_or_none()
-                if strategy:
-                    ma = await db.execute(select(MasterAccount).where(MasterAccount.strategy_id == strategy.id))
-                    master = ma.scalar_one_or_none()
-                    if master:
-                        try:
-                            copy_engine.dispatch_unblock_account(
-                                account_id=str(account.id),
-                                login=account.login,
-                                encrypted_password=account.encrypted_password,
-                                server=account.server,
-                                strategy_level=strategy.level.value,
-                                master_login=master.login,
-                                risk_multiplier=strategy.risk_multiplier,
-                            )
-                        except Exception:
-                            pass
+                active_us = us_result.scalar_one_or_none()
+                if active_us:
+                    strat = await db.execute(select(Strategy).where(Strategy.id == active_us.strategy_id))
+                    strategy = strat.scalar_one_or_none()
+                    if strategy:
+                        ma = await db.execute(select(MasterAccount).where(MasterAccount.strategy_id == strategy.id))
+                        master = ma.scalar_one_or_none()
+                        if master:
+                            try:
+                                copy_engine.dispatch_unblock_account(
+                                    account_id=str(account.id),
+                                    login=account.login,
+                                    encrypted_password=account.encrypted_password,
+                                    server=account.server,
+                                    strategy_level=strategy.level.value,
+                                    master_login=master.login,
+                                    risk_multiplier=strategy.risk_multiplier,
+                                )
+                            except Exception:
+                                pass
 
 
 async def _process_gateway_webhook(provider: PaymentProvider, request: Request, db: AsyncSession):
