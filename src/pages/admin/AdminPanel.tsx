@@ -32,11 +32,15 @@ import {
   Trash2,
   ArrowUpDown,
   AlertTriangle,
+  ArrowUpCircle,
+  Check,
+  X,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   useAdminUsers,
   useAdminCheckPayments,
@@ -49,6 +53,8 @@ import {
   useAdminChangeUserPlan,
   useAdminSubscriptions,
   useAdminInvoices,
+  useAdminUpgradeRequests,
+  useAdminHandleUpgradeRequest,
 } from "@/hooks/use-api";
 import { StatCard } from "@/components/StatCard";
 import type { AdminPlan, CreatePlanData } from "@/lib/api";
