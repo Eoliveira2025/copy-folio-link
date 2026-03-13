@@ -358,6 +358,32 @@ class ApiClient {
   async adminGetTermsContent(termsId: string) {
     return this.request<AdminTermsDetail>(`/admin/terms/${termsId}/content`);
   }
+
+  // ── Admin Risk Protection ───────────────────────────
+  async adminGetRiskSettings() {
+    return this.request<RiskSettings>("/admin/risk/settings");
+  }
+
+  async adminUpdateRiskSettings(data: RiskSettingsUpdate) {
+    return this.request<RiskSettings>("/admin/risk/settings", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminGetRiskStatus() {
+    return this.request<RiskStatus>("/admin/risk/status");
+  }
+
+  async adminGetRiskIncidents() {
+    return this.request<RiskIncident[]>("/admin/risk/incidents");
+  }
+
+  async adminResetEmergency() {
+    return this.request<{ message: string }>("/admin/risk/reset-emergency", {
+      method: "POST",
+    });
+  }
 }
 
 // ── Error class ───────────────────────────────────────
