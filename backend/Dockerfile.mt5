@@ -1,5 +1,5 @@
-# MT5 Multi-Terminal Manager Dockerfile
-# Uses Wine to run MetaTrader 5 terminals on Linux (headless via Xvfb)
+# MT5 Services Dockerfile (copy-engine + mt5-manager)
+# Uses Wine to run MetaTrader 5 on Linux (headless via Xvfb)
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -21,19 +21,16 @@ ENV DISPLAY=:99
 ENV WINEARCH=win64
 ENV WINEPREFIX=/root/.wine
 
-# psutil for health monitoring
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir psutil==5.9.8
+# Install base + MT5 requirements
+COPY requirements.txt requirements-mt5.txt ./
+RUN pip install --no-cache-dir -r requirements.txt -r requirements-mt5.txt
 
 COPY . .
 
-# Create MT5 data directory
 RUN mkdir -p /app/mt5_terminals
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD python -c "import redis; r=redis.from_url('${REDIS_URL:-redis://redis:6379/0}'); r.ping()" || exit 1
 
-# Start Xvfb + MT5 Manager
+# Default: mt5-manager. Override command for copy-engine.
 CMD ["sh", "-c", "Xvfb :99 -screen 0 1024x768x16 & sleep 2 && python -m mt5_manager.main"]

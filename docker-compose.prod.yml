@@ -1,5 +1,12 @@
 version: "3.9"
 
+# ═══════════════════════════════════════════════════════════════
+# LINUX PRODUCTION STACK
+# All services here run on Ubuntu without MetaTrader5.
+# MT5 services (copy-engine, mt5-manager) are in
+# docker-compose.mt5.yml — deploy on Windows VPS or Wine host.
+# ═══════════════════════════════════════════════════════════════
+
 services:
   # ═══════════════════════════════════════════════════════
   # REVERSE PROXY & SSL
@@ -38,7 +45,7 @@ services:
       - copytrade
 
   # ═══════════════════════════════════════════════════════
-  # API SERVER
+  # API SERVER (no MT5 dependency)
   # ═══════════════════════════════════════════════════════
   api:
     build:
@@ -67,65 +74,7 @@ services:
           memory: 1G
 
   # ═══════════════════════════════════════════════════════
-  # COPY TRADING ENGINE
-  # ═══════════════════════════════════════════════════════
-  copy-engine:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: ct-engine
-    restart: always
-    command: python -m engine.main
-    env_file: .env
-    environment:
-      - DATABASE_URL_SYNC=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      - REDIS_URL=redis://redis:6379/0
-    volumes:
-      - engine_logs:/app/logs
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - copytrade
-    deploy:
-      resources:
-        limits:
-          cpus: "2"
-          memory: 2G
-
-  # ═══════════════════════════════════════════════════════
-  # MT5 TERMINAL MANAGER
-  # ═══════════════════════════════════════════════════════
-  mt5-manager:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.mt5
-    container_name: ct-mt5
-    restart: always
-    env_file: .env
-    environment:
-      - DATABASE_URL_SYNC=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      - REDIS_URL=redis://redis:6379/0
-    volumes:
-      - mt5_data:/root/.wine
-      - mt5_logs:/app/logs
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - copytrade
-    deploy:
-      resources:
-        limits:
-          cpus: "4"
-          memory: 4G
-
-  # ═══════════════════════════════════════════════════════
-  # CELERY WORKERS & SCHEDULER
+  # CELERY WORKERS & SCHEDULER (no MT5 dependency)
   # ═══════════════════════════════════════════════════════
   celery-worker:
     build:
@@ -299,8 +248,6 @@ services:
     volumes:
       - ./monitoring/promtail.yml:/etc/promtail/promtail.yml:ro
       - api_logs:/var/log/api:ro
-      - engine_logs:/var/log/engine:ro
-      - mt5_logs:/var/log/mt5:ro
       - celery_logs:/var/log/celery:ro
       - /var/log:/var/log/host:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -352,10 +299,7 @@ networks:
 volumes:
   pgdata:
   redis_data:
-  mt5_data:
   api_logs:
-  engine_logs:
-  mt5_logs:
   celery_logs:
   prometheus_data:
   grafana_data:
