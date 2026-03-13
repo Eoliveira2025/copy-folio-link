@@ -3,7 +3,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { CreatePlanData, CreateTermsData, UpdateTermsData } from "@/lib/api";
+import type { CreatePlanData, CreateTermsData, UpdateTermsData, RiskSettingsUpdate } from "@/lib/api";
 import { toast } from "sonner";
 
 // ── MT5 Accounts ────────────────────────────────────
