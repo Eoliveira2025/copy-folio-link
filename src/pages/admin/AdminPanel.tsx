@@ -212,18 +212,22 @@ const AdminPanel = () => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [subStatusFilter, setSubStatusFilter] = useState("");
   const [invStatusFilter, setInvStatusFilter] = useState("");
+  const [upgradeStatusFilter, setUpgradeStatusFilter] = useState("");
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<AdminPlan | undefined>();
   const [changePlanUser, setChangePlanUser] = useState<{ id: string; email: string } | null>(null);
+  const [upgradeNote, setUpgradeNote] = useState("");
 
   const { data: users, isLoading: usersLoading } = useAdminUsers(debouncedSearch);
   const { data: dashboard, isLoading: dashLoading } = useAdminDashboard();
   const { data: plans, isLoading: plansLoading } = useAdminPlans();
   const { data: subscriptions, isLoading: subsLoading } = useAdminSubscriptions(subStatusFilter || undefined);
   const { data: invoices, isLoading: invsLoading } = useAdminInvoices(invStatusFilter || undefined);
+  const { data: upgradeRequests, isLoading: upgradesLoading } = useAdminUpgradeRequests(upgradeStatusFilter || undefined);
   const checkPayments = useAdminCheckPayments();
   const unblockUser = useAdminUnblockUser();
   const deletePlan = useAdminDeletePlan();
+  const handleUpgrade = useAdminHandleUpgradeRequest();
 
   const handleSearch = (val: string) => {
     setSearch(val);
