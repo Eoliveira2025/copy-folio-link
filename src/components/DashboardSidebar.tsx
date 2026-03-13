@@ -32,6 +32,7 @@ export function DashboardSidebar({ isAdmin }: { isAdmin?: boolean }) {
 
   const adminItems = [
     { title: t("nav.adminPanel"), url: "/admin", icon: Shield },
+    { title: t("nav.operations"), url: "/admin/operations", icon: Activity },
   ];
 
   return (
