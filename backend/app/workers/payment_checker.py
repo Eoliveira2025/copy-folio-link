@@ -121,6 +121,7 @@ def check_payments():
             except Exception as e:
                 logger.error(f"Error checking invoice {invoice.id}: {e}")
 
+        loop.close()
         db.commit()
     return f"Checked {checked} invoices, {paid} newly paid"
 

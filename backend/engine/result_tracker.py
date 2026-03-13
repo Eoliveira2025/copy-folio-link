@@ -3,6 +3,8 @@ Result Tracker — consumes execution results with full latency data
 and persists to DB for audit trail and dashboard.
 """
 
+import time
+
 from __future__ import annotations
 import logging
 import threading

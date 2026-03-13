@@ -314,6 +314,11 @@ class ExecutionWorker:
             try:
                 self._send_heartbeat()
 
+                # Check if trading is globally blocked (emergency stop)
+                if self.redis_client.exists("copytrade:trading_blocked"):
+                    time.sleep(2)
+                    continue
+
                 # Blocking pop with short timeout for responsiveness
                 result = self.redis_client.brpop(self._queue_key, timeout=2)
                 if result is None:
