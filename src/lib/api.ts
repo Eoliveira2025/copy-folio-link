@@ -655,6 +655,11 @@ export interface RiskIncident {
   created_at: string;
 }
 
+// ── Public Settings Types ──────────────────────────────
+export interface PublicSettings {
+  affiliate_broker_link: string | null;
+}
+
 // ── Operations Types ──────────────────────────────────
 export interface OperationsDashboard {
   connected_mt5_accounts: number;
