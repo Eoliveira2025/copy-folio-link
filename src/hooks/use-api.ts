@@ -304,3 +304,52 @@ export function useAdminActivateTerms() {
     onError: (err: Error) => toast.error(err.message),
   });
 }
+
+// ── Admin Risk Protection ──────────────────────────
+export function useAdminRiskSettings() {
+  return useQuery({
+    queryKey: ["admin-risk-settings"],
+    queryFn: () => api.adminGetRiskSettings(),
+  });
+}
+
+export function useAdminRiskStatus() {
+  return useQuery({
+    queryKey: ["admin-risk-status"],
+    queryFn: () => api.adminGetRiskStatus(),
+    refetchInterval: 5000,
+  });
+}
+
+export function useAdminRiskIncidents() {
+  return useQuery({
+    queryKey: ["admin-risk-incidents"],
+    queryFn: () => api.adminGetRiskIncidents(),
+  });
+}
+
+export function useAdminUpdateRiskSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: RiskSettingsUpdate) => api.adminUpdateRiskSettings(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-risk-settings"] });
+      qc.invalidateQueries({ queryKey: ["admin-risk-status"] });
+      toast.success("Risk settings updated");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminResetEmergency() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.adminResetEmergency(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-risk-status"] });
+      qc.invalidateQueries({ queryKey: ["admin-risk-settings"] });
+      toast.success("Emergency state reset — trading re-enabled");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
