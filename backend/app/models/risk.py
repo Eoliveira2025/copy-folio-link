@@ -14,6 +14,7 @@ class SystemSettings(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     global_max_drawdown_percent: Mapped[float] = mapped_column(Float, nullable=False, default=50.0)
     protection_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    affiliate_broker_link: Mapped[str | None] = mapped_column(String(500))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
