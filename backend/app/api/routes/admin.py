@@ -535,3 +535,122 @@ async def handle_upgrade_request(
         "message": f"Upgrade approved. User moved to '{target_plan.name}'. Invoice of ${target_plan.price} generated.",
         "invoice_id": str(invoice.id),
     }
+
+
+# ── Terms Management ────────────────────────────────────
+
+@router.get("/terms")
+async def admin_list_terms(
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all terms versions with acceptance counts."""
+    result = await db.execute(
+        select(
+            TermsDocument,
+            func.count(TermsAcceptance.id).label("acceptance_count"),
+        )
+        .outerjoin(TermsAcceptance, TermsAcceptance.terms_id == TermsDocument.id)
+        .group_by(TermsDocument.id)
+        .order_by(TermsDocument.version.desc())
+    )
+    rows = result.all()
+    return [
+        AdminTermsListItem(
+            id=str(t.id),
+            title=t.title,
+            version=t.version,
+            company_name=t.company_name,
+            is_active=t.is_active,
+            created_at=t.created_at.isoformat(),
+            updated_at=t.updated_at.isoformat(),
+            acceptance_count=count,
+        )
+        for t, count in rows
+    ]
+
+
+@router.post("/terms")
+async def admin_create_terms(
+    body: AdminCreateTerms,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new terms version."""
+    terms = TermsDocument(
+        title=body.title,
+        content=body.content,
+        version=body.version,
+        company_name=body.company_name,
+        is_active=False,
+    )
+    db.add(terms)
+    await db.commit()
+    await db.refresh(terms)
+    return {"message": "Terms created", "id": str(terms.id)}
+
+
+@router.put("/terms/{terms_id}")
+async def admin_update_terms(
+    terms_id: str,
+    body: AdminUpdateTerms,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Edit terms content."""
+    result = await db.execute(select(TermsDocument).where(TermsDocument.id == terms_id))
+    terms = result.scalar_one_or_none()
+    if not terms:
+        raise HTTPException(status_code=404, detail="Terms not found")
+
+    if body.title is not None:
+        terms.title = body.title
+    if body.content is not None:
+        terms.content = body.content
+    if body.company_name is not None:
+        terms.company_name = body.company_name
+
+    await db.commit()
+    return {"message": "Terms updated"}
+
+
+@router.post("/terms/{terms_id}/activate")
+async def admin_activate_terms(
+    terms_id: str,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Activate a terms version (deactivates all others)."""
+    result = await db.execute(select(TermsDocument).where(TermsDocument.id == terms_id))
+    terms = result.scalar_one_or_none()
+    if not terms:
+        raise HTTPException(status_code=404, detail="Terms not found")
+
+    # Deactivate all others
+    all_terms = await db.execute(select(TermsDocument))
+    for t in all_terms.scalars():
+        t.is_active = (t.id == terms.id)
+
+    await db.commit()
+    return {"message": f"Terms v{terms.version} is now active"}
+
+
+@router.get("/terms/{terms_id}/content")
+async def admin_get_terms_content(
+    terms_id: str,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get full terms content for editing."""
+    result = await db.execute(select(TermsDocument).where(TermsDocument.id == terms_id))
+    terms = result.scalar_one_or_none()
+    if not terms:
+        raise HTTPException(status_code=404, detail="Terms not found")
+    return {
+        "id": str(terms.id),
+        "title": terms.title,
+        "content": terms.content,
+        "version": terms.version,
+        "company_name": terms.company_name,
+        "is_active": terms.is_active,
+    }

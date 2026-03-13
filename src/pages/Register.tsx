@@ -3,10 +3,13 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
+import { api } from "@/lib/api";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 
 const Register = () => {
   const [email, setEmail] = useState("");
@@ -14,11 +17,22 @@ const Register = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const navigate = useNavigate();
   const { register } = useAuth();
 
+  const { data: activeTerms } = useQuery({
+    queryKey: ["active-terms"],
+    queryFn: () => api.getActiveTerms(),
+    retry: false,
+  });
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!termsAccepted) {
+      toast.error("You must accept the Terms and Conditions");
+      return;
+    }
     if (password !== confirmPassword) {
       toast.error("Passwords do not match");
       return;
@@ -30,6 +44,14 @@ const Register = () => {
     setIsLoading(true);
     try {
       await register(email, password, confirmPassword);
+      // Accept terms after registration (user is now authenticated)
+      if (activeTerms?.id) {
+        try {
+          await api.acceptTerms(activeTerms.id);
+        } catch {
+          // Non-blocking - terms acceptance is best-effort during registration
+        }
+      }
       toast.success("Account created! 30-day free trial started.");
       navigate("/dashboard");
     } catch (err: any) {
@@ -70,7 +92,23 @@ const Register = () => {
             <Label htmlFor="confirm">Confirm Password</Label>
             <Input id="confirm" type="password" placeholder="Repeat password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="h-11 bg-secondary border-border" required />
           </div>
-          <Button type="submit" className="w-full h-11 font-semibold" disabled={isLoading}>
+
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="terms"
+              checked={termsAccepted}
+              onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+              className="mt-0.5"
+            />
+            <Label htmlFor="terms" className="text-sm text-muted-foreground font-normal leading-relaxed cursor-pointer">
+              I have read and agree to the{" "}
+              <Link to="/terms-of-service" target="_blank" className="text-primary hover:underline font-medium">
+                Terms and Conditions
+              </Link>
+            </Label>
+          </div>
+
+          <Button type="submit" className="w-full h-11 font-semibold" disabled={isLoading || !termsAccepted}>
             {isLoading ? "Creating account..." : "Create Account"}
           </Button>
         </form>
