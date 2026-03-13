@@ -1,4 +1,4 @@
-"""Strategy listing and selection endpoints."""
+"""Strategy listing and selection with Copy Engine auto-subscription."""
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,8 +7,10 @@ from sqlalchemy import select
 from app.core.database import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
-from app.models.strategy import Strategy, UserStrategy, LOCKED_STRATEGIES
+from app.models.mt5_account import MT5Account, MT5Status
+from app.models.strategy import Strategy, UserStrategy, MasterAccount, LOCKED_STRATEGIES
 from app.schemas.strategy import StrategyResponse, SelectStrategyRequest
+from app.services import copy_engine
 
 router = APIRouter()
 
@@ -18,7 +20,6 @@ async def list_strategies(user: User = Depends(get_current_user), db: AsyncSessi
     result = await db.execute(select(Strategy))
     strategies = result.scalars().all()
 
-    # Check which locked strategies user has unlocked
     unlocked = await db.execute(
         select(UserStrategy.strategy_id).where(
             UserStrategy.user_id == user.id, UserStrategy.unlocked_by_admin == True
@@ -66,6 +67,30 @@ async def select_strategy(
 
     # Activate new
     db.add(UserStrategy(user_id=user.id, strategy_id=strategy.id, is_active=True))
-    await db.commit()
 
+    # Get master account for new strategy
+    ma_result = await db.execute(select(MasterAccount).where(MasterAccount.strategy_id == strategy.id))
+    master = ma_result.scalar_one_or_none()
+
+    # Re-subscribe all connected MT5 accounts to the new strategy
+    if master:
+        mt5_result = await db.execute(
+            select(MT5Account).where(
+                MT5Account.user_id == user.id,
+                MT5Account.status == MT5Status.CONNECTED,
+            )
+        )
+        for account in mt5_result.scalars().all():
+            try:
+                copy_engine.dispatch_subscribe_strategy(
+                    account_id=str(account.id),
+                    client_login=account.login,
+                    strategy_level=strategy.level.value,
+                    master_login=master.login,
+                    risk_multiplier=strategy.risk_multiplier,
+                )
+            except Exception:
+                pass
+
+    await db.commit()
     return {"message": f"Strategy '{strategy.name}' activated"}
