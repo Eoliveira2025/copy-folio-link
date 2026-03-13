@@ -12,10 +12,15 @@ services:
       - redis
     volumes:
       - .:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   celery-worker:
     build: .
-    command: celery -A app.workers.payment_checker worker --loglevel=info
+    command: celery -A app.workers.payment_checker worker --loglevel=info --concurrency=4
     env_file: .env
     depends_on:
       - db
@@ -39,10 +44,12 @@ services:
       resources:
         limits:
           memory: 2G
+          cpus: "2.0"
 
   mt5-manager:
-    build: .
-    command: python -m mt5_manager.main
+    build:
+      context: .
+      dockerfile: Dockerfile.mt5
     env_file: .env
     depends_on:
       - db
@@ -50,7 +57,12 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4G
+          memory: 8G
+          cpus: "4.0"
+    volumes:
+      - mt5_data:/app/mt5_terminals
+    environment:
+      - MT5_DATA_DIR_BASE=/app/mt5_terminals
 
   db:
     image: postgres:16-alpine
@@ -62,12 +74,29 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    command: >
+      postgres
+        -c shared_buffers=256MB
+        -c effective_cache_size=1GB
+        -c work_mem=16MB
+        -c max_connections=200
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: >
+      redis-server
+        --maxmemory 512mb
+        --maxmemory-policy allkeys-lru
+        --appendonly yes
+        --appendfsync everysec
+        --save 900 1
+        --save 300 10
+    volumes:
+      - redis_data:/data
 
 volumes:
   pgdata:
+  redis_data:
+  mt5_data:
