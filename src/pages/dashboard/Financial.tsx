@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useSubscription, useInvoices, useMyUpgradeRequests } from "@/hooks/use-api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
 
 const statusStyle: Record<string, string> = {
   paid: "bg-success/15 text-success border-success/30 hover:bg-success/15",
@@ -23,17 +24,14 @@ const subStatusStyle: Record<string, string> = {
 };
 
 const Financial = () => {
+  const { t } = useTranslation();
   const { data: subscription, isLoading: subLoading } = useSubscription();
   const { data: invoices, isLoading: invLoading } = useInvoices();
   const { data: upgradeRequests, isLoading: upgradeLoading } = useMyUpgradeRequests();
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "—";
-    try {
-      return format(new Date(dateStr), "MMM dd, yyyy");
-    } catch {
-      return dateStr;
-    }
+    try { return format(new Date(dateStr), "MMM dd, yyyy"); } catch { return dateStr; }
   };
 
   const getDaysRemaining = () => {
@@ -47,11 +45,10 @@ const Financial = () => {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-bold">Financial</h1>
-        <p className="text-muted-foreground text-sm">Manage your subscription and invoices</p>
+        <h1 className="text-2xl font-bold">{t("financial.title")}</h1>
+        <p className="text-muted-foreground text-sm">{t("financial.subtitle")}</p>
       </div>
 
-      {/* Subscription Card */}
       {subLoading ? (
         <Skeleton className="h-32" />
       ) : subscription ? (
@@ -59,7 +56,7 @@ const Financial = () => {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <CreditCard className="w-5 h-5 text-primary" />
-              <h2 className="font-semibold">Current Subscription</h2>
+              <h2 className="font-semibold">{t("financial.currentSubscription")}</h2>
             </div>
             <Badge className={subStatusStyle[subscription.status] || ""}>
               {subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
@@ -67,54 +64,53 @@ const Financial = () => {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
             <div>
-              <span className="text-muted-foreground block">Plan</span>
+              <span className="text-muted-foreground block">{t("financial.plan")}</span>
               <div className="flex items-center gap-1.5">
                 <Package className="w-3.5 h-3.5 text-primary" />
                 <span className="font-medium">
-                  {subscription.plan_name || (subscription.status === "trial" ? "Free Trial" : "Standard")}
+                  {subscription.plan_name || (subscription.status === "trial" ? t("financial.freeTrial") : t("financial.standard"))}
                 </span>
               </div>
             </div>
             <div>
-              <span className="text-muted-foreground block">Price</span>
+              <span className="text-muted-foreground block">{t("financial.price")}</span>
               <span className="font-mono font-medium">
                 ${subscription.plan_price != null ? subscription.plan_price.toFixed(2) : "49.90"}/mo
               </span>
             </div>
             <div>
               <span className="text-muted-foreground block">
-                {subscription.status === "trial" ? "Trial Ends" : "Next Billing"}
+                {subscription.status === "trial" ? t("financial.trialEnds") : t("financial.nextBilling")}
               </span>
               <span className="font-mono">
                 {formatDate(subscription.trial_end || subscription.current_period_end)}
               </span>
             </div>
             <div>
-              <span className="text-muted-foreground block">Remaining</span>
+              <span className="text-muted-foreground block">{t("financial.remaining")}</span>
               <span className="font-mono">
-                {getDaysRemaining() !== null ? `${getDaysRemaining()} days` : "—"}
+                {getDaysRemaining() !== null ? t("financial.days", { count: getDaysRemaining() }) : "—"}
               </span>
             </div>
           </div>
         </motion.div>
       ) : null}
 
-      {/* Upgrade Requests */}
       {!upgradeLoading && upgradeRequests && upgradeRequests.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="card-glass rounded-lg p-6">
           <div className="flex items-center gap-3 mb-4">
             <ArrowUpCircle className="w-5 h-5 text-primary" />
-            <h2 className="font-semibold">Upgrade Requests</h2>
+            <h2 className="font-semibold">{t("financial.upgradeRequests")}</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-muted-foreground text-left border-b border-border">
-                  <th className="pb-3 font-medium">From</th>
-                  <th className="pb-3 font-medium">To</th>
-                  <th className="pb-3 font-medium">Balance</th>
-                  <th className="pb-3 font-medium">Status</th>
-                  <th className="pb-3 font-medium">Date</th>
+                  <th className="pb-3 font-medium">{t("financial.from")}</th>
+                  <th className="pb-3 font-medium">{t("financial.to")}</th>
+                  <th className="pb-3 font-medium">{t("dashboard.balance")}</th>
+                  <th className="pb-3 font-medium">{t("financial.status")}</th>
+                  <th className="pb-3 font-medium">{t("admin.date")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -137,22 +133,21 @@ const Financial = () => {
         </motion.div>
       )}
 
-      {/* Invoices */}
       {invLoading ? (
         <Skeleton className="h-48" />
       ) : (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card-glass rounded-lg p-6">
-          <h2 className="font-semibold mb-4">Invoices</h2>
+          <h2 className="font-semibold mb-4">{t("financial.invoices")}</h2>
           {invoices && invoices.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-muted-foreground text-left border-b border-border">
-                    <th className="pb-3 font-medium">Issue Date</th>
-                    <th className="pb-3 font-medium">Due Date</th>
-                    <th className="pb-3 font-medium">Amount</th>
-                    <th className="pb-3 font-medium">Status</th>
-                    <th className="pb-3 font-medium">Paid At</th>
+                    <th className="pb-3 font-medium">{t("financial.issueDate")}</th>
+                    <th className="pb-3 font-medium">{t("financial.dueDate")}</th>
+                    <th className="pb-3 font-medium">{t("financial.amount")}</th>
+                    <th className="pb-3 font-medium">{t("financial.status")}</th>
+                    <th className="pb-3 font-medium">{t("financial.paidAt")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -173,7 +168,7 @@ const Financial = () => {
               </table>
             </div>
           ) : (
-            <p className="text-muted-foreground text-sm">No invoices yet. Your first invoice will be generated before your trial ends.</p>
+            <p className="text-muted-foreground text-sm">{t("financial.noInvoices")}</p>
           )}
         </motion.div>
       )}

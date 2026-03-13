@@ -14,12 +14,14 @@ import { api } from "@/lib/api";
 import type { TermsCheckResult } from "@/lib/api";
 import { toast } from "sonner";
 import { Shield } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface TermsAcceptanceModalProps {
   onAccepted: () => void;
 }
 
 export function TermsAcceptanceModal({ onAccepted }: TermsAcceptanceModalProps) {
+  const { t } = useTranslation();
   const [checkResult, setCheckResult] = useState<TermsCheckResult | null>(null);
   const [termsContent, setTermsContent] = useState<string>("");
   const [accepted, setAccepted] = useState(false);
@@ -31,7 +33,6 @@ export function TermsAcceptanceModal({ onAccepted }: TermsAcceptanceModalProps) 
       if (result.needs_acceptance && result.terms_id) {
         setOpen(true);
         setCheckResult(result);
-        // Fetch full terms content
         api.getActiveTerms().then((terms) => setTermsContent(terms.content)).catch(() => {});
       }
     }).catch(() => {});
@@ -42,11 +43,11 @@ export function TermsAcceptanceModal({ onAccepted }: TermsAcceptanceModalProps) 
     setSubmitting(true);
     try {
       await api.acceptTerms(checkResult.terms_id);
-      toast.success("Terms accepted");
+      toast.success(t("terms.accepted"));
       setOpen(false);
       onAccepted();
     } catch (err: any) {
-      toast.error(err.message || "Failed to accept terms");
+      toast.error(err.message || t("terms.failedAccept"));
     } finally {
       setSubmitting(false);
     }
@@ -62,10 +63,10 @@ export function TermsAcceptanceModal({ onAccepted }: TermsAcceptanceModalProps) 
             <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center">
               <Shield className="w-5 h-5 text-primary" />
             </div>
-            <DialogTitle className="text-xl">Terms and Conditions Updated</DialogTitle>
+            <DialogTitle className="text-xl">{t("terms.updated")}</DialogTitle>
           </div>
           <DialogDescription>
-            Please review and accept the updated Terms and Conditions (v{checkResult?.version}) to continue using the platform.
+            {t("terms.reviewAccept", { version: checkResult?.version })}
           </DialogDescription>
         </DialogHeader>
 
@@ -84,7 +85,7 @@ export function TermsAcceptanceModal({ onAccepted }: TermsAcceptanceModalProps) 
             className="mt-0.5"
           />
           <Label htmlFor="modal-terms" className="text-sm text-muted-foreground font-normal leading-relaxed cursor-pointer">
-            I have read and agree to the updated Terms and Conditions
+            {t("terms.agreeUpdated")}
           </Label>
         </div>
 
@@ -93,7 +94,7 @@ export function TermsAcceptanceModal({ onAccepted }: TermsAcceptanceModalProps) 
           disabled={!accepted || submitting}
           className="w-full mt-2"
         >
-          {submitting ? "Accepting..." : "Accept and Continue"}
+          {submitting ? t("terms.accepting") : t("terms.acceptContinue")}
         </Button>
       </DialogContent>
     </Dialog>
