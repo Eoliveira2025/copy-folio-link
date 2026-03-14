@@ -416,6 +416,45 @@ class ApiClient {
       method: "POST",
     });
   }
+
+  // ── Admin Strategies ─────────────────────────────────
+  async adminListStrategies() {
+    return this.request<AdminStrategy[]>("/admin/strategies");
+  }
+
+  async adminCreateStrategy(data: CreateStrategyData) {
+    return this.request<AdminStrategy>("/admin/strategies", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminUpdateStrategy(strategyId: string, data: Partial<CreateStrategyData>) {
+    return this.request<AdminStrategy>(`/admin/strategies/${strategyId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminDeleteStrategy(strategyId: string) {
+    return this.request<{ message: string }>(`/admin/strategies/${strategyId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async adminSetMasterAccount(strategyId: string, data: CreateMasterAccountData) {
+    return this.request<AdminMasterAccount>(`/admin/strategies/${strategyId}/master-account`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminUpdateMasterAccount(strategyId: string, data: Partial<CreateMasterAccountData>) {
+    return this.request<AdminMasterAccount>(`/admin/strategies/${strategyId}/master-account`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 // ── Error class ───────────────────────────────────────
@@ -697,6 +736,40 @@ export interface DeadLetterTrade {
   resolution_note: string | null;
   created_at: string;
   resolved_at: string | null;
+}
+
+// ── Admin Strategy Types ──────────────────────────────
+export interface AdminMasterAccount {
+  id: string;
+  account_name: string;
+  login: number;
+  server: string;
+  balance: number;
+}
+
+export interface AdminStrategy {
+  id: string;
+  level: string;
+  name: string;
+  description: string | null;
+  risk_multiplier: number;
+  requires_unlock: boolean;
+  master_account: AdminMasterAccount | null;
+}
+
+export interface CreateStrategyData {
+  level: string;
+  name: string;
+  description?: string | null;
+  risk_multiplier: number;
+  requires_unlock: boolean;
+}
+
+export interface CreateMasterAccountData {
+  account_name: string;
+  login: number;
+  server: string;
+  password: string;
 }
 
 // Singleton

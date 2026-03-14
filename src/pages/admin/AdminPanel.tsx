@@ -12,7 +12,7 @@ import {
 import {
   Search, RefreshCw, Users, BarChart3, Server, Shield, CreditCard,
   FileText, Package, Plus, Pencil, Trash2, ArrowUpDown, AlertTriangle,
-  ArrowUpCircle, Check, X, Scale, Power, Eye, Settings,
+  ArrowUpCircle, Check, X, Scale, Power, Eye, Settings, Crosshair,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,6 +32,7 @@ import { StatCard } from "@/components/StatCard";
 import type { AdminPlan, CreatePlanData, AdminTermsItem } from "@/lib/api";
 import { api } from "@/lib/api";
 import { RiskProtectionTab } from "@/components/admin/RiskProtectionTab";
+import { StrategiesTab } from "@/components/admin/StrategiesTab";
 
 const statusStyle: Record<string, string> = {
   active: "bg-success/15 text-success border-success/30 hover:bg-success/15",
@@ -200,6 +201,7 @@ const AdminPanel = () => {
         <TabsList className="bg-secondary">
           <TabsTrigger value="users" className="gap-2"><Users className="w-4 h-4" /> {t("admin.users")}</TabsTrigger>
           <TabsTrigger value="plans" className="gap-2"><Package className="w-4 h-4" /> {t("admin.plans")}</TabsTrigger>
+          <TabsTrigger value="strategies" className="gap-2"><Crosshair className="w-4 h-4" /> {t("adminStrategies.title")}</TabsTrigger>
           <TabsTrigger value="subscriptions" className="gap-2"><CreditCard className="w-4 h-4" /> {t("admin.subscriptions")}</TabsTrigger>
           <TabsTrigger value="invoices" className="gap-2"><FileText className="w-4 h-4" /> {t("admin.invoices")}</TabsTrigger>
           <TabsTrigger value="upgrades" className="gap-2"><ArrowUpCircle className="w-4 h-4" /> {t("admin.upgrades")}</TabsTrigger>
@@ -293,6 +295,11 @@ const AdminPanel = () => {
               {(!plans || plans.length === 0) && <div className="col-span-full p-6 text-center text-muted-foreground card-glass rounded-lg">{t("admin.noPlans")}</div>}
             </div>
           )}
+        </TabsContent>
+
+        {/* Strategies Tab */}
+        <TabsContent value="strategies" className="mt-4 space-y-4">
+          <StrategiesTab />
         </TabsContent>
 
         {/* Subscriptions Tab */}

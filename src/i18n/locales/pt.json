@@ -336,5 +336,33 @@
     "retry": "Retentar",
     "resolve": "Resolver",
     "noDLQ": "Nenhuma operação falha na fila. Sistema operando normalmente."
+  },
+  "adminStrategies": {
+    "title": "Estratégias",
+    "subtitle": "Gerencie estratégias de copy trading e suas contas master MT5",
+    "level": "Nível da Estratégia",
+    "selectLevel": "Selecione um nível",
+    "strategyName": "Nome da Estratégia",
+    "description": "Descrição",
+    "descriptionPlaceholder": "Breve descrição desta estratégia...",
+    "riskMultiplier": "Multiplicador de Risco",
+    "requiresUnlock": "Requer Desbloqueio Admin",
+    "createStrategy": "Criar Estratégia",
+    "editStrategy": "Editar Estratégia",
+    "updateStrategy": "Atualizar Estratégia",
+    "noStrategies": "Nenhuma estratégia criada. Clique em \"Criar Estratégia\" para adicionar.",
+    "masterAccount": "Conta Master",
+    "noMasterAccount": "Nenhuma conta master vinculada",
+    "masterAccountFor": "Conta master para",
+    "masterAccountConfig": "Configuração da Conta Master",
+    "accountName": "Nome da Conta",
+    "masterLogin": "Login MT5",
+    "masterServer": "Servidor MT5",
+    "masterPassword": "Senha MT5",
+    "leaveBlank": "Deixe vazio para manter atual",
+    "passwordPlaceholder": "Senha da conta master",
+    "setMasterAccount": "Vincular Conta Master",
+    "editMasterAccount": "Editar Conta Master",
+    "updateMasterAccount": "Atualizar Conta Master"
   }
 }
