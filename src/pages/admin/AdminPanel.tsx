@@ -54,6 +54,7 @@ function PlanFormDialog({ plan, onClose }: { plan?: AdminPlan; onClose: () => vo
   const updatePlan = useAdminUpdatePlan();
   const [name, setName] = useState(plan?.name || "");
   const [price, setPrice] = useState(String(plan?.price || ""));
+  const [currency, setCurrency] = useState(plan?.currency || "USD");
   const [trialDays, setTrialDays] = useState(String(plan?.trial_days ?? 30));
   const [maxAccounts, setMaxAccounts] = useState(String(plan?.max_accounts ?? 1));
   const [active, setActive] = useState(plan?.active ?? true);
@@ -62,10 +63,12 @@ function PlanFormDialog({ plan, onClose }: { plan?: AdminPlan; onClose: () => vo
   const toggleStrategy = (s: string) => setStrategies((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]);
 
   const handleSubmit = () => {
-    const data: CreatePlanData = { name, price: parseFloat(price), allowed_strategies: strategies, trial_days: parseInt(trialDays), max_accounts: parseInt(maxAccounts), active };
+    const data: CreatePlanData = { name, price: parseFloat(price), currency, allowed_strategies: strategies, trial_days: parseInt(trialDays), max_accounts: parseInt(maxAccounts), active };
     if (plan) { updatePlan.mutate({ planId: plan.id, updates: data }, { onSuccess: onClose }); }
     else { createPlan.mutate(data, { onSuccess: onClose }); }
   };
+
+  const currencySymbol = currency === "BRL" ? "R$" : "US$";
 
   return (
     <div className="space-y-4">
@@ -73,8 +76,18 @@ function PlanFormDialog({ plan, onClose }: { plan?: AdminPlan; onClose: () => vo
         <Label>{t("admin.planName")}</Label>
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Starter" className="bg-secondary" />
       </div>
+      <div className="space-y-2">
+        <Label>{t("admin.currency", "Moeda")}</Label>
+        <div className="flex gap-2">
+          {(["USD", "BRL"] as const).map((c) => (
+            <Button key={c} type="button" variant={currency === c ? "default" : "outline"} size="sm" onClick={() => setCurrency(c)} className="gap-1.5">
+              {c === "USD" ? "🇺🇸 Dólar (USD)" : "🇧🇷 Real (BRL)"}
+            </Button>
+          ))}
+        </div>
+      </div>
       <div className="grid grid-cols-3 gap-3">
-        <div className="space-y-2"><Label>{t("admin.priceMo")}</Label><Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="bg-secondary" /></div>
+        <div className="space-y-2"><Label>{t("admin.priceMo")} ({currencySymbol})</Label><Input type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} className="bg-secondary" /></div>
         <div className="space-y-2"><Label>{t("admin.trialDays")}</Label><Input type="number" value={trialDays} onChange={(e) => setTrialDays(e.target.value)} className="bg-secondary" /></div>
         <div className="space-y-2"><Label>{t("admin.maxAccounts")}</Label><Input type="number" value={maxAccounts} onChange={(e) => setMaxAccounts(e.target.value)} className="bg-secondary" /></div>
       </div>
@@ -87,7 +100,7 @@ function PlanFormDialog({ plan, onClose }: { plan?: AdminPlan; onClose: () => vo
         </div>
       </div>
       <div className="flex items-center gap-2"><Switch checked={active} onCheckedChange={setActive} /><Label>{t("common.active")}</Label></div>
-      <Button onClick={handleSubmit} disabled={createPlan.isPending || updatePlan.isPending} className="w-full">
+      <Button onClick={handleSubmit} disabled={createPlan.isPending || updatePlan.isPending || !name || !price || parseFloat(price) <= 0} className="w-full">
         {plan ? t("admin.updatePlan") : t("admin.createPlan")}
       </Button>
     </div>
