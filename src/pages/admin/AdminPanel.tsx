@@ -281,7 +281,7 @@ const AdminPanel = () => {
                       <Button variant="ghost" size="icon" className="h-7 w-7 text-danger hover:text-danger" onClick={() => deletePlan.mutate(plan.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
                     </div>
                   </div>
-                  <div className="flex items-baseline gap-1"><span className="text-2xl font-mono font-bold text-primary">${plan.price}</span><span className="text-muted-foreground text-sm">/mo</span></div>
+                  <div className="flex items-baseline gap-1"><span className="text-2xl font-mono font-bold text-primary">{plan.currency === "BRL" ? "R$" : "US$"}{plan.price.toFixed(2)}</span><span className="text-muted-foreground text-sm">/mo</span></div>
                   <div className="text-sm space-y-1 text-muted-foreground">
                     <div>{t("admin.trialDays").split(" ")[0]}: <span className="text-foreground">{plan.trial_days} {t("admin.trialDays").split(" ").slice(1).join(" ") || "days"}</span></div>
                     <div>{t("admin.maxAccounts")}: <span className="text-foreground">{plan.max_accounts}</span></div>
