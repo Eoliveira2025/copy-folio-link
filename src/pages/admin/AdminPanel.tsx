@@ -32,6 +32,7 @@ import { StatCard } from "@/components/StatCard";
 import type { AdminPlan, CreatePlanData, AdminTermsItem } from "@/lib/api";
 import { api } from "@/lib/api";
 import { RiskProtectionTab } from "@/components/admin/RiskProtectionTab";
+import { StrategiesTab } from "@/components/admin/StrategiesTab";
 
 const statusStyle: Record<string, string> = {
   active: "bg-success/15 text-success border-success/30 hover:bg-success/15",
