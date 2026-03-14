@@ -1,0 +1,23 @@
+# CopyTrade Pro — Windows VPS Agent Dependencies
+# Install on Windows Server 2022 with Python 3.12
+
+# MT5 API (Windows only)
+MetaTrader5==5.0.4230
+
+# Database
+sqlalchemy==2.0.30
+psycopg2-binary==2.9.9
+
+# Redis
+redis==5.0.7
+
+# Configuration
+pydantic[email-validator]==2.7.4
+pydantic-settings==2.3.4
+
+# Encryption
+cryptography==42.0.8
+
+# Performance
+orjson==3.10.5
+psutil==5.9.8
