@@ -6,8 +6,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
 
-revision = "004_add_reset_and_dlq_tables"
-down_revision = "003_add_risk_protection_tables"
+revision = "004"
+down_revision = "003"
 branch_labels = None
 depends_on = None
 
