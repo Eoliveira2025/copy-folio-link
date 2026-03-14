@@ -5,8 +5,8 @@ Revision ID: 005
 from alembic import op
 import sqlalchemy as sa
 
-revision = "005_add_affiliate_broker_link"
-down_revision = "004_add_reset_and_dlq_tables"
+revision = "005"
+down_revision = "004"
 branch_labels = None
 depends_on = None
 
