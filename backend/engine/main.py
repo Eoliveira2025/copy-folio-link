@@ -137,14 +137,13 @@ def run_listener_subprocess(master: dict):
         format=f"%(asctime)s.%(msecs)03d [Listen-{master['login']}] %(levelname)s: %(message)s",
         datefmt="%H:%M:%S",
     )
-    password = os.environ.get(f"MASTER_PASSWORD_{master['login']}", "")
     listener = MasterListener(
         master_account_id=master["id"],
         login=master["login"],
-        password=password,
+        password=master["password"],
         server=master["server"],
     )
-    listener.run()  # Run directly (not as thread) since it's in its own subprocess
+    listener.run()
 
 
 class CopyEngine:

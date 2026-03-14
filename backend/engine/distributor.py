@@ -74,7 +74,8 @@ class ClientCache:
                     ma.id AS client_mt5_id,
                     ma.server AS client_server,
                     ma.balance AS client_balance,
-                    s.name AS strategy_level,
+                    s.level AS strategy_level,
+                    s.risk_multiplier,
                     master.balance AS master_balance
                 FROM mt5_accounts ma
                 JOIN user_strategies us ON us.user_id = ma.user_id AND us.is_active = true
@@ -91,6 +92,7 @@ class ClientCache:
                     "client_server": row.client_server,
                     "client_balance": row.client_balance or 0.0,
                     "strategy_level": row.strategy_level,
+                    "risk_multiplier": row.risk_multiplier or 1.0,
                     "master_balance": row.master_balance or 0.0,
                 }
                 for row in rows
