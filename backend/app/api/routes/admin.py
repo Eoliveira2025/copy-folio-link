@@ -553,6 +553,173 @@ async def handle_upgrade_request(
     }
 
 
+# ── Strategy & Master Account CRUD ──────────────────────
+
+@router.get("/strategies", response_model=list[AdminStrategyResponse])
+async def admin_list_strategies(
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all strategies with their master accounts."""
+    result = await db.execute(
+        select(Strategy).options(selectinload(Strategy.master_account)).order_by(Strategy.level)
+    )
+    strategies = result.scalars().all()
+    response = []
+    for s in strategies:
+        data = AdminStrategyResponse.model_validate(s)
+        if s.master_account:
+            data.master_account = AdminMasterAccountResponse.model_validate(s.master_account)
+        response.append(data)
+    return response
+
+
+@router.post("/strategies", response_model=AdminStrategyResponse)
+async def admin_create_strategy(
+    body: AdminStrategyCreate,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new strategy."""
+    from app.models.strategy import StrategyLevel
+    # Check uniqueness
+    existing = await db.execute(select(Strategy).where(Strategy.level == StrategyLevel(body.level)))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail=f"Strategy with level '{body.level}' already exists")
+
+    strategy = Strategy(
+        level=StrategyLevel(body.level),
+        name=body.name,
+        description=body.description,
+        risk_multiplier=body.risk_multiplier,
+        requires_unlock=body.requires_unlock,
+    )
+    db.add(strategy)
+    await db.commit()
+    await db.refresh(strategy)
+    return AdminStrategyResponse.model_validate(strategy)
+
+
+@router.put("/strategies/{strategy_id}", response_model=AdminStrategyResponse)
+async def admin_update_strategy(
+    strategy_id: str,
+    body: AdminStrategyUpdate,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update a strategy."""
+    result = await db.execute(
+        select(Strategy).options(selectinload(Strategy.master_account)).where(Strategy.id == strategy_id)
+    )
+    strategy = result.scalar_one_or_none()
+    if not strategy:
+        raise HTTPException(status_code=404, detail="Strategy not found")
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(strategy, field, value)
+    await db.commit()
+    await db.refresh(strategy)
+    data = AdminStrategyResponse.model_validate(strategy)
+    if strategy.master_account:
+        data.master_account = AdminMasterAccountResponse.model_validate(strategy.master_account)
+    return data
+
+
+@router.delete("/strategies/{strategy_id}")
+async def admin_delete_strategy(
+    strategy_id: str,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a strategy and its master account."""
+    result = await db.execute(
+        select(Strategy).options(selectinload(Strategy.master_account)).where(Strategy.id == strategy_id)
+    )
+    strategy = result.scalar_one_or_none()
+    if not strategy:
+        raise HTTPException(status_code=404, detail="Strategy not found")
+
+    # Check if any users are actively using this strategy
+    active_users = await db.execute(
+        select(func.count(UserStrategy.id)).where(
+            UserStrategy.strategy_id == strategy_id, UserStrategy.is_active == True
+        )
+    )
+    if (active_users.scalar() or 0) > 0:
+        raise HTTPException(status_code=409, detail="Cannot delete strategy with active users. Deactivate users first.")
+
+    await db.delete(strategy)
+    await db.commit()
+    return {"message": f"Strategy '{strategy.name}' deleted"}
+
+
+@router.post("/strategies/{strategy_id}/master-account", response_model=AdminMasterAccountResponse)
+async def admin_set_master_account(
+    strategy_id: str,
+    body: AdminMasterAccountCreate,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create or replace the master account for a strategy."""
+    result = await db.execute(
+        select(Strategy).options(selectinload(Strategy.master_account)).where(Strategy.id == strategy_id)
+    )
+    strategy = result.scalar_one_or_none()
+    if not strategy:
+        raise HTTPException(status_code=404, detail="Strategy not found")
+
+    # Check login uniqueness
+    existing = await db.execute(
+        select(MasterAccount).where(MasterAccount.login == body.login, MasterAccount.strategy_id != strategy.id)
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail=f"Master account with login {body.login} already exists for another strategy")
+
+    if strategy.master_account:
+        # Update existing
+        strategy.master_account.account_name = body.account_name
+        strategy.master_account.login = body.login
+        strategy.master_account.server = body.server
+    else:
+        # Create new
+        master = MasterAccount(
+            strategy_id=strategy.id,
+            account_name=body.account_name,
+            login=body.login,
+            server=body.server,
+        )
+        db.add(master)
+
+    await db.commit()
+    await db.refresh(strategy)
+    # Re-load master
+    ma_result = await db.execute(select(MasterAccount).where(MasterAccount.strategy_id == strategy.id))
+    master = ma_result.scalar_one()
+    return AdminMasterAccountResponse.model_validate(master)
+
+
+@router.put("/strategies/{strategy_id}/master-account", response_model=AdminMasterAccountResponse)
+async def admin_update_master_account(
+    strategy_id: str,
+    body: AdminMasterAccountUpdate,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update master account details."""
+    result = await db.execute(select(MasterAccount).where(MasterAccount.strategy_id == strategy_id))
+    master = result.scalar_one_or_none()
+    if not master:
+        raise HTTPException(status_code=404, detail="No master account for this strategy")
+
+    if body.account_name is not None:
+        master.account_name = body.account_name
+    if body.server is not None:
+        master.server = body.server
+
+    await db.commit()
+    await db.refresh(master)
+    return AdminMasterAccountResponse.model_validate(master)
+
+
 # ── Terms Management ────────────────────────────────────
 
 @router.get("/terms")
