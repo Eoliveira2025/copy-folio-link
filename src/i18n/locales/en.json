@@ -337,5 +337,33 @@
     "retry": "Retry",
     "resolve": "Resolve",
     "noDLQ": "No failed trades in the dead letter queue. System operating normally."
+  },
+  "adminStrategies": {
+    "title": "Strategies",
+    "subtitle": "Manage copy trading strategies and their master MT5 accounts",
+    "level": "Strategy Level",
+    "selectLevel": "Select a level",
+    "strategyName": "Strategy Name",
+    "description": "Description",
+    "descriptionPlaceholder": "Brief description of this strategy...",
+    "riskMultiplier": "Risk Multiplier",
+    "requiresUnlock": "Requires Admin Unlock",
+    "createStrategy": "Create Strategy",
+    "editStrategy": "Edit Strategy",
+    "updateStrategy": "Update Strategy",
+    "noStrategies": "No strategies created yet. Click \"Create Strategy\" to add one.",
+    "masterAccount": "Master Account",
+    "noMasterAccount": "No master account linked",
+    "masterAccountFor": "Master account for",
+    "masterAccountConfig": "Master Account Configuration",
+    "accountName": "Account Name",
+    "masterLogin": "MT5 Login",
+    "masterServer": "MT5 Server",
+    "masterPassword": "MT5 Password",
+    "leaveBlank": "Leave blank to keep current",
+    "passwordPlaceholder": "Master account password",
+    "setMasterAccount": "Link Master Account",
+    "editMasterAccount": "Edit Master Account",
+    "updateMasterAccount": "Update Master Account"
   }
 }
