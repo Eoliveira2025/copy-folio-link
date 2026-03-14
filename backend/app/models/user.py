@@ -37,7 +37,7 @@ class UserRoleMapping(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(
-        __import__("sqlalchemy").ForeignKey("users.id", ondelete="CASCADE"),
+        ForeignKey("users.id", ondelete="CASCADE"),
         unique=True, nullable=False
     )
     role: Mapped[UserRole] = mapped_column(SAEnum(UserRole), default=UserRole.USER, nullable=False)
