@@ -20,9 +20,14 @@ from app.models.terms import TermsDocument, TermsAcceptance
 from app.schemas.plan import PlanCreate, PlanUpdate, PlanResponse, ChangePlanRequest
 from app.schemas.billing import UpgradeRequestResponse, UpgradeRequestAction
 from app.schemas.legal import AdminTermsListItem, AdminCreateTerms, AdminUpdateTerms
+from app.schemas.strategy import (
+    AdminStrategyCreate, AdminStrategyUpdate, AdminStrategyResponse,
+    AdminMasterAccountCreate, AdminMasterAccountUpdate, AdminMasterAccountResponse,
+)
 from app.services import copy_engine
 from app.services.strategy_switcher import switch_user_strategy_for_plan
 from app.services.payments import get_gateway, GatewayStatus
+from app.core.security import encrypt_mt5_password
 
 router = APIRouter()
 
