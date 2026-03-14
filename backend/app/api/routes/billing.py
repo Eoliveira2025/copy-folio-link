@@ -34,6 +34,7 @@ async def list_available_plans(db: AsyncSession = Depends(get_db)):
             "id": str(p.id),
             "name": p.name,
             "price": p.price,
+            "currency": p.currency,
             "allowed_strategies": p.allowed_strategies,
             "trial_days": p.trial_days,
             "max_accounts": p.max_accounts,

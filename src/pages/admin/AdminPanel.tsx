@@ -118,7 +118,7 @@ function ChangePlanDialog({ userId, userName, plans, onClose }: { userId: string
       <Select value={selectedPlan} onValueChange={setSelectedPlan}>
         <SelectTrigger className="bg-secondary"><SelectValue placeholder={t("admin.selectPlan")} /></SelectTrigger>
         <SelectContent>
-          {plans.filter((p) => p.active).map((p) => (<SelectItem key={p.id} value={p.id}>{p.name} — ${p.price}/mo</SelectItem>))}
+          {plans.filter((p) => p.active).map((p) => (<SelectItem key={p.id} value={p.id}>{p.name} — {p.currency === "BRL" ? "R$" : "US$"}{p.price.toFixed(2)}/mo</SelectItem>))}
         </SelectContent>
       </Select>
       <Button onClick={() => changePlan.mutate({ userId, planId: selectedPlan }, { onSuccess: onClose })} disabled={!selectedPlan || changePlan.isPending} className="w-full">
