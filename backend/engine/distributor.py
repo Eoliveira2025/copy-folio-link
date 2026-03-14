@@ -139,13 +139,14 @@ class TradeDistributor(threading.Thread):
         orders: List[CopyOrder] = []
 
         for client in clients:
-            # Calculate lot size
+            # Calculate lot size based on strategy rules
             if event.action == TradeAction.OPEN:
                 volume = calculate_lot_size(
                     master_volume=event.volume,
                     master_balance=client["master_balance"],
                     client_balance=client["client_balance"],
                     strategy_level=client["strategy_level"],
+                    risk_multiplier=client.get("risk_multiplier", 1.0),
                 )
                 if volume <= 0:
                     self._metrics.record_skip()
