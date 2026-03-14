@@ -419,3 +419,61 @@ export function useAdminResolveDeadLetter() {
     onError: (err: Error) => toast.error(err.message),
   });
 }
+
+// ── Admin Strategies ───────────────────────────────
+export function useAdminStrategies() {
+  return useQuery({
+    queryKey: ["admin-strategies"],
+    queryFn: () => api.adminListStrategies(),
+  });
+}
+
+export function useAdminCreateStrategy() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateStrategyData) => api.adminCreateStrategy(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-strategies"] });
+      toast.success("Strategy created");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminUpdateStrategy() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { strategyId: string; updates: Partial<CreateStrategyData> }) =>
+      api.adminUpdateStrategy(data.strategyId, data.updates),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-strategies"] });
+      toast.success("Strategy updated");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminDeleteStrategy() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (strategyId: string) => api.adminDeleteStrategy(strategyId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-strategies"] });
+      toast.success("Strategy deleted");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminSetMasterAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { strategyId: string; masterData: CreateMasterAccountData }) =>
+      api.adminSetMasterAccount(data.strategyId, data.masterData),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-strategies"] });
+      toast.success("Master account configured");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}

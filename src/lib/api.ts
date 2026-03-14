@@ -738,5 +738,39 @@ export interface DeadLetterTrade {
   resolved_at: string | null;
 }
 
+// ── Admin Strategy Types ──────────────────────────────
+export interface AdminMasterAccount {
+  id: string;
+  account_name: string;
+  login: number;
+  server: string;
+  balance: number;
+}
+
+export interface AdminStrategy {
+  id: string;
+  level: string;
+  name: string;
+  description: string | null;
+  risk_multiplier: number;
+  requires_unlock: boolean;
+  master_account: AdminMasterAccount | null;
+}
+
+export interface CreateStrategyData {
+  level: string;
+  name: string;
+  description?: string | null;
+  risk_multiplier: number;
+  requires_unlock: boolean;
+}
+
+export interface CreateMasterAccountData {
+  account_name: string;
+  login: number;
+  server: string;
+  password: string;
+}
+
 // Singleton
 export const api = new ApiClient();
