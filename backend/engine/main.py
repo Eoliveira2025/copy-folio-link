@@ -76,12 +76,23 @@ def decrypt(encrypted: str) -> str:
 
 
 def load_master_accounts(db_engine) -> list[dict]:
-    """Load all active master accounts."""
+    """Load all active master accounts with decrypted passwords."""
     with Session(db_engine) as db:
         rows = db.execute(text("""
-            SELECT id, login, server FROM master_accounts
+            SELECT ma.id, ma.login, ma.server, ma.encrypted_password
+            FROM master_accounts ma
+            JOIN strategies s ON s.id = ma.strategy_id
+            WHERE s.enabled = true
         """)).fetchall()
-        return [{"id": str(r.id), "login": r.login, "server": r.server} for r in rows]
+        return [
+            {
+                "id": str(r.id),
+                "login": r.login,
+                "server": r.server,
+                "password": decrypt(r.encrypted_password),
+            }
+            for r in rows
+        ]
 
 
 def load_client_accounts(db_engine) -> list[dict]:
@@ -126,14 +137,13 @@ def run_listener_subprocess(master: dict):
         format=f"%(asctime)s.%(msecs)03d [Listen-{master['login']}] %(levelname)s: %(message)s",
         datefmt="%H:%M:%S",
     )
-    password = os.environ.get(f"MASTER_PASSWORD_{master['login']}", "")
     listener = MasterListener(
         master_account_id=master["id"],
         login=master["login"],
-        password=password,
+        password=master["password"],
         server=master["server"],
     )
-    listener.run()  # Run directly (not as thread) since it's in its own subprocess
+    listener.run()
 
 
 class CopyEngine:
