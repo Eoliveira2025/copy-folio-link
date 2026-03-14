@@ -416,6 +416,45 @@ class ApiClient {
       method: "POST",
     });
   }
+
+  // ── Admin Strategies ─────────────────────────────────
+  async adminListStrategies() {
+    return this.request<AdminStrategy[]>("/admin/strategies");
+  }
+
+  async adminCreateStrategy(data: CreateStrategyData) {
+    return this.request<AdminStrategy>("/admin/strategies", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminUpdateStrategy(strategyId: string, data: Partial<CreateStrategyData>) {
+    return this.request<AdminStrategy>(`/admin/strategies/${strategyId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminDeleteStrategy(strategyId: string) {
+    return this.request<{ message: string }>(`/admin/strategies/${strategyId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async adminSetMasterAccount(strategyId: string, data: CreateMasterAccountData) {
+    return this.request<AdminMasterAccount>(`/admin/strategies/${strategyId}/master-account`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminUpdateMasterAccount(strategyId: string, data: Partial<CreateMasterAccountData>) {
+    return this.request<AdminMasterAccount>(`/admin/strategies/${strategyId}/master-account`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 // ── Error class ───────────────────────────────────────
