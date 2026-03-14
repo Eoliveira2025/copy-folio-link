@@ -297,6 +297,11 @@ const AdminPanel = () => {
           )}
         </TabsContent>
 
+        {/* Strategies Tab */}
+        <TabsContent value="strategies" className="mt-4 space-y-4">
+          <StrategiesTab />
+        </TabsContent>
+
         {/* Subscriptions Tab */}
         <TabsContent value="subscriptions" className="mt-4 space-y-4">
           <div className="flex gap-2">
