@@ -536,6 +536,7 @@ export interface AdminPlan {
   id: string;
   name: string;
   price: number;
+  currency: string;
   allowed_strategies: string[];
   trial_days: number;
   max_accounts: number;
@@ -545,6 +546,7 @@ export interface AdminPlan {
 export interface CreatePlanData {
   name: string;
   price: number;
+  currency: string;
   allowed_strategies: string[];
   trial_days: number;
   max_accounts: number;
