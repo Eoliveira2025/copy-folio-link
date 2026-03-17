@@ -1,9 +1,9 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Lock, BarChart3 } from "lucide-react";
+import { Lock, BarChart3, CheckCircle2, AlertTriangle, Send } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { useStrategies, useSelectStrategy } from "@/hooks/use-api";
+import { useStrategies, useSelectStrategy, useRequestStrategy } from "@/hooks/use-api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
 
@@ -32,17 +32,31 @@ const riskTranslationKeys: Record<string, string> = {
   Extreme: "strategies.extreme",
 };
 
+const statusConfig: Record<string, { color: string; borderColor: string }> = {
+  active: { color: "bg-success/15 text-success border-success/30", borderColor: "border-success/40" },
+  available: { color: "bg-primary/15 text-primary border-primary/30", borderColor: "" },
+  request: { color: "bg-warning/15 text-warning border-warning/30", borderColor: "" },
+  insufficient: { color: "bg-muted text-muted-foreground border-border", borderColor: "" },
+  locked: { color: "bg-muted text-muted-foreground border-border", borderColor: "" },
+};
+
 const Strategies = () => {
   const { t } = useTranslation();
   const { data: strategies, isLoading } = useStrategies();
   const selectMutation = useSelectStrategy();
+  const requestMutation = useRequestStrategy();
 
-  const handleSelect = (id: string, available: boolean, locked: boolean) => {
-    if (locked && !available) {
+  const handleSelect = (id: string, status: string) => {
+    if (status === "active") return;
+    if (status === "insufficient" || status === "locked") {
       toast.error(t("strategies.lockedMessage"));
       return;
     }
     selectMutation.mutate(id);
+  };
+
+  const handleRequest = (id: string) => {
+    requestMutation.mutate(id);
   };
 
   if (isLoading) {
@@ -66,7 +80,7 @@ const Strategies = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {strategies?.map((s, i) => {
           const info = riskInfo[s.level] || { risk: "Medium", expectedReturn: "10-20%" };
-          const isLocked = s.requires_unlock && !s.is_available;
+          const sc = statusConfig[s.user_status] || statusConfig.available;
 
           return (
             <motion.div
@@ -74,13 +88,14 @@ const Strategies = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className={`card-glass rounded-lg p-5 relative ${!isLocked && s.is_available ? "" : "opacity-60"}`}
+              className={`card-glass rounded-lg p-5 relative ${s.user_status === "active" ? "ring-1 ring-success/40" : ""} ${s.user_status === "insufficient" || s.user_status === "locked" ? "opacity-60" : ""}`}
             >
-              {isLocked && (
-                <div className="absolute top-3 right-3">
-                  <Lock className="w-4 h-4 text-muted-foreground" />
-                </div>
-              )}
+              {/* Status badge */}
+              <div className="absolute top-3 right-3">
+                {s.user_status === "active" && <CheckCircle2 className="w-5 h-5 text-success" />}
+                {s.user_status === "locked" && <Lock className="w-4 h-4 text-muted-foreground" />}
+                {s.user_status === "insufficient" && <AlertTriangle className="w-4 h-4 text-warning" />}
+              </div>
 
               <div className="flex items-center gap-2 mb-3">
                 <BarChart3 className="w-5 h-5 text-primary" />
@@ -101,16 +116,50 @@ const Strategies = () => {
                   <span className="text-muted-foreground">{t("strategies.multiplier")}</span>
                   <span className="font-mono">{s.risk_multiplier}x</span>
                 </div>
+                {s.min_capital > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t("strategies.minCapital")}</span>
+                    <span className="font-mono text-warning">R$ {s.min_capital.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                  </div>
+                )}
               </div>
 
-              <Button
-                className="w-full"
-                variant={s.is_available ? "default" : "outline"}
-                disabled={isLocked || selectMutation.isPending}
-                onClick={() => handleSelect(s.id, s.is_available, s.requires_unlock)}
-              >
-                {isLocked ? t("strategies.locked") : t("strategies.select")}
-              </Button>
+              {/* Status indicator */}
+              <div className="mb-3">
+                <Badge variant="outline" className={sc.color}>
+                  {t(`strategies.status_${s.user_status}`)}
+                </Badge>
+              </div>
+
+              {/* Action button */}
+              {s.user_status === "active" ? (
+                <Button className="w-full" variant="outline" disabled>
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  {t("strategies.active")}
+                </Button>
+              ) : s.user_status === "available" ? (
+                <Button
+                  className="w-full"
+                  disabled={selectMutation.isPending}
+                  onClick={() => handleSelect(s.id, s.user_status)}
+                >
+                  {t("strategies.select")}
+                </Button>
+              ) : s.user_status === "request" ? (
+                <Button
+                  className="w-full"
+                  variant="secondary"
+                  disabled={requestMutation.isPending}
+                  onClick={() => handleRequest(s.id)}
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  {t("strategies.requestAccess")}
+                </Button>
+              ) : (
+                <Button className="w-full" variant="outline" disabled>
+                  {s.user_status === "insufficient" ? t("strategies.insufficientCapital") : t("strategies.locked")}
+                </Button>
+              )}
             </motion.div>
           );
         })}

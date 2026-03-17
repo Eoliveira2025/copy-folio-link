@@ -11,13 +11,19 @@ class StrategyResponse(BaseModel):
     description: str | None
     risk_multiplier: float
     requires_unlock: bool
+    min_capital: float = 0
     is_available: bool = False  # computed per-user
+    user_status: str = "available"  # available | active | request | insufficient | locked
 
     class Config:
         from_attributes = True
 
 
 class SelectStrategyRequest(BaseModel):
+    strategy_id: uuid.UUID
+
+
+class RequestStrategyRequest(BaseModel):
     strategy_id: uuid.UUID
 
 
@@ -41,6 +47,7 @@ class AdminStrategyCreate(BaseModel):
     description: str | None = None
     risk_multiplier: float = 1.0
     requires_unlock: bool = False
+    min_capital: float = 0
 
     @field_validator("level")
     @classmethod
@@ -56,18 +63,33 @@ class AdminStrategyCreate(BaseModel):
             raise ValueError("risk_multiplier must be positive")
         return v
 
+    @field_validator("min_capital")
+    @classmethod
+    def validate_min_capital(cls, v: float) -> float:
+        if v < 0:
+            raise ValueError("min_capital must be >= 0")
+        return v
+
 
 class AdminStrategyUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     risk_multiplier: float | None = None
     requires_unlock: bool | None = None
+    min_capital: float | None = None
 
     @field_validator("risk_multiplier")
     @classmethod
     def validate_multiplier(cls, v: float | None) -> float | None:
         if v is not None and v <= 0:
             raise ValueError("risk_multiplier must be positive")
+        return v
+
+    @field_validator("min_capital")
+    @classmethod
+    def validate_min_capital(cls, v: float | None) -> float | None:
+        if v is not None and v < 0:
+            raise ValueError("min_capital must be >= 0")
         return v
 
 
@@ -78,6 +100,7 @@ class AdminStrategyResponse(BaseModel):
     description: str | None
     risk_multiplier: float
     requires_unlock: bool
+    min_capital: float = 0
     master_account: "AdminMasterAccountResponse | None" = None
 
     class Config:

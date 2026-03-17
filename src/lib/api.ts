@@ -183,6 +183,13 @@ class ApiClient {
     });
   }
 
+  async requestStrategy(strategyId: string) {
+    return this.request<{ message: string }>("/strategies/request", {
+      method: "POST",
+      body: JSON.stringify({ strategy_id: strategyId }),
+    });
+  }
+
   // ── Billing ───────────────────────────────────────────
   async listPlans() {
     return this.request<PlanPublic[]>("/billing/plans");
@@ -492,7 +499,9 @@ export interface Strategy {
   description: string | null;
   risk_multiplier: number;
   requires_unlock: boolean;
+  min_capital: number;
   is_available: boolean;
+  user_status: "available" | "active" | "request" | "insufficient" | "locked";
 }
 
 export interface PlanPublic {
@@ -754,6 +763,7 @@ export interface AdminStrategy {
   description: string | null;
   risk_multiplier: number;
   requires_unlock: boolean;
+  min_capital: number;
   master_account: AdminMasterAccount | null;
 }
 
@@ -763,6 +773,7 @@ export interface CreateStrategyData {
   description?: string | null;
   risk_multiplier: number;
   requires_unlock: boolean;
+  min_capital: number;
 }
 
 export interface CreateMasterAccountData {

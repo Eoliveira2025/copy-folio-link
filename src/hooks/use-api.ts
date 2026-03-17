@@ -59,6 +59,18 @@ export function useSelectStrategy() {
   });
 }
 
+export function useRequestStrategy() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (strategyId: string) => api.requestStrategy(strategyId),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["strategies"] });
+      toast.success(data.message);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
 // ── Billing ─────────────────────────────────────────
 export function usePlans() {
   return useQuery({
