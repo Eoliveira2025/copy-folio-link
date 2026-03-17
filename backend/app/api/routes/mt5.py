@@ -9,7 +9,7 @@ from app.core.security import encrypt_mt5_password
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.mt5_account import MT5Account, MT5Status
-from app.models.strategy import Strategy, MasterAccount, UserStrategy
+from app.models.strategy import Strategy, MasterAccount, UserStrategy, StrategyLevel
 from app.schemas.mt5 import ConnectMT5Request, MT5AccountResponse
 from app.services import copy_engine
 
@@ -55,11 +55,26 @@ async def connect_mt5(
     await db.flush()
     await db.refresh(account)
 
-    # Get user's active strategy to auto-subscribe
+    # ── Auto-assign LOW strategy if user has no active strategy ──
     strategy_result = await db.execute(
         select(UserStrategy).where(UserStrategy.user_id == user.id, UserStrategy.is_active == True)
     )
     active_us = strategy_result.scalar_one_or_none()
+
+    if not active_us:
+        # Find the LOW strategy
+        low_result = await db.execute(
+            select(Strategy).where(Strategy.level == StrategyLevel.LOW)
+        )
+        low_strategy = low_result.scalar_one_or_none()
+        if low_strategy:
+            active_us = UserStrategy(
+                user_id=user.id,
+                strategy_id=low_strategy.id,
+                is_active=True,
+            )
+            db.add(active_us)
+            await db.flush()
 
     master_login = None
     strategy_level = None
