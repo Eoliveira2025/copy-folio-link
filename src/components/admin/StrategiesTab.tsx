@@ -51,6 +51,7 @@ function StrategyFormDialog({ strategy, onClose }: { strategy?: AdminStrategy; o
       description: description || null,
       risk_multiplier: parseFloat(riskMultiplier),
       requires_unlock: requiresUnlock,
+      min_capital: parseFloat(minCapital) || 0,
     };
     if (strategy) {
       const { level: _, ...updates } = data;
