@@ -156,6 +156,7 @@
     "status_request": "SOLICITAR",
     "status_insufficient": "CAPITAL INSUFICIENTE",
     "status_locked": "BLOQUEADA",
+    "status_pending": "AGUARDANDO APROVAÇÃO",
     "low": "Baixo",
     "medium": "Médio",
     "high": "Alto",

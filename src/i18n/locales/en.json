@@ -156,6 +156,7 @@
     "status_request": "REQUEST",
     "status_insufficient": "INSUFFICIENT CAPITAL",
     "status_locked": "LOCKED",
+    "status_pending": "PENDING APPROVAL",
     "low": "Low",
     "medium": "Medium",
     "high": "High",
