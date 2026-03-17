@@ -94,6 +94,7 @@ const Strategies = () => {
               {/* Status badge */}
               <div className="absolute top-3 right-3">
                 {s.user_status === "active" && <CheckCircle2 className="w-5 h-5 text-success" />}
+                {s.user_status === "pending" && <Clock className="w-4 h-4 text-info" />}
                 {s.user_status === "locked" && <Lock className="w-4 h-4 text-muted-foreground" />}
                 {s.user_status === "insufficient" && <AlertTriangle className="w-4 h-4 text-warning" />}
               </div>
