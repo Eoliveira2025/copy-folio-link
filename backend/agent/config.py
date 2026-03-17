@@ -15,6 +15,12 @@ class AgentSettings(BaseSettings):
     # ── MT5 Terminal (Windows native) ─────────────────────────────
     MT5_TERMINAL_PATH: str = r"C:\Program Files\MetaTrader 5\terminal64.exe"
 
+    # ── Multi-instance management ─────────────────────────────────
+    MT5_BASE_PATH: str = r"C:\Program Files\MetaTrader 5"
+    MT5_INSTANCES_DIR: str = r"C:\MT5_Instances"
+    MT5_INSTANCE_MAPPING_FILE: str = r"C:\MT5_Instances\instances.json"
+    MT5_INIT_TIMEOUT_MS: int = 60000
+
     # ── Master Listener ───────────────────────────────────────────
     MASTER_POLL_INTERVAL_MS: int = 50      # 50ms polling (20 polls/sec)
     ORDER_HISTORY_POLL_INTERVAL_MS: int = 100

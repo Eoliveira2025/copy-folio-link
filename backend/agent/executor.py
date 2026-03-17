@@ -32,10 +32,15 @@ except ImportError:
     _loads = json.loads
 
 
-def executor_process(client_id: str, login: int, password: str, server: str):
+def executor_process(client_id: str, login: int, password: str, server: str,
+                     instance_path: str = ""):
     """
-    Subprocess entry point: connects to a client MT5 account,
-    dequeues CopyOrders from Redis, executes them.
+    Subprocess entry point: connects to a client MT5 account using
+    a DEDICATED terminal instance (separate folder per account).
+
+    Args:
+        instance_path: Full path to terminal64.exe in the account's own MT5 folder.
+                       If empty, falls back to settings.MT5_TERMINAL_PATH.
     """
     import logging
     logging.basicConfig(
@@ -45,14 +50,20 @@ def executor_process(client_id: str, login: int, password: str, server: str):
     )
     log = logging.getLogger(f"executor.{login}")
 
-    # Connect to MT5
-    if not mt5.initialize(path=settings.MT5_TERMINAL_PATH):
-        log.error(f"MT5 initialize failed: {mt5.last_error()}")
-        return
+    terminal_path = instance_path or settings.MT5_TERMINAL_PATH
+    log.info(f"Initializing MT5 with dedicated instance: {terminal_path}")
 
-    if not mt5.login(login, password=password, server=server):
-        log.error(f"MT5 login failed: {mt5.last_error()}")
-        mt5.shutdown()
+    # Connect to MT5 — pass login/password/server directly to initialize()
+    # This ensures the terminal starts in portable/headless mode for THIS account
+    if not mt5.initialize(
+        path=terminal_path,
+        login=login,
+        password=password,
+        server=server,
+        timeout=settings.MT5_INIT_TIMEOUT_MS,
+        portable=True,
+    ):
+        log.error(f"MT5 initialize failed: {mt5.last_error()}")
         return
 
     info = mt5.account_info()
