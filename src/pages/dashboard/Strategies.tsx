@@ -157,6 +157,11 @@ const Strategies = () => {
                   <Send className="w-4 h-4 mr-2" />
                   {t("strategies.requestAccess")}
                 </Button>
+              ) : s.user_status === "pending" ? (
+                <Button className="w-full" variant="outline" disabled>
+                  <Clock className="w-4 h-4 mr-2" />
+                  {t("strategyRequests.pendingMessage")}
+                </Button>
               ) : (
                 <Button className="w-full" variant="outline" disabled>
                   {s.user_status === "insufficient" ? t("strategies.insufficientCapital") : t("strategies.locked")}
