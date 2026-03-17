@@ -499,7 +499,9 @@ export interface Strategy {
   description: string | null;
   risk_multiplier: number;
   requires_unlock: boolean;
+  min_capital: number;
   is_available: boolean;
+  user_status: "available" | "active" | "request" | "insufficient" | "locked";
 }
 
 export interface PlanPublic {
