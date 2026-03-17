@@ -183,6 +183,13 @@ class ApiClient {
     });
   }
 
+  async requestStrategy(strategyId: string) {
+    return this.request<{ message: string }>("/strategies/request", {
+      method: "POST",
+      body: JSON.stringify({ strategy_id: strategyId }),
+    });
+  }
+
   // ── Billing ───────────────────────────────────────────
   async listPlans() {
     return this.request<PlanPublic[]>("/billing/plans");
