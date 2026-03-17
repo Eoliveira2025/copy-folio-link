@@ -42,6 +42,7 @@ function StrategyFormDialog({ strategy, onClose }: { strategy?: AdminStrategy; o
   const [description, setDescription] = useState(strategy?.description || "");
   const [riskMultiplier, setRiskMultiplier] = useState(String(strategy?.risk_multiplier ?? 1.0));
   const [requiresUnlock, setRequiresUnlock] = useState(strategy?.requires_unlock ?? false);
+  const [minCapital, setMinCapital] = useState(String(strategy?.min_capital ?? 0));
 
   const handleSubmit = () => {
     const data: CreateStrategyData = {
