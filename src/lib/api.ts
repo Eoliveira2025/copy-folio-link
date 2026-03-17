@@ -462,6 +462,20 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // ── Admin Strategy Requests ──────────────────────────
+  async adminListStrategyRequests(status?: string) {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+    return this.request<StrategyRequestItem[]>(`/admin/strategy-requests${qs}`);
+  }
+
+  async adminApproveStrategyRequest(requestId: string) {
+    return this.request<{ message: string }>(`/admin/strategy-requests/${requestId}/approve`, { method: "POST" });
+  }
+
+  async adminRejectStrategyRequest(requestId: string, note: string = "") {
+    return this.request<{ message: string }>(`/admin/strategy-requests/${requestId}/reject?note=${encodeURIComponent(note)}`, { method: "POST" });
+  }
 }
 
 // ── Error class ───────────────────────────────────────
