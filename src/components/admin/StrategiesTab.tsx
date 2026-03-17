@@ -221,6 +221,10 @@ export function StrategiesTab() {
                 <span className="font-mono">{s.risk_multiplier}x</span>
               </div>
               <div className="flex justify-between">
+                <span className="text-muted-foreground">{t("adminStrategies.minCapital")}</span>
+                <span className="font-mono">R$ {(s.min_capital || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("adminStrategies.requiresUnlock")}</span>
                 <span>{s.requires_unlock ? "✓" : "—"}</span>
               </div>
