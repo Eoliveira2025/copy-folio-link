@@ -515,7 +515,7 @@ export interface Strategy {
   requires_unlock: boolean;
   min_capital: number;
   is_available: boolean;
-  user_status: "available" | "active" | "request" | "insufficient" | "locked";
+  user_status: "available" | "active" | "request" | "insufficient" | "locked" | "pending";
 }
 
 export interface PlanPublic {
