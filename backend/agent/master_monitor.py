@@ -109,10 +109,15 @@ class PositionSnapshot:
         return events
 
 
-def master_listener_process(master_id: str, login: int, password: str, server: str):
+def master_listener_process(master_id: str, login: int, password: str, server: str,
+                            instance_path: str = ""):
     """
-    Subprocess entry point: connects to a master MT5 account,
-    polls positions every MASTER_POLL_INTERVAL_MS, publishes changes to Redis.
+    Subprocess entry point: connects to a master MT5 account using
+    a DEDICATED terminal instance (separate folder per account).
+
+    Args:
+        instance_path: Full path to terminal64.exe in the account's own MT5 folder.
+                       If empty, falls back to settings.MT5_TERMINAL_PATH.
     """
     import logging
     logging.basicConfig(
@@ -122,14 +127,20 @@ def master_listener_process(master_id: str, login: int, password: str, server: s
     )
     log = logging.getLogger(f"master.{login}")
 
-    # Connect to MT5
-    if not mt5.initialize(path=settings.MT5_TERMINAL_PATH):
-        log.error(f"MT5 initialize failed: {mt5.last_error()}")
-        return
+    terminal_path = instance_path or settings.MT5_TERMINAL_PATH
+    log.info(f"Initializing MT5 with dedicated instance: {terminal_path}")
 
-    if not mt5.login(login, password=password, server=server):
-        log.error(f"MT5 login failed: {mt5.last_error()}")
-        mt5.shutdown()
+    # Connect to MT5 — pass credentials directly to initialize()
+    # Each account uses its OWN terminal64.exe in its OWN folder
+    if not mt5.initialize(
+        path=terminal_path,
+        login=login,
+        password=password,
+        server=server,
+        timeout=settings.MT5_INIT_TIMEOUT_MS,
+        portable=True,
+    ):
+        log.error(f"MT5 initialize failed: {mt5.last_error()}")
         return
 
     info = mt5.account_info()
@@ -227,12 +238,18 @@ def master_listener_process(master_id: str, login: int, password: str, server: s
                 pass
         except Exception as e:
             log.error(f"Poll error: {e}", exc_info=True)
-            # Try to reconnect MT5
+            # Try to reconnect MT5 using the SAME dedicated instance
             try:
                 mt5.shutdown()
                 time.sleep(1)
-                mt5.initialize(path=settings.MT5_TERMINAL_PATH)
-                mt5.login(login, password=password, server=server)
+                mt5.initialize(
+                    path=terminal_path,
+                    login=login,
+                    password=password,
+                    server=server,
+                    timeout=settings.MT5_INIT_TIMEOUT_MS,
+                    portable=True,
+                )
             except Exception:
                 time.sleep(5)
 
