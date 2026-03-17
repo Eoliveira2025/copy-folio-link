@@ -763,6 +763,7 @@ export interface AdminStrategy {
   description: string | null;
   risk_multiplier: number;
   requires_unlock: boolean;
+  min_capital: number;
   master_account: AdminMasterAccount | null;
 }
 
