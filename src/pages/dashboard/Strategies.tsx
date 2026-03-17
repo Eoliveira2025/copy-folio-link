@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Lock, BarChart3, CheckCircle2, AlertTriangle, Send } from "lucide-react";
+import { Lock, BarChart3, CheckCircle2, AlertTriangle, Send, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useStrategies, useSelectStrategy, useRequestStrategy } from "@/hooks/use-api";
@@ -36,6 +36,7 @@ const statusConfig: Record<string, { color: string; borderColor: string }> = {
   active: { color: "bg-success/15 text-success border-success/30", borderColor: "border-success/40" },
   available: { color: "bg-primary/15 text-primary border-primary/30", borderColor: "" },
   request: { color: "bg-warning/15 text-warning border-warning/30", borderColor: "" },
+  pending: { color: "bg-info/15 text-info border-info/30", borderColor: "" },
   insufficient: { color: "bg-muted text-muted-foreground border-border", borderColor: "" },
   locked: { color: "bg-muted text-muted-foreground border-border", borderColor: "" },
 };
@@ -93,6 +94,7 @@ const Strategies = () => {
               {/* Status badge */}
               <div className="absolute top-3 right-3">
                 {s.user_status === "active" && <CheckCircle2 className="w-5 h-5 text-success" />}
+                {s.user_status === "pending" && <Clock className="w-4 h-4 text-info" />}
                 {s.user_status === "locked" && <Lock className="w-4 h-4 text-muted-foreground" />}
                 {s.user_status === "insufficient" && <AlertTriangle className="w-4 h-4 text-warning" />}
               </div>
@@ -154,6 +156,11 @@ const Strategies = () => {
                 >
                   <Send className="w-4 h-4 mr-2" />
                   {t("strategies.requestAccess")}
+                </Button>
+              ) : s.user_status === "pending" ? (
+                <Button className="w-full" variant="outline" disabled>
+                  <Clock className="w-4 h-4 mr-2" />
+                  {t("strategyRequests.pendingMessage")}
                 </Button>
               ) : (
                 <Button className="w-full" variant="outline" disabled>

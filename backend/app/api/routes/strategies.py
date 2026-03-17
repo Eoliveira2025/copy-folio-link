@@ -10,9 +10,9 @@ from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.mt5_account import MT5Account, MT5Status
 from app.models.strategy import Strategy, UserStrategy, MasterAccount, LOCKED_STRATEGIES, StrategyLevel
+from app.models.strategy_request import StrategyRequest, StrategyRequestStatus
 from app.models.subscription import Subscription
 from app.models.plan import Plan
-from app.models.upgrade_request import UpgradeRequest, UpgradeRequestStatus
 from app.schemas.strategy import StrategyResponse, SelectStrategyRequest, RequestStrategyRequest
 from app.services import copy_engine
 
@@ -70,14 +70,13 @@ async def list_strategies(user: User = Depends(get_current_user), db: AsyncSessi
     user_balance = await _get_user_balance(user.id, db)
 
     # Check for pending strategy requests
-    pending_requests = await db.execute(
-        select(UpgradeRequest.target_plan_id).where(
-            UpgradeRequest.user_id == user.id,
-            UpgradeRequest.status == UpgradeRequestStatus.PENDING,
+    pending_result = await db.execute(
+        select(StrategyRequest.target_strategy_id).where(
+            StrategyRequest.user_id == user.id,
+            StrategyRequest.status == StrategyRequestStatus.PENDING,
         )
     )
-    # We'll use a simpler approach - check pending strategy upgrade requests
-    # stored via the new request endpoint
+    pending_strategy_ids = {row[0] for row in pending_result.all()}
 
     response = []
     for s in strategies:
@@ -89,15 +88,14 @@ async def list_strategies(user: User = Depends(get_current_user), db: AsyncSessi
         # Determine user_status
         if active_strategy_id and s.id == active_strategy_id:
             user_status = "active"
+        elif s.id in pending_strategy_ids:
+            user_status = "pending"
         elif is_available:
             user_status = "available"
-        elif s.level in LOCKED_STRATEGIES and s.id not in unlocked_ids:
-            if float(s.min_capital) > 0 and user_balance < float(s.min_capital):
-                user_status = "insufficient"
-            else:
-                user_status = "request"
         elif float(s.min_capital) > 0 and user_balance < float(s.min_capital):
             user_status = "insufficient"
+        elif s.level in LOCKED_STRATEGIES and s.id not in unlocked_ids:
+            user_status = "request"
         else:
             user_status = "request"
 
@@ -194,33 +192,30 @@ async def request_strategy(
             detail=f"Insufficient balance. Minimum required: R$ {float(strategy.min_capital):,.2f}. Your balance: R$ {user_balance:,.2f}"
         )
 
-    # Check if already has pending request for this strategy
-    # We reuse UpgradeRequest model but with strategy context
-    from app.models.upgrade_request import UpgradeRequest, UpgradeRequestStatus
+    # Check if already has pending request
     pending = await db.execute(
-        select(UpgradeRequest).where(
-            UpgradeRequest.user_id == user.id,
-            UpgradeRequest.status == UpgradeRequestStatus.PENDING,
+        select(StrategyRequest).where(
+            StrategyRequest.user_id == user.id,
+            StrategyRequest.status == StrategyRequestStatus.PENDING,
         )
     )
     if pending.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="You already have a pending request. Please wait for admin approval.")
 
-    # Get current subscription info
-    sub_result = await db.execute(
-        select(Subscription).where(Subscription.user_id == user.id).order_by(Subscription.created_at.desc())
+    # Get current active strategy
+    active_result = await db.execute(
+        select(UserStrategy).where(UserStrategy.user_id == user.id, UserStrategy.is_active == True)
     )
-    sub = sub_result.scalar_one_or_none()
+    active_us = active_result.scalar_one_or_none()
 
-    # Create upgrade request
-    upgrade_req = UpgradeRequest(
+    # Create strategy request
+    req = StrategyRequest(
         user_id=user.id,
-        current_plan_id=sub.plan_id if sub else None,
-        target_plan_id=sub.plan_id if sub else None,  # Same plan, just strategy change
+        current_strategy_id=active_us.strategy_id if active_us else None,
+        target_strategy_id=strategy.id,
         mt5_balance=user_balance,
-        admin_note=f"Strategy request: {strategy.level.value.upper()} ({strategy.name})",
     )
-    db.add(upgrade_req)
+    db.add(req)
     await db.commit()
 
     return {"message": f"Request for strategy '{strategy.name}' submitted. Awaiting admin approval."}

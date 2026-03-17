@@ -477,6 +477,40 @@ export function useAdminDeleteStrategy() {
   });
 }
 
+// ── Admin Strategy Requests ────────────────────────────
+export function useAdminStrategyRequests(status?: string) {
+  return useQuery({
+    queryKey: ["admin-strategy-requests", status],
+    queryFn: () => api.adminListStrategyRequests(status),
+    refetchInterval: 15000,
+  });
+}
+
+export function useAdminApproveStrategyRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (requestId: string) => api.adminApproveStrategyRequest(requestId),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["admin-strategy-requests"] });
+      toast.success(data.message);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminRejectStrategyRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { requestId: string; note: string }) =>
+      api.adminRejectStrategyRequest(data.requestId, data.note),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["admin-strategy-requests"] });
+      toast.success(data.message);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
 export function useAdminSetMasterAccount() {
   const qc = useQueryClient();
   return useMutation({

@@ -13,7 +13,7 @@ class StrategyResponse(BaseModel):
     requires_unlock: bool
     min_capital: float = 0
     is_available: bool = False  # computed per-user
-    user_status: str = "available"  # available | active | request | insufficient | locked
+    user_status: str = "available"  # available | active | request | insufficient | locked | pending
 
     class Config:
         from_attributes = True

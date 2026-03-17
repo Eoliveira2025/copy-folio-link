@@ -462,6 +462,20 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // ── Admin Strategy Requests ──────────────────────────
+  async adminListStrategyRequests(status?: string) {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+    return this.request<StrategyRequestItem[]>(`/admin/strategy-requests${qs}`);
+  }
+
+  async adminApproveStrategyRequest(requestId: string) {
+    return this.request<{ message: string }>(`/admin/strategy-requests/${requestId}/approve`, { method: "POST" });
+  }
+
+  async adminRejectStrategyRequest(requestId: string, note: string = "") {
+    return this.request<{ message: string }>(`/admin/strategy-requests/${requestId}/reject?note=${encodeURIComponent(note)}`, { method: "POST" });
+  }
 }
 
 // ── Error class ───────────────────────────────────────
@@ -501,7 +515,7 @@ export interface Strategy {
   requires_unlock: boolean;
   min_capital: number;
   is_available: boolean;
-  user_status: "available" | "active" | "request" | "insufficient" | "locked";
+  user_status: "available" | "active" | "request" | "insufficient" | "locked" | "pending";
 }
 
 export interface PlanPublic {
@@ -781,6 +795,23 @@ export interface CreateMasterAccountData {
   login: number;
   server: string;
   password: string;
+}
+
+// ── Strategy Request Types ────────────────────────────
+export interface StrategyRequestItem {
+  id: string;
+  user_id: string;
+  user_email: string;
+  mt5_logins: number[];
+  current_strategy: string | null;
+  target_strategy: string | null;
+  target_strategy_id: string;
+  target_level: string | null;
+  mt5_balance: number;
+  status: string;
+  admin_note: string | null;
+  created_at: string;
+  resolved_at: string | null;
 }
 
 // Singleton

@@ -12,7 +12,7 @@ import {
 import {
   Search, RefreshCw, Users, BarChart3, Server, Shield, CreditCard,
   FileText, Package, Plus, Pencil, Trash2, ArrowUpDown, AlertTriangle,
-  ArrowUpCircle, Check, X, Scale, Power, Eye, Settings, Crosshair,
+  ArrowUpCircle, Check, X, Scale, Power, Eye, Settings, Crosshair, Send,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,6 +33,7 @@ import type { AdminPlan, CreatePlanData, AdminTermsItem } from "@/lib/api";
 import { api } from "@/lib/api";
 import { RiskProtectionTab } from "@/components/admin/RiskProtectionTab";
 import { StrategiesTab } from "@/components/admin/StrategiesTab";
+import { StrategyRequestsTab } from "@/components/admin/StrategyRequestsTab";
 
 const statusStyle: Record<string, string> = {
   active: "bg-success/15 text-success border-success/30 hover:bg-success/15",
@@ -205,6 +206,7 @@ const AdminPanel = () => {
           <TabsTrigger value="subscriptions" className="gap-2"><CreditCard className="w-4 h-4" /> {t("admin.subscriptions")}</TabsTrigger>
           <TabsTrigger value="invoices" className="gap-2"><FileText className="w-4 h-4" /> {t("admin.invoices")}</TabsTrigger>
           <TabsTrigger value="upgrades" className="gap-2"><ArrowUpCircle className="w-4 h-4" /> {t("admin.upgrades")}</TabsTrigger>
+          <TabsTrigger value="strategy-requests" className="gap-2"><Send className="w-4 h-4" /> {t("strategyRequests.title")}</TabsTrigger>
           <TabsTrigger value="risk" className="gap-2"><AlertTriangle className="w-4 h-4" /> {t("admin.risk")}</TabsTrigger>
           <TabsTrigger value="legal" className="gap-2"><Scale className="w-4 h-4" /> {t("admin.legal")}</TabsTrigger>
           <TabsTrigger value="servers" className="gap-2"><Server className="w-4 h-4" /> {t("admin.servers")}</TabsTrigger>
@@ -408,6 +410,11 @@ const AdminPanel = () => {
               </div>
             </motion.div>
           )}
+        </TabsContent>
+
+        {/* Strategy Requests Tab */}
+        <TabsContent value="strategy-requests" className="mt-4 space-y-4">
+          <StrategyRequestsTab />
         </TabsContent>
 
         {/* Risk Tab */}
