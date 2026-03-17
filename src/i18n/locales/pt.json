@@ -375,5 +375,24 @@
     "setMasterAccount": "Vincular Conta Master",
     "editMasterAccount": "Editar Conta Master",
     "updateMasterAccount": "Atualizar Conta Master"
+  },
+  "strategyRequests": {
+    "title": "Solicitações",
+    "subtitle": "Gerencie solicitações de estratégia dos usuários",
+    "user": "Usuário",
+    "mt5Account": "Conta MT5",
+    "currentStrategy": "Estratégia Atual",
+    "targetStrategy": "Estratégia Solicitada",
+    "capital": "Capital",
+    "date": "Data",
+    "pending": "Pendente",
+    "approved": "Aprovada",
+    "rejected": "Recusada",
+    "noRequests": "Nenhuma solicitação de estratégia encontrada.",
+    "rejectTitle": "Recusar Solicitação",
+    "rejectDescription": "Informe o motivo da recusa (opcional):",
+    "rejectPlaceholder": "Motivo da recusa...",
+    "confirmReject": "Confirmar Recusa",
+    "pendingMessage": "Sua solicitação está sendo analisada pelo admin."
   }
 }
