@@ -89,12 +89,14 @@ function StrategyFormDialog({ strategy, onClose }: { strategy?: AdminStrategy; o
           <Label>{t("adminStrategies.riskMultiplier")}</Label>
           <Input type="number" min="0.1" step="0.1" value={riskMultiplier} onChange={(e) => setRiskMultiplier(e.target.value)} className="bg-secondary" />
         </div>
-        <div className="space-y-2 flex flex-col justify-end">
-          <div className="flex items-center gap-2 pb-1">
-            <Switch checked={requiresUnlock} onCheckedChange={setRequiresUnlock} />
-            <Label className="text-sm">{t("adminStrategies.requiresUnlock")}</Label>
-          </div>
+        <div className="space-y-2">
+          <Label>{t("adminStrategies.minCapital")}</Label>
+          <Input type="number" min="0" step="100" value={minCapital} onChange={(e) => setMinCapital(e.target.value)} className="bg-secondary" placeholder="0.00" />
         </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Switch checked={requiresUnlock} onCheckedChange={setRequiresUnlock} />
+        <Label className="text-sm">{t("adminStrategies.requiresUnlock")}</Label>
       </div>
       <Button
         onClick={handleSubmit}
