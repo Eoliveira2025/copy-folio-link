@@ -36,6 +36,7 @@ const statusConfig: Record<string, { color: string; borderColor: string }> = {
   active: { color: "bg-success/15 text-success border-success/30", borderColor: "border-success/40" },
   available: { color: "bg-primary/15 text-primary border-primary/30", borderColor: "" },
   request: { color: "bg-warning/15 text-warning border-warning/30", borderColor: "" },
+  pending: { color: "bg-info/15 text-info border-info/30", borderColor: "" },
   insufficient: { color: "bg-muted text-muted-foreground border-border", borderColor: "" },
   locked: { color: "bg-muted text-muted-foreground border-border", borderColor: "" },
 };
