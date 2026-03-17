@@ -412,6 +412,11 @@ const AdminPanel = () => {
           )}
         </TabsContent>
 
+        {/* Strategy Requests Tab */}
+        <TabsContent value="strategy-requests" className="mt-4 space-y-4">
+          <StrategyRequestsTab />
+        </TabsContent>
+
         {/* Risk Tab */}
         <TabsContent value="risk" className="mt-4 space-y-4"><RiskProtectionTab /></TabsContent>
 
