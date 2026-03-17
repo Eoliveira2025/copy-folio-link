@@ -773,6 +773,7 @@ export interface CreateStrategyData {
   description?: string | null;
   risk_multiplier: number;
   requires_unlock: boolean;
+  min_capital: number;
 }
 
 export interface CreateMasterAccountData {
