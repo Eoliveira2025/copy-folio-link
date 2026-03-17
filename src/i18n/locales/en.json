@@ -376,5 +376,24 @@
     "setMasterAccount": "Link Master Account",
     "editMasterAccount": "Edit Master Account",
     "updateMasterAccount": "Update Master Account"
+  },
+  "strategyRequests": {
+    "title": "Requests",
+    "subtitle": "Manage user strategy change requests",
+    "user": "User",
+    "mt5Account": "MT5 Account",
+    "currentStrategy": "Current Strategy",
+    "targetStrategy": "Requested Strategy",
+    "capital": "Capital",
+    "date": "Date",
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "noRequests": "No strategy requests found.",
+    "rejectTitle": "Reject Request",
+    "rejectDescription": "Provide a reason for rejection (optional):",
+    "rejectPlaceholder": "Rejection reason...",
+    "confirmReject": "Confirm Rejection",
+    "pendingMessage": "Your request is being reviewed by admin."
   }
 }
