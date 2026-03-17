@@ -797,5 +797,22 @@ export interface CreateMasterAccountData {
   password: string;
 }
 
+// ── Strategy Request Types ────────────────────────────
+export interface StrategyRequestItem {
+  id: string;
+  user_id: string;
+  user_email: string;
+  mt5_logins: number[];
+  current_strategy: string | null;
+  target_strategy: string | null;
+  target_strategy_id: string;
+  target_level: string | null;
+  mt5_balance: number;
+  status: string;
+  admin_note: string | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
 // Singleton
 export const api = new ApiClient();
