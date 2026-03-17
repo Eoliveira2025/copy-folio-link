@@ -357,6 +357,7 @@
     "descriptionPlaceholder": "Brief description of this strategy...",
     "riskMultiplier": "Risk Multiplier",
     "requiresUnlock": "Requires Admin Unlock",
+    "minCapital": "Min Capital (R$)",
     "createStrategy": "Create Strategy",
     "editStrategy": "Edit Strategy",
     "updateStrategy": "Update Strategy",
