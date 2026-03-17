@@ -206,6 +206,7 @@ const AdminPanel = () => {
           <TabsTrigger value="subscriptions" className="gap-2"><CreditCard className="w-4 h-4" /> {t("admin.subscriptions")}</TabsTrigger>
           <TabsTrigger value="invoices" className="gap-2"><FileText className="w-4 h-4" /> {t("admin.invoices")}</TabsTrigger>
           <TabsTrigger value="upgrades" className="gap-2"><ArrowUpCircle className="w-4 h-4" /> {t("admin.upgrades")}</TabsTrigger>
+          <TabsTrigger value="strategy-requests" className="gap-2"><Send className="w-4 h-4" /> {t("strategyRequests.title")}</TabsTrigger>
           <TabsTrigger value="risk" className="gap-2"><AlertTriangle className="w-4 h-4" /> {t("admin.risk")}</TabsTrigger>
           <TabsTrigger value="legal" className="gap-2"><Scale className="w-4 h-4" /> {t("admin.legal")}</TabsTrigger>
           <TabsTrigger value="servers" className="gap-2"><Server className="w-4 h-4" /> {t("admin.servers")}</TabsTrigger>
