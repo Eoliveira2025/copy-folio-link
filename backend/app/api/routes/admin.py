@@ -1,4 +1,4 @@
-"""Admin endpoints: user management, plan management, subscriptions, invoices, upgrade requests, terms."""
+"""Admin endpoints: user management, plan management, subscriptions, invoices, upgrade requests, strategy requests, terms."""
 
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -11,7 +11,8 @@ from app.core.security import hash_password
 from app.api.deps import require_admin
 from app.models.user import User
 from app.models.mt5_account import MT5Account, MT5Status
-from app.models.strategy import Strategy, UserStrategy, MasterAccount, LOCKED_STRATEGIES
+from app.models.strategy import Strategy, UserStrategy, MasterAccount, LOCKED_STRATEGIES, StrategyLevel
+from app.models.strategy_request import StrategyRequest, StrategyRequestStatus
 from app.models.plan import Plan
 from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.invoice import Invoice, InvoiceStatus
