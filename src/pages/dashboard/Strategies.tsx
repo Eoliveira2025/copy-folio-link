@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Lock, BarChart3, CheckCircle2, AlertTriangle, Send } from "lucide-react";
+import { Lock, BarChart3, CheckCircle2, AlertTriangle, Send, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useStrategies, useSelectStrategy, useRequestStrategy } from "@/hooks/use-api";
