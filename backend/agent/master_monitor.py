@@ -238,12 +238,18 @@ def master_listener_process(master_id: str, login: int, password: str, server: s
                 pass
         except Exception as e:
             log.error(f"Poll error: {e}", exc_info=True)
-            # Try to reconnect MT5
+            # Try to reconnect MT5 using the SAME dedicated instance
             try:
                 mt5.shutdown()
                 time.sleep(1)
-                mt5.initialize(path=settings.MT5_TERMINAL_PATH)
-                mt5.login(login, password=password, server=server)
+                mt5.initialize(
+                    path=terminal_path,
+                    login=login,
+                    password=password,
+                    server=server,
+                    timeout=settings.MT5_INIT_TIMEOUT_MS,
+                    portable=True,
+                )
             except Exception:
                 time.sleep(5)
 
