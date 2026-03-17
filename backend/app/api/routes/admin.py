@@ -838,3 +838,150 @@ async def admin_get_terms_content(
         "company_name": terms.company_name,
         "is_active": terms.is_active,
     }
+
+
+# ── Strategy Requests ───────────────────────────────────
+
+@router.get("/strategy-requests")
+async def list_strategy_requests(
+    status: str = Query("", description="Filter by status: pending, approved, rejected"),
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all strategy change requests."""
+    query = select(StrategyRequest).order_by(StrategyRequest.created_at.desc())
+    if status:
+        query = query.where(StrategyRequest.status == StrategyRequestStatus(status))
+    result = await db.execute(query.limit(100))
+    requests = result.scalars().all()
+
+    response = []
+    for r in requests:
+        user_result = await db.execute(select(User).where(User.id == r.user_id))
+        user = user_result.scalar_one_or_none()
+
+        # Get MT5 accounts for display
+        mt5_result = await db.execute(
+            select(MT5Account).where(MT5Account.user_id == r.user_id, MT5Account.status == MT5Status.CONNECTED)
+        )
+        mt5_accounts = mt5_result.scalars().all()
+        mt5_logins = [a.login for a in mt5_accounts]
+
+        current_name = None
+        target_name = None
+        target_level = None
+        if r.current_strategy_id:
+            cs = await db.execute(select(Strategy).where(Strategy.id == r.current_strategy_id))
+            s = cs.scalar_one_or_none()
+            current_name = f"{s.name} ({s.level.value.upper()})" if s else None
+        if r.target_strategy_id:
+            ts = await db.execute(select(Strategy).where(Strategy.id == r.target_strategy_id))
+            s = ts.scalar_one_or_none()
+            if s:
+                target_name = f"{s.name} ({s.level.value.upper()})"
+                target_level = s.level.value
+
+        response.append({
+            "id": str(r.id),
+            "user_id": str(r.user_id),
+            "user_email": user.email if user else "unknown",
+            "mt5_logins": mt5_logins,
+            "current_strategy": current_name,
+            "target_strategy": target_name,
+            "target_strategy_id": str(r.target_strategy_id),
+            "target_level": target_level,
+            "mt5_balance": r.mt5_balance,
+            "status": r.status.value,
+            "admin_note": r.admin_note,
+            "created_at": r.created_at.isoformat(),
+            "resolved_at": r.resolved_at.isoformat() if r.resolved_at else None,
+        })
+    return response
+
+
+@router.post("/strategy-requests/{request_id}/approve")
+async def approve_strategy_request(
+    request_id: str,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Approve a strategy request: activate the target strategy for the user."""
+    result = await db.execute(select(StrategyRequest).where(StrategyRequest.id == request_id))
+    req = result.scalar_one_or_none()
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    if req.status != StrategyRequestStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Request already processed")
+
+    now = datetime.now(timezone.utc)
+    req.status = StrategyRequestStatus.APPROVED
+    req.resolved_at = now
+
+    # Get target strategy
+    strat_result = await db.execute(select(Strategy).where(Strategy.id == req.target_strategy_id))
+    strategy = strat_result.scalar_one_or_none()
+    if not strategy:
+        raise HTTPException(status_code=404, detail="Target strategy no longer exists")
+
+    # Deactivate current user strategies
+    current = await db.execute(
+        select(UserStrategy).where(UserStrategy.user_id == req.user_id, UserStrategy.is_active == True)
+    )
+    for us in current.scalars().all():
+        us.is_active = False
+
+    # Activate the new strategy (also marks as unlocked by admin)
+    db.add(UserStrategy(
+        user_id=req.user_id,
+        strategy_id=strategy.id,
+        is_active=True,
+        unlocked_by_admin=True,
+    ))
+
+    # Dispatch to copy engine for all connected MT5 accounts
+    ma_result = await db.execute(select(MasterAccount).where(MasterAccount.strategy_id == strategy.id))
+    master = ma_result.scalar_one_or_none()
+
+    if master:
+        mt5_result = await db.execute(
+            select(MT5Account).where(
+                MT5Account.user_id == req.user_id,
+                MT5Account.status == MT5Status.CONNECTED,
+            )
+        )
+        for account in mt5_result.scalars().all():
+            try:
+                copy_engine.dispatch_subscribe_strategy(
+                    account_id=str(account.id),
+                    client_login=account.login,
+                    strategy_level=strategy.level.value,
+                    master_login=master.login,
+                    risk_multiplier=strategy.risk_multiplier,
+                )
+            except Exception:
+                pass
+
+    await db.commit()
+    return {"message": f"Strategy '{strategy.name}' approved and activated for user"}
+
+
+@router.post("/strategy-requests/{request_id}/reject")
+async def reject_strategy_request(
+    request_id: str,
+    note: str = Query("", description="Rejection reason"),
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Reject a strategy request with an optional note."""
+    result = await db.execute(select(StrategyRequest).where(StrategyRequest.id == request_id))
+    req = result.scalar_one_or_none()
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    if req.status != StrategyRequestStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Request already processed")
+
+    req.status = StrategyRequestStatus.REJECTED
+    req.resolved_at = datetime.now(timezone.utc)
+    req.admin_note = note or None
+    await db.commit()
+    return {"message": "Strategy request rejected"}
