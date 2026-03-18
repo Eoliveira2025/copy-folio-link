@@ -10,7 +10,7 @@ from sqlalchemy import select
 from app.core.database import get_db
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from app.core.config import get_settings
-from app.models.user import User, UserRoleMapping, UserRole
+from app.models.user import User
 from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.password_reset import PasswordResetToken
 from app.schemas.auth import (
