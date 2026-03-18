@@ -83,12 +83,13 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Email already registered")
 
-    user = User(email=body.email, hashed_password=hash_password(body.password), full_name=body.full_name)
+    user = User(
+        email=body.email,
+        hashed_password=hash_password(body.password),
+        full_name=body.full_name,
+    )
     db.add(user)
     await db.flush()
-
-    # Assign default role
-    db.add(UserRoleMapping(user_id=user.id, role=UserRole.USER))
 
     # Create free trial subscription with next_billing_date
     now = datetime.now(timezone.utc)
