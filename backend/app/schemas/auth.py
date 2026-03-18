@@ -45,4 +45,5 @@ class UserProfileResponse(BaseModel):
     full_name: str | None
     is_active: bool
     created_at: str
+    is_superuser: bool = False
     role: str

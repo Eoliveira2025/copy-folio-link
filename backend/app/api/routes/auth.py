@@ -10,7 +10,7 @@ from sqlalchemy import select
 from app.core.database import get_db
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from app.core.config import get_settings
-from app.models.user import User, UserRoleMapping, UserRole
+from app.models.user import User
 from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.password_reset import PasswordResetToken
 from app.schemas.auth import (
@@ -83,12 +83,13 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Email already registered")
 
-    user = User(email=body.email, hashed_password=hash_password(body.password), full_name=body.full_name)
+    user = User(
+        email=body.email,
+        hashed_password=hash_password(body.password),
+        full_name=body.full_name,
+    )
     db.add(user)
     await db.flush()
-
-    # Assign default role
-    db.add(UserRoleMapping(user_id=user.id, role=UserRole.USER))
 
     # Create free trial subscription with next_billing_date
     now = datetime.now(timezone.utc)
@@ -154,19 +155,16 @@ async def refresh_token(refresh_token: str, db: AsyncSession = Depends(get_db)):
 @router.get("/me", response_model=UserProfileResponse)
 async def get_profile(
     user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
 ):
-    role_result = await db.execute(
-        select(UserRoleMapping).where(UserRoleMapping.user_id == user.id)
-    )
-    role_mapping = role_result.scalar_one_or_none()
+    is_superuser = bool(getattr(user, "is_superuser", False))
     return UserProfileResponse(
         id=str(user.id),
         email=user.email,
         full_name=user.full_name,
         is_active=user.is_active,
         created_at=user.created_at.isoformat(),
-        role=role_mapping.role.value if role_mapping else "user",
+        is_superuser=is_superuser,
+        role="ADMIN" if is_superuser else "USER",
     )
 
 
