@@ -33,11 +33,7 @@ async def get_current_user(
 
 async def require_admin(
     user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
 ) -> User:
-    result = await db.execute(
-        select(UserRoleMapping).where(UserRoleMapping.user_id == user.id, UserRoleMapping.role == UserRole.ADMIN)
-    )
-    if not result.scalar_one_or_none():
+    if not bool(getattr(user, "is_superuser", False)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return user

@@ -155,19 +155,16 @@ async def refresh_token(refresh_token: str, db: AsyncSession = Depends(get_db)):
 @router.get("/me", response_model=UserProfileResponse)
 async def get_profile(
     user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
 ):
-    role_result = await db.execute(
-        select(UserRoleMapping).where(UserRoleMapping.user_id == user.id)
-    )
-    role_mapping = role_result.scalar_one_or_none()
+    is_superuser = bool(getattr(user, "is_superuser", False))
     return UserProfileResponse(
         id=str(user.id),
         email=user.email,
         full_name=user.full_name,
         is_active=user.is_active,
         created_at=user.created_at.isoformat(),
-        role=role_mapping.role.value if role_mapping else "user",
+        is_superuser=is_superuser,
+        role="ADMIN" if is_superuser else "USER",
     )
 
 
