@@ -26,6 +26,7 @@ export function DashboardSidebar({ isAdmin }: { isAdmin?: boolean }) {
     { title: t("nav.dashboard"), url: "/dashboard", icon: LayoutDashboard },
     { title: t("nav.connectMT5"), url: "/dashboard/connect", icon: Link2 },
     { title: t("nav.strategies"), url: "/dashboard/strategies", icon: BarChart3 },
+    { title: t("nav.plans"), url: "/dashboard/plans", icon: Package },
     { title: t("nav.financial"), url: "/dashboard/financial", icon: CreditCard },
     { title: t("nav.settings"), url: "/dashboard/settings", icon: Settings },
   ];
