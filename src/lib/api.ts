@@ -552,9 +552,30 @@ export interface PlanPublic {
   id: string;
   name: string;
   price: number;
+  currency: string;
   allowed_strategies: string[];
   trial_days: number;
   max_accounts: number;
+}
+
+export interface CheckoutResult {
+  invoice_id: string;
+  gateway_id: string;
+  checkout_url: string | null;
+  pix_qr_code: string | null;
+  pix_copy_paste: string | null;
+  boleto_url: string | null;
+  status: string;
+}
+
+export interface BillingStats {
+  total_revenue: number;
+  active_subscriptions: number;
+  trial_subscriptions: number;
+  blocked_subscriptions: number;
+  pending_invoices: number;
+  overdue_invoices: number;
+  paid_invoices_this_month: number;
 }
 
 export interface Subscription {
