@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { motion, AnimatePresence } from "framer-motion";
-import { Check, Crown, Zap, Shield, Star, Rocket, Gem, Copy, QrCode, X, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { Check, Crown, Zap, Shield, Star, Rocket, Gem, Copy, QrCode, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
