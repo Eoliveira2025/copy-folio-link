@@ -57,6 +57,7 @@ const App = () => (
               <Route path="/dashboard" element={<DashboardHome />} />
               <Route path="/dashboard/connect" element={<ConnectMT5 />} />
               <Route path="/dashboard/strategies" element={<Strategies />} />
+              <Route path="/dashboard/plans" element={<Plans />} />
               <Route path="/dashboard/financial" element={<Financial />} />
               <Route path="/dashboard/settings" element={<SettingsPage />} />
               <Route
