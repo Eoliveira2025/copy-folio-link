@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     STRIPE_SECRET_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
     ASAAS_API_KEY: str = ""
+    ASAAS_ENVIRONMENT: str = "sandbox"  # sandbox | production
+    ASAAS_WEBHOOK_TOKEN: str = ""
     MERCADOPAGO_ACCESS_TOKEN: str = ""
     CELCOIN_CLIENT_ID: str = ""
     CELCOIN_CLIENT_SECRET: str = ""
