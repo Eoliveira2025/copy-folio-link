@@ -121,6 +121,53 @@ export function useMyUpgradeRequests() {
   });
 }
 
+export function useCheckout() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { plan_id: string; billing_type: string; gateway: string }) =>
+      api.checkout(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+      qc.invalidateQueries({ queryKey: ["subscription"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminBillingStats() {
+  return useQuery({
+    queryKey: ["admin-billing-stats"],
+    queryFn: () => api.adminBillingStats(),
+  });
+}
+
+export function useAdminCancelSubscription() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (subscriptionId: string) => api.adminCancelSubscription(subscriptionId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-subscriptions"] });
+      qc.invalidateQueries({ queryKey: ["admin-billing-stats"] });
+      toast.success("Subscription cancelled");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminRefundInvoice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { invoice_id: string; amount?: number; reason?: string }) =>
+      api.adminRefundInvoice(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-invoices"] });
+      qc.invalidateQueries({ queryKey: ["admin-billing-stats"] });
+      toast.success("Refund processed");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
 // ── Admin ───────────────────────────────────────────
 export function useAdminUsers(search: string) {
   return useQuery({

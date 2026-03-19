@@ -218,6 +218,36 @@ class ApiClient {
     return this.request<UpgradeRequestItem[]>("/billing/upgrade-requests");
   }
 
+  async checkout(data: { plan_id: string; billing_type: string; gateway: string }) {
+    return this.request<CheckoutResult>("/billing/checkout", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async checkoutStatus(invoiceId: string) {
+    return this.request<{ status: string }>(`/billing/checkout/${invoiceId}/status`);
+  }
+
+  // ── Admin Billing ─────────────────────────────────────
+  async adminBillingStats() {
+    return this.request<BillingStats>("/billing/admin/stats");
+  }
+
+  async adminCancelSubscription(subscriptionId: string, reason?: string) {
+    return this.request<{ message: string }>(`/billing/admin/subscriptions/${subscriptionId}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  async adminRefundInvoice(data: { invoice_id: string; amount?: number; reason?: string }) {
+    return this.request<{ message: string }>("/billing/admin/refund", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
   // ── Admin ─────────────────────────────────────────────
   async adminSearchUsers(query: string = "") {
     return this.request<AdminUser[]>(`/admin/users?q=${encodeURIComponent(query)}`);
@@ -522,9 +552,30 @@ export interface PlanPublic {
   id: string;
   name: string;
   price: number;
+  currency: string;
   allowed_strategies: string[];
   trial_days: number;
   max_accounts: number;
+}
+
+export interface CheckoutResult {
+  invoice_id: string;
+  gateway_id: string;
+  checkout_url: string | null;
+  pix_qr_code: string | null;
+  pix_copy_paste: string | null;
+  boleto_url: string | null;
+  status: string;
+}
+
+export interface BillingStats {
+  total_revenue: number;
+  active_subscriptions: number;
+  trial_subscriptions: number;
+  blocked_subscriptions: number;
+  pending_invoices: number;
+  overdue_invoices: number;
+  paid_invoices_this_month: number;
 }
 
 export interface Subscription {
@@ -628,7 +679,9 @@ export interface AdminSubscription {
 
 export interface AdminInvoice {
   id: string;
-  user_email: string;
+  subscription_id: string;
+  user_email: string | null;
+  plan_name: string | null;
   amount: number;
   currency: string;
   status: string;
@@ -636,6 +689,7 @@ export interface AdminInvoice {
   due_date: string;
   paid_at: string | null;
   provider: string | null;
+  external_id: string | null;
 }
 
 // ── Terms Types ───────────────────────────────────────

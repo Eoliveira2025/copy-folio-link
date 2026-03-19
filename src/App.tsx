@@ -18,8 +18,10 @@ import ConnectMT5 from "./pages/dashboard/ConnectMT5";
 import Strategies from "./pages/dashboard/Strategies";
 import Financial from "./pages/dashboard/Financial";
 import SettingsPage from "./pages/dashboard/SettingsPage";
+import Plans from "./pages/dashboard/Plans";
 import AdminPanel from "./pages/admin/AdminPanel";
 import OperationsDashboard from "./pages/admin/OperationsDashboard";
+import AdminBilling from "./pages/admin/AdminBilling";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -55,6 +57,7 @@ const App = () => (
               <Route path="/dashboard" element={<DashboardHome />} />
               <Route path="/dashboard/connect" element={<ConnectMT5 />} />
               <Route path="/dashboard/strategies" element={<Strategies />} />
+              <Route path="/dashboard/plans" element={<Plans />} />
               <Route path="/dashboard/financial" element={<Financial />} />
               <Route path="/dashboard/settings" element={<SettingsPage />} />
               <Route
@@ -70,6 +73,14 @@ const App = () => (
                 element={
                   <AdminRoute>
                     <OperationsDashboard />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/billing"
+                element={
+                  <AdminRoute>
+                    <AdminBilling />
                   </AdminRoute>
                 }
               />
