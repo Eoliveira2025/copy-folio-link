@@ -2,15 +2,17 @@
 Payment Gateway abstraction layer.
 
 Each gateway implements the PaymentGateway protocol for:
-- Creating invoices/charges
+- Creating invoices/charges (with billing type selection)
+- Generating checkout URLs for user payment
 - Checking payment status
 - Processing webhook payloads
+- Refunding payments
 """
 
 from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 import httpx
@@ -26,6 +28,14 @@ class GatewayStatus(str, Enum):
     PAID = "paid"
     FAILED = "failed"
     CANCELLED = "cancelled"
+    REFUNDED = "refunded"
+
+
+class BillingType(str, Enum):
+    BOLETO = "BOLETO"
+    PIX = "PIX"
+    CREDIT_CARD = "CREDIT_CARD"
+    UNDEFINED = "UNDEFINED"  # Let gateway decide / show all options
 
 
 @dataclass
@@ -34,13 +44,27 @@ class PaymentResult:
     status: GatewayStatus
     amount: float
     raw_data: dict
+    checkout_url: Optional[str] = None  # URL for user to complete payment
+    pix_qr_code: Optional[str] = None  # PIX QR code (base64 image)
+    pix_copy_paste: Optional[str] = None  # PIX copy-paste code
+    boleto_url: Optional[str] = None  # Boleto PDF URL
+    invoice_url: Optional[str] = None  # General invoice/payment URL
 
 
 class PaymentGateway(ABC):
     """Protocol for payment gateway implementations."""
 
     @abstractmethod
-    async def create_charge(self, amount: float, currency: str, description: str, customer_email: str) -> PaymentResult:
+    async def create_charge(
+        self,
+        amount: float,
+        currency: str,
+        description: str,
+        customer_email: str,
+        customer_name: Optional[str] = None,
+        customer_cpf: Optional[str] = None,
+        billing_type: BillingType = BillingType.UNDEFINED,
+    ) -> PaymentResult:
         ...
 
     @abstractmethod
@@ -51,6 +75,171 @@ class PaymentGateway(ABC):
     async def process_webhook(self, payload: dict) -> PaymentResult:
         ...
 
+    async def refund(self, gateway_id: str, amount: Optional[float] = None) -> PaymentResult:
+        raise NotImplementedError("Refund not supported by this gateway")
+
+
+# ── ASAAS ──────────────────────────────────────────────────
+
+class AsaasGateway(PaymentGateway):
+    def __init__(self):
+        self.api_key = settings.ASAAS_API_KEY
+        env = getattr(settings, "ASAAS_ENVIRONMENT", "sandbox")
+        if env == "production":
+            self.base_url = "https://api.asaas.com/v3"
+        else:
+            self.base_url = "https://sandbox.asaas.com/api/v3"
+
+    def _headers(self):
+        return {"access_token": self.api_key, "Content-Type": "application/json"}
+
+    async def _find_or_create_customer(
+        self, client: httpx.AsyncClient, email: str, name: Optional[str] = None, cpf: Optional[str] = None
+    ) -> str:
+        """Find existing Asaas customer by email or create a new one."""
+        search = await client.get(f"{self.base_url}/customers?email={email}", headers=self._headers())
+        search.raise_for_status()
+        customers = search.json().get("data", [])
+        if customers:
+            return customers[0]["id"]
+
+        payload = {"name": name or email.split("@")[0], "email": email}
+        if cpf:
+            payload["cpfCnpj"] = cpf
+
+        create = await client.post(f"{self.base_url}/customers", headers=self._headers(), json=payload)
+        create.raise_for_status()
+        return create.json()["id"]
+
+    async def create_charge(
+        self,
+        amount: float,
+        currency: str,
+        description: str,
+        customer_email: str,
+        customer_name: Optional[str] = None,
+        customer_cpf: Optional[str] = None,
+        billing_type: BillingType = BillingType.UNDEFINED,
+    ) -> PaymentResult:
+        async with httpx.AsyncClient(timeout=30) as client:
+            customer_id = await self._find_or_create_customer(
+                client, customer_email, customer_name, customer_cpf
+            )
+
+            from datetime import datetime, timedelta
+            due_date = (datetime.utcnow() + timedelta(days=2)).strftime("%Y-%m-%d")
+
+            # Map billing type
+            asaas_billing = billing_type.value if billing_type != BillingType.UNDEFINED else "UNDEFINED"
+
+            payment_payload = {
+                "customer": customer_id,
+                "billingType": asaas_billing,
+                "value": amount,
+                "dueDate": due_date,
+                "description": description,
+            }
+
+            resp = await client.post(
+                f"{self.base_url}/payments", headers=self._headers(), json=payment_payload
+            )
+            resp.raise_for_status()
+            payment = resp.json()
+
+            result = PaymentResult(
+                gateway_id=payment.get("id", ""),
+                status=GatewayStatus.PENDING,
+                amount=amount,
+                raw_data=payment,
+                invoice_url=payment.get("invoiceUrl"),
+                checkout_url=payment.get("invoiceUrl"),
+            )
+
+            # If PIX, fetch QR code
+            if billing_type == BillingType.PIX and payment.get("id"):
+                try:
+                    pix_resp = await client.get(
+                        f"{self.base_url}/payments/{payment['id']}/pixQrCode",
+                        headers=self._headers(),
+                    )
+                    if pix_resp.status_code == 200:
+                        pix_data = pix_resp.json()
+                        result.pix_qr_code = pix_data.get("encodedImage")
+                        result.pix_copy_paste = pix_data.get("payload")
+                except Exception as e:
+                    logger.warning(f"Failed to fetch PIX QR code: {e}")
+
+            # If BOLETO, the invoiceUrl already contains the boleto
+            if billing_type == BillingType.BOLETO:
+                result.boleto_url = payment.get("bankSlipUrl") or payment.get("invoiceUrl")
+
+            return result
+
+    async def check_status(self, gateway_id: str) -> PaymentResult:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(f"{self.base_url}/payments/{gateway_id}", headers=self._headers())
+            resp.raise_for_status()
+            payment = resp.json()
+
+            status_map = {
+                "CONFIRMED": GatewayStatus.PAID,
+                "RECEIVED": GatewayStatus.PAID,
+                "RECEIVED_IN_CASH": GatewayStatus.PAID,
+                "REFUNDED": GatewayStatus.REFUNDED,
+                "REFUND_REQUESTED": GatewayStatus.REFUNDED,
+                "OVERDUE": GatewayStatus.PENDING,
+            }
+            status = status_map.get(payment.get("status", ""), GatewayStatus.PENDING)
+
+            return PaymentResult(
+                gateway_id=gateway_id,
+                status=status,
+                amount=payment.get("value", 0),
+                raw_data=payment,
+                invoice_url=payment.get("invoiceUrl"),
+            )
+
+    async def process_webhook(self, payload: dict) -> PaymentResult:
+        event = payload.get("event", "")
+        payment = payload.get("payment", {})
+
+        event_status_map = {
+            "PAYMENT_CONFIRMED": GatewayStatus.PAID,
+            "PAYMENT_RECEIVED": GatewayStatus.PAID,
+            "PAYMENT_OVERDUE": GatewayStatus.PENDING,
+            "PAYMENT_REFUNDED": GatewayStatus.REFUNDED,
+            "PAYMENT_DELETED": GatewayStatus.CANCELLED,
+        }
+        status = event_status_map.get(event, GatewayStatus.PENDING)
+
+        return PaymentResult(
+            gateway_id=payment.get("id", ""),
+            status=status,
+            amount=payment.get("value", 0),
+            raw_data=payment,
+        )
+
+    async def refund(self, gateway_id: str, amount: Optional[float] = None) -> PaymentResult:
+        async with httpx.AsyncClient(timeout=15) as client:
+            payload = {}
+            if amount:
+                payload["value"] = amount
+
+            resp = await client.post(
+                f"{self.base_url}/payments/{gateway_id}/refund",
+                headers=self._headers(),
+                json=payload,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+            return PaymentResult(
+                gateway_id=gateway_id,
+                status=GatewayStatus.REFUNDED,
+                amount=amount or data.get("value", 0),
+                raw_data=data,
+            )
+
 
 # ── Stripe ─────────────────────────────────────────────────
 
@@ -59,17 +248,24 @@ class StripeGateway(PaymentGateway):
         self.api_key = settings.STRIPE_SECRET_KEY
         self.base_url = "https://api.stripe.com/v1"
 
-    async def create_charge(self, amount: float, currency: str, description: str, customer_email: str) -> PaymentResult:
-        async with httpx.AsyncClient() as client:
-            # Create or find customer
+    async def create_charge(
+        self,
+        amount: float,
+        currency: str,
+        description: str,
+        customer_email: str,
+        customer_name: Optional[str] = None,
+        customer_cpf: Optional[str] = None,
+        billing_type: BillingType = BillingType.UNDEFINED,
+    ) -> PaymentResult:
+        async with httpx.AsyncClient(timeout=30) as client:
             customer_resp = await client.post(
                 f"{self.base_url}/customers",
-                data={"email": customer_email},
+                data={"email": customer_email, "name": customer_name or ""},
                 auth=(self.api_key, ""),
             )
             customer = customer_resp.json()
 
-            # Create invoice
             invoice_resp = await client.post(
                 f"{self.base_url}/invoices",
                 data={
@@ -83,7 +279,6 @@ class StripeGateway(PaymentGateway):
             )
             invoice = invoice_resp.json()
 
-            # Add invoice item
             await client.post(
                 f"{self.base_url}/invoiceitems",
                 data={
@@ -96,7 +291,6 @@ class StripeGateway(PaymentGateway):
                 auth=(self.api_key, ""),
             )
 
-            # Finalize and send
             await client.post(f"{self.base_url}/invoices/{invoice['id']}/finalize", auth=(self.api_key, ""))
             await client.post(f"{self.base_url}/invoices/{invoice['id']}/send", auth=(self.api_key, ""))
 
@@ -105,10 +299,11 @@ class StripeGateway(PaymentGateway):
                 status=GatewayStatus.PENDING,
                 amount=amount,
                 raw_data=invoice,
+                checkout_url=invoice.get("hosted_invoice_url"),
             )
 
     async def check_status(self, gateway_id: str) -> PaymentResult:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.get(f"{self.base_url}/invoices/{gateway_id}", auth=(self.api_key, ""))
             invoice = resp.json()
             status = GatewayStatus.PAID if invoice.get("paid") else GatewayStatus.PENDING
@@ -137,75 +332,6 @@ class StripeGateway(PaymentGateway):
         )
 
 
-# ── ASAAS ──────────────────────────────────────────────────
-
-class AsaasGateway(PaymentGateway):
-    def __init__(self):
-        self.api_key = settings.ASAAS_API_KEY
-        self.base_url = "https://api.asaas.com/v3"
-
-    def _headers(self):
-        return {"access_token": self.api_key, "Content-Type": "application/json"}
-
-    async def create_charge(self, amount: float, currency: str, description: str, customer_email: str) -> PaymentResult:
-        async with httpx.AsyncClient() as client:
-            # Find or create customer
-            search = await client.get(f"{self.base_url}/customers?email={customer_email}", headers=self._headers())
-            customers = search.json().get("data", [])
-            if customers:
-                customer_id = customers[0]["id"]
-            else:
-                create = await client.post(
-                    f"{self.base_url}/customers",
-                    headers=self._headers(),
-                    json={"name": customer_email, "email": customer_email},
-                )
-                customer_id = create.json()["id"]
-
-            # Create payment
-            from datetime import datetime, timedelta
-            due_date = (datetime.utcnow() + timedelta(days=2)).strftime("%Y-%m-%d")
-            resp = await client.post(
-                f"{self.base_url}/payments",
-                headers=self._headers(),
-                json={
-                    "customer": customer_id,
-                    "billingType": "BOLETO",
-                    "value": amount,
-                    "dueDate": due_date,
-                    "description": description,
-                },
-            )
-            payment = resp.json()
-            return PaymentResult(
-                gateway_id=payment.get("id", ""),
-                status=GatewayStatus.PENDING,
-                amount=amount,
-                raw_data=payment,
-            )
-
-    async def check_status(self, gateway_id: str) -> PaymentResult:
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(f"{self.base_url}/payments/{gateway_id}", headers=self._headers())
-            payment = resp.json()
-            status_map = {"CONFIRMED": GatewayStatus.PAID, "RECEIVED": GatewayStatus.PAID}
-            status = status_map.get(payment.get("status", ""), GatewayStatus.PENDING)
-            return PaymentResult(
-                gateway_id=gateway_id, status=status, amount=payment.get("value", 0), raw_data=payment,
-            )
-
-    async def process_webhook(self, payload: dict) -> PaymentResult:
-        event = payload.get("event", "")
-        payment = payload.get("payment", {})
-        status = GatewayStatus.PAID if event == "PAYMENT_CONFIRMED" else GatewayStatus.PENDING
-        return PaymentResult(
-            gateway_id=payment.get("id", ""),
-            status=status,
-            amount=payment.get("value", 0),
-            raw_data=payment,
-        )
-
-
 # ── Mercado Pago ───────────────────────────────────────────
 
 class MercadoPagoGateway(PaymentGateway):
@@ -216,8 +342,17 @@ class MercadoPagoGateway(PaymentGateway):
     def _headers(self):
         return {"Authorization": f"Bearer {self.access_token}", "Content-Type": "application/json"}
 
-    async def create_charge(self, amount: float, currency: str, description: str, customer_email: str) -> PaymentResult:
-        async with httpx.AsyncClient() as client:
+    async def create_charge(
+        self,
+        amount: float,
+        currency: str,
+        description: str,
+        customer_email: str,
+        customer_name: Optional[str] = None,
+        customer_cpf: Optional[str] = None,
+        billing_type: BillingType = BillingType.UNDEFINED,
+    ) -> PaymentResult:
+        async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(
                 f"{self.base_url}/v1/payments",
                 headers=self._headers(),
@@ -237,7 +372,7 @@ class MercadoPagoGateway(PaymentGateway):
             )
 
     async def check_status(self, gateway_id: str) -> PaymentResult:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.get(f"{self.base_url}/v1/payments/{gateway_id}", headers=self._headers())
             payment = resp.json()
             status = GatewayStatus.PAID if payment.get("status") == "approved" else GatewayStatus.PENDING
@@ -280,7 +415,16 @@ class CelcoinGateway(PaymentGateway):
     def _headers(self, token: str):
         return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
-    async def create_charge(self, amount: float, currency: str, description: str, customer_email: str) -> PaymentResult:
+    async def create_charge(
+        self,
+        amount: float,
+        currency: str,
+        description: str,
+        customer_email: str,
+        customer_name: Optional[str] = None,
+        customer_cpf: Optional[str] = None,
+        billing_type: BillingType = BillingType.UNDEFINED,
+    ) -> PaymentResult:
         token = await self._authenticate()
         async with httpx.AsyncClient() as client:
             resp = await client.post(
