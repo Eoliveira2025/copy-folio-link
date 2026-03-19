@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { DollarSign, Users, FileText, AlertTriangle, CreditCard, TrendingUp, Clock } from "lucide-react";
+import { DollarSign, Users, FileText, AlertTriangle, TrendingUp, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
