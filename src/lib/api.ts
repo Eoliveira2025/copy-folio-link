@@ -218,6 +218,36 @@ class ApiClient {
     return this.request<UpgradeRequestItem[]>("/billing/upgrade-requests");
   }
 
+  async checkout(data: { plan_id: string; billing_type: string; gateway: string }) {
+    return this.request<CheckoutResult>("/billing/checkout", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async checkoutStatus(invoiceId: string) {
+    return this.request<{ status: string }>(`/billing/checkout/${invoiceId}/status`);
+  }
+
+  // ── Admin Billing ─────────────────────────────────────
+  async adminBillingStats() {
+    return this.request<BillingStats>("/billing/admin/stats");
+  }
+
+  async adminCancelSubscription(subscriptionId: string, reason?: string) {
+    return this.request<{ message: string }>(`/billing/admin/subscriptions/${subscriptionId}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  async adminRefundInvoice(data: { invoice_id: string; amount?: number; reason?: string }) {
+    return this.request<{ message: string }>("/billing/admin/refund", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
   // ── Admin ─────────────────────────────────────────────
   async adminSearchUsers(query: string = "") {
     return this.request<AdminUser[]>(`/admin/users?q=${encodeURIComponent(query)}`);
