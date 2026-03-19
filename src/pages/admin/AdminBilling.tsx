@@ -193,7 +193,7 @@ const AdminBilling = () => {
                   {invoices && invoices.length > 0 ? invoices.map((inv) => (
                     <tr key={inv.id} className="border-b border-border/50 last:border-0">
                       <td className="py-3 text-sm">{inv.user_email || "—"}</td>
-                      <td className="py-3">{(inv as any).plan_name || "—"}</td>
+                      <td className="py-3">{inv.plan_name || "—"}</td>
                       <td className="py-3 font-mono">R$ {inv.amount.toFixed(2)}</td>
                       <td className="py-3">
                         <Badge className={statusStyle[inv.status] || ""}>{inv.status}</Badge>
