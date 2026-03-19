@@ -679,7 +679,9 @@ export interface AdminSubscription {
 
 export interface AdminInvoice {
   id: string;
-  user_email: string;
+  subscription_id: string;
+  user_email: string | null;
+  plan_name: string | null;
   amount: number;
   currency: string;
   status: string;
@@ -687,6 +689,7 @@ export interface AdminInvoice {
   due_date: string;
   paid_at: string | null;
   provider: string | null;
+  external_id: string | null;
 }
 
 // ── Terms Types ───────────────────────────────────────

@@ -80,10 +80,12 @@
     "dashboard": "Painel",
     "connectMT5": "Conectar MT5",
     "strategies": "Estratégias",
+    "plans": "Planos",
     "financial": "Financeiro",
     "settings": "Configurações",
     "admin": "Admin",
     "adminPanel": "Painel Admin",
+    "adminBilling": "Financeiro Admin",
     "engineActive": "v1.0.0 · Motor de Cópia Ativo",
     "operations": "Operações"
   },

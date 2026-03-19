@@ -80,10 +80,12 @@
     "dashboard": "Dashboard",
     "connectMT5": "Connect MT5",
     "strategies": "Strategies",
+    "plans": "Plans",
     "financial": "Financial",
     "settings": "Settings",
     "admin": "Admin",
     "adminPanel": "Admin Panel",
+    "adminBilling": "Billing Admin",
     "engineActive": "v1.0.0 · Copy Engine Active",
     "operations": "Operations"
   },
