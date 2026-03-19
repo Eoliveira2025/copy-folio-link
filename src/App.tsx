@@ -18,8 +18,10 @@ import ConnectMT5 from "./pages/dashboard/ConnectMT5";
 import Strategies from "./pages/dashboard/Strategies";
 import Financial from "./pages/dashboard/Financial";
 import SettingsPage from "./pages/dashboard/SettingsPage";
+import Plans from "./pages/dashboard/Plans";
 import AdminPanel from "./pages/admin/AdminPanel";
 import OperationsDashboard from "./pages/admin/OperationsDashboard";
+import AdminBilling from "./pages/admin/AdminBilling";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
