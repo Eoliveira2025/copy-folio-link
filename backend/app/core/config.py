@@ -30,9 +30,17 @@ class Settings(BaseSettings):
     # Payment gateways
     STRIPE_SECRET_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
+
+    # Asaas
+    ASAAS_ENABLED: bool = True
     ASAAS_API_KEY: str = ""
     ASAAS_ENVIRONMENT: str = "sandbox"  # sandbox | production
+    ASAAS_SANDBOX: bool = True  # Alias: True = sandbox, False = production
+    ASAAS_BASE_URL: str = ""  # Override; leave empty to auto-detect from ASAAS_SANDBOX
     ASAAS_WEBHOOK_TOKEN: str = ""
+    ASAAS_WEBHOOK_ENABLED: bool = True
+    ASAAS_TIMEOUT_SECONDS: int = 30
+    ASAAS_BILLING_DUE_DAYS: int = 1  # Days until due date for new charges
     MERCADOPAGO_ACCESS_TOKEN: str = ""
     CELCOIN_CLIENT_ID: str = ""
     CELCOIN_CLIENT_SECRET: str = ""

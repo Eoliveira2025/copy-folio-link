@@ -84,11 +84,21 @@ class PaymentGateway(ABC):
 class AsaasGateway(PaymentGateway):
     def __init__(self):
         self.api_key = settings.ASAAS_API_KEY
-        env = getattr(settings, "ASAAS_ENVIRONMENT", "sandbox")
-        if env == "production":
-            self.base_url = "https://api.asaas.com/v3"
-        else:
+        self.timeout = getattr(settings, "ASAAS_TIMEOUT_SECONDS", 30)
+        self.due_days = getattr(settings, "ASAAS_BILLING_DUE_DAYS", 1)
+
+        # Resolve base URL: explicit override > sandbox flag > environment string
+        explicit_url = getattr(settings, "ASAAS_BASE_URL", "")
+        if explicit_url:
+            self.base_url = explicit_url.rstrip("/")
+        elif getattr(settings, "ASAAS_SANDBOX", True):
             self.base_url = "https://sandbox.asaas.com/api/v3"
+        else:
+            env = getattr(settings, "ASAAS_ENVIRONMENT", "sandbox")
+            self.base_url = (
+                "https://api.asaas.com/v3" if env == "production"
+                else "https://sandbox.asaas.com/api/v3"
+            )
 
     def _headers(self):
         return {"access_token": self.api_key, "Content-Type": "application/json"}
@@ -120,16 +130,19 @@ class AsaasGateway(PaymentGateway):
         customer_name: Optional[str] = None,
         customer_cpf: Optional[str] = None,
         billing_type: BillingType = BillingType.UNDEFINED,
+        external_reference: Optional[str] = None,
+        due_date_override: Optional[str] = None,  # "YYYY-MM-DD"
     ) -> PaymentResult:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
             customer_id = await self._find_or_create_customer(
                 client, customer_email, customer_name, customer_cpf
             )
 
             from datetime import datetime, timedelta
-            due_date = (datetime.utcnow() + timedelta(days=2)).strftime("%Y-%m-%d")
+            due_date = due_date_override or (
+                datetime.utcnow() + timedelta(days=self.due_days)
+            ).strftime("%Y-%m-%d")
 
-            # Map billing type
             asaas_billing = billing_type.value if billing_type != BillingType.UNDEFINED else "UNDEFINED"
 
             payment_payload = {
@@ -139,6 +152,8 @@ class AsaasGateway(PaymentGateway):
                 "dueDate": due_date,
                 "description": description,
             }
+            if external_reference:
+                payment_payload["externalReference"] = external_reference
 
             resp = await client.post(
                 f"{self.base_url}/payments", headers=self._headers(), json=payment_payload
