@@ -450,11 +450,13 @@ async def _handle_payment_confirmation(invoice: Invoice, db: AsyncSession):
 # ── Webhooks ───────────────────────────────────────────────
 
 async def _process_gateway_webhook(provider: PaymentProvider, request: Request, db: AsyncSession):
-    """Generic webhook handler for all gateways."""
+    """Generic webhook handler for all gateways. Idempotent — deduplicates via Payment table."""
     payload = await request.json()
 
-    # Optional: verify webhook token for Asaas
+    # Asaas-specific: check enabled flag and validate token
     if provider == PaymentProvider.ASAAS:
+        if not getattr(settings, "ASAAS_WEBHOOK_ENABLED", True):
+            return {"status": "ok", "note": "webhooks_disabled"}
         token = request.headers.get("asaas-access-token", "")
         expected = settings.ASAAS_WEBHOOK_TOKEN
         if expected and token != expected:
