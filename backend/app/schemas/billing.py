@@ -48,6 +48,7 @@ class CheckoutResponse(BaseModel):
     invoice_id: uuid.UUID
     gateway_id: str
     checkout_url: str | None = None
+    invoice_url: str | None = None  # Asaas hosted payment page
     pix_qr_code: str | None = None
     pix_copy_paste: str | None = None
     boleto_url: str | None = None

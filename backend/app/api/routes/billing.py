@@ -490,6 +490,17 @@ async def _process_gateway_webhook(provider: PaymentProvider, request: Request, 
             invoice.status = InvoiceStatus.CANCELLED
             await db.commit()
 
+    elif result.status == GatewayStatus.PENDING and result.gateway_id:
+        # Handle OVERDUE status from gateway
+        raw_event = payload.get("event", "") if isinstance(payload, dict) else ""
+        if raw_event == "PAYMENT_OVERDUE":
+            inv = await db.execute(select(Invoice).where(Invoice.external_id == result.gateway_id))
+            invoice = inv.scalar_one_or_none()
+            if invoice and invoice.status == InvoiceStatus.PENDING:
+                invoice.status = InvoiceStatus.OVERDUE
+                await db.commit()
+                logger.info(f"Invoice {invoice.id} marked OVERDUE via webhook")
+
     return {"status": "ok"}
 
 
