@@ -166,10 +166,18 @@ async def create_checkout(
     if not provider:
         raise HTTPException(status_code=400, detail=f"Unknown gateway: {body.gateway}")
 
+    # Determine due date (trial-aware: if user is in active trial, due at trial end)
+    due_date_override = None
+    if sub.status == SubscriptionStatus.TRIAL and sub.trial_end and sub.trial_end > datetime.now(timezone.utc):
+        due_date_override = sub.trial_end.strftime("%Y-%m-%d")
+
+    # Build externalReference for Asaas linking: "sub:<sub_id>"
+    external_ref = f"sub:{sub.id}"
+
     # Create charge via gateway
     try:
         gateway = get_gateway(body.gateway)
-        result = await gateway.create_charge(
+        create_kwargs = dict(
             amount=plan.price,
             currency=plan.currency,
             description=f"CopyTrade Pro - Plano {plan.name}",
@@ -177,12 +185,22 @@ async def create_checkout(
             customer_name=user.full_name,
             billing_type=billing_type,
         )
+        # Pass extra params only for Asaas (duck-typing safe)
+        if body.gateway.lower() == "asaas":
+            create_kwargs["external_reference"] = external_ref
+            if due_date_override:
+                create_kwargs["due_date_override"] = due_date_override
+
+        result = await gateway.create_charge(**create_kwargs)
     except Exception as e:
         logger.error(f"Gateway error creating charge: {e}")
         raise HTTPException(status_code=502, detail="Payment gateway error")
 
     # Create invoice
-    due_date = datetime.now(timezone.utc) + timedelta(days=settings.INVOICE_DUE_AFTER_DAYS)
+    due_date = (
+        sub.trial_end if due_date_override and sub.trial_end
+        else datetime.now(timezone.utc) + timedelta(days=settings.INVOICE_DUE_AFTER_DAYS)
+    )
     invoice = Invoice(
         subscription_id=sub.id,
         amount=plan.price,
@@ -204,6 +222,7 @@ async def create_checkout(
         pix_qr_code=result.pix_qr_code,
         pix_copy_paste=result.pix_copy_paste,
         boleto_url=result.boleto_url,
+        invoice_url=result.invoice_url,
         status="pending",
     )
 
