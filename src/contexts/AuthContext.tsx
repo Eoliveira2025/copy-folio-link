@@ -6,7 +6,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, confirmPassword: string) => Promise<void>;
+  register: (email: string, password: string, confirmPassword: string, fullName?: string, cpfCnpj?: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
