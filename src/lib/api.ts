@@ -109,7 +109,13 @@ class ApiClient {
     return data;
   }
 
-  async register(email: string, password: string, confirmPassword: string) {
+  async register(
+    email: string,
+    password: string,
+    confirmPassword: string,
+    fullName?: string,
+    cpfCnpj?: string
+  ) {
     const data = await this.request<{
       access_token: string;
       refresh_token: string;
@@ -119,6 +125,8 @@ class ApiClient {
         email,
         password,
         confirm_password: confirmPassword,
+        full_name: fullName || undefined,
+        cpf_cnpj: cpfCnpj || undefined,
       }),
     });
     this.setTokens(data.access_token, data.refresh_token);
