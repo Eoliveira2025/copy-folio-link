@@ -13,6 +13,7 @@ from __future__ import annotations
 import time
 import logging
 import json
+from pathlib import Path
 from typing import Dict, Optional
 import redis
 import MetaTrader5 as mt5
@@ -53,17 +54,18 @@ def executor_process(client_id: str, login: int, password: str, server: str,
     terminal_path = instance_path or settings.MT5_TERMINAL_PATH
     log.info(f"Initializing MT5 with dedicated instance: {terminal_path}")
 
-    # Connect to MT5 — pass login/password/server directly to initialize()
-    # This ensures the terminal starts in portable/headless mode for THIS account
-    if not mt5.initialize(
-        path=terminal_path,
+    # Bootstrap: pre-configure .ini files and connect with retry
+    from agent.terminal_bootstrap import bootstrap_and_connect
+    instance_dir = str(Path(terminal_path).parent) if terminal_path.endswith("terminal64.exe") else terminal_path
+    if not bootstrap_and_connect(
+        instance_dir=instance_dir,
         login=login,
         password=password,
         server=server,
-        timeout=settings.MT5_INIT_TIMEOUT_MS,
-        portable=True,
+        timeout_ms=settings.MT5_INIT_TIMEOUT_MS,
+        max_retries=3,
     ):
-        log.error(f"MT5 initialize failed: {mt5.last_error()}")
+        log.error(f"MT5 bootstrap+connect failed after retries for login={login}")
         return
 
     info = mt5.account_info()

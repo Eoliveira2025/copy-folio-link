@@ -130,17 +130,19 @@ def master_listener_process(master_id: str, login: int, password: str, server: s
     terminal_path = instance_path or settings.MT5_TERMINAL_PATH
     log.info(f"Initializing MT5 with dedicated instance: {terminal_path}")
 
-    # Connect to MT5 — pass credentials directly to initialize()
-    # Each account uses its OWN terminal64.exe in its OWN folder
-    if not mt5.initialize(
-        path=terminal_path,
+    # Bootstrap: pre-configure .ini files and connect with retry
+    from agent.terminal_bootstrap import bootstrap_and_connect
+    from pathlib import Path as _Path
+    instance_dir = str(_Path(terminal_path).parent) if terminal_path.endswith("terminal64.exe") else terminal_path
+    if not bootstrap_and_connect(
+        instance_dir=instance_dir,
         login=login,
         password=password,
         server=server,
-        timeout=settings.MT5_INIT_TIMEOUT_MS,
-        portable=True,
+        timeout_ms=settings.MT5_INIT_TIMEOUT_MS,
+        max_retries=3,
     ):
-        log.error(f"MT5 initialize failed: {mt5.last_error()}")
+        log.error(f"MT5 bootstrap+connect failed after retries for login={login}")
         return
 
     info = mt5.account_info()
@@ -238,17 +240,17 @@ def master_listener_process(master_id: str, login: int, password: str, server: s
                 pass
         except Exception as e:
             log.error(f"Poll error: {e}", exc_info=True)
-            # Try to reconnect MT5 using the SAME dedicated instance
+            # Try to reconnect MT5 using bootstrap
             try:
                 mt5.shutdown()
                 time.sleep(1)
-                mt5.initialize(
-                    path=terminal_path,
+                bootstrap_and_connect(
+                    instance_dir=instance_dir,
                     login=login,
                     password=password,
                     server=server,
-                    timeout=settings.MT5_INIT_TIMEOUT_MS,
-                    portable=True,
+                    timeout_ms=settings.MT5_INIT_TIMEOUT_MS,
+                    max_retries=2,
                 )
             except Exception:
                 time.sleep(5)
