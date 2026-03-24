@@ -11,10 +11,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
 
 const servers = [
-  "Exness-MT5Real",
-  "Exness-MT5Real2",
-  "Exness-MT5Real3",
-  "Exness-MT5Trial",
+  ...Array.from({ length: 41 }, (_, i) => `Exness-MT5Real${i + 1}`),
+  "Exness-MT5Trial11",
+  "Exness-MT5Trial12",
 ];
 
 const ConnectMT5 = () => {
