@@ -90,6 +90,9 @@ class AdminSubscriptionResponse(BaseModel):
     plan_name: str | None = None
     plan_price: float | None = None
     status: str
+    access_status: str = "active"
+    manual_override: bool = False
+    blocked_at: datetime | None = None
     trial_start: datetime
     trial_end: datetime | None
     current_period_start: datetime | None
