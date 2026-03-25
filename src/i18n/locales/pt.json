@@ -96,7 +96,8 @@
     "adminPanel": "Painel Admin",
     "adminBilling": "Financeiro Admin",
     "engineActive": "v1.0.0 · Motor de Cópia Ativo",
-    "operations": "Operações"
+    "operations": "Operações",
+    "provisioning": "Provisionamento"
   },
   "dashboard": {
     "title": "Painel",
@@ -429,6 +430,17 @@
     "boletoInstructions": "O boleto será aberto em uma nova aba. Pague até a data de vencimento.",
     "redirected": "Você será redirecionado para a página de pagamento",
     "goToPayment": "Ir para Pagamento"
+  },
+  "provisioning": {
+    "title": "Provisionamento Manual",
+    "subtitle": "Contas aguardando primeira conexão MT5 — conecte manualmente e confirme aqui",
+    "pendingStatus": "Pendente",
+    "mt5Login": "Login MT5",
+    "password": "Senha",
+    "server": "Servidor",
+    "confirmConnection": "Confirmar Conexão",
+    "allClear": "Todas as contas provisionadas",
+    "allClearDesc": "Nenhuma conta pendente. Todas as conexões MT5 estão ativas."
   },
   "adminBilling": {
     "title": "Gestão Financeira",

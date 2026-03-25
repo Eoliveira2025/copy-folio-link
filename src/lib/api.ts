@@ -456,6 +456,17 @@ class ApiClient {
     return this.request<RiskIncident[]>("/admin/risk/incidents");
   }
 
+  // ── Admin Provisioning ─────────────────────────────
+  async adminGetPendingAccounts() {
+    return this.request<PendingProvisionAccount[]>("/admin/provision/pending");
+  }
+
+  async adminCompleteProvision(accountId: string) {
+    return this.request<{ message: string }>(`/admin/provision/complete/${accountId}`, {
+      method: "POST",
+    });
+  }
+
   async adminResetEmergency() {
     return this.request<{ message: string }>("/admin/risk/reset-emergency", {
       method: "POST",
@@ -857,6 +868,17 @@ export interface CreateMasterAccountData {
   login: number;
   server: string;
   password: string;
+}
+
+// ── Provisioning Types ────────────────────────────────
+export interface PendingProvisionAccount {
+  id: string;
+  user_email: string;
+  login: number;
+  password: string;
+  server: string;
+  status: string;
+  created_at: string;
 }
 
 // ── Strategy Request Types ────────────────────────────

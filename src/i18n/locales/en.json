@@ -96,7 +96,8 @@
     "adminPanel": "Admin Panel",
     "adminBilling": "Billing Admin",
     "engineActive": "v1.0.0 · Copy Engine Active",
-    "operations": "Operations"
+    "operations": "Operations",
+    "provisioning": "Provisioning"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -430,6 +431,17 @@
     "boletoInstructions": "The boleto will open in a new tab. Pay before the due date.",
     "redirected": "You will be redirected to the payment page",
     "goToPayment": "Go to Payment"
+  },
+  "provisioning": {
+    "title": "Manual Provisioning",
+    "subtitle": "Accounts pending first MT5 connection — connect manually, then confirm here",
+    "pendingStatus": "Pending Provision",
+    "mt5Login": "MT5 Login",
+    "password": "Password",
+    "server": "Server",
+    "confirmConnection": "Confirm Connection",
+    "allClear": "All accounts provisioned",
+    "allClearDesc": "No pending accounts. All MT5 connections are active."
   },
   "adminBilling": {
     "title": "Financial Management",
