@@ -275,3 +275,10 @@ def block_overdue_accounts():
 
         db.commit()
     return f"Blocked {blocked} overdue accounts"
+
+
+@celery_app.task
+def check_access_status():
+    """Run the access status checker every 5 minutes."""
+    from app.workers.access_checker import run_access_check
+    return run_access_check()
