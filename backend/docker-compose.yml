@@ -73,4 +73,3 @@ services:
 volumes:
   pgdata:
   redis_data:
-  mt5_data:
