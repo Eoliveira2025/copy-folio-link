@@ -22,6 +22,7 @@ import Plans from "./pages/dashboard/Plans";
 import AdminPanel from "./pages/admin/AdminPanel";
 import OperationsDashboard from "./pages/admin/OperationsDashboard";
 import AdminBilling from "./pages/admin/AdminBilling";
+import Provisioning from "./pages/admin/Provisioning";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
