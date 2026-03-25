@@ -108,7 +108,7 @@ def upgrade() -> None:
     op.execute("CREATE INDEX ix_trade_copies_event ON trade_copies (trade_event_id)")
     op.execute("CREATE INDEX ix_trade_copies_account ON trade_copies (mt5_account_id)")
     op.execute("CREATE INDEX ix_trade_copies_ts ON trade_copies (executed_at)")
-    op.execute("DROP TABLE trade_copies_old")
+    op.execute("DROP TABLE trade_copies_old CASCADE")
 
 
 def downgrade() -> None:
