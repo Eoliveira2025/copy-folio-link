@@ -33,36 +33,10 @@ services:
     depends_on:
       - redis
 
-  copy-engine:
-    build: .
-    command: python -m engine.main
-    env_file: .env
-    depends_on:
-      - db
-      - redis
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: "2.0"
-
-  mt5-manager:
-    build:
-      context: .
-      dockerfile: Dockerfile.mt5
-    env_file: .env
-    depends_on:
-      - db
-      - redis
-    deploy:
-      resources:
-        limits:
-          memory: 8G
-          cpus: "4.0"
-    volumes:
-      - mt5_data:/app/mt5_terminals
-    environment:
-      - MT5_DATA_DIR_BASE=/app/mt5_terminals
+  # ─────────────────────────────────────────────────────────
+  # copy-engine and mt5-manager run on Windows VPS only.
+  # See docker-compose.mt5.yml for those services.
+  # ─────────────────────────────────────────────────────────
 
   db:
     image: postgres:16-alpine
@@ -99,4 +73,3 @@ services:
 volumes:
   pgdata:
   redis_data:
-  mt5_data:
