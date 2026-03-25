@@ -430,6 +430,17 @@
     "redirected": "Você será redirecionado para a página de pagamento",
     "goToPayment": "Ir para Pagamento"
   },
+  "provisioning": {
+    "title": "Provisionamento Manual",
+    "subtitle": "Contas aguardando primeira conexão MT5 — conecte manualmente e confirme aqui",
+    "pendingStatus": "Pendente",
+    "mt5Login": "Login MT5",
+    "password": "Senha",
+    "server": "Servidor",
+    "confirmConnection": "Confirmar Conexão",
+    "allClear": "Todas as contas provisionadas",
+    "allClearDesc": "Nenhuma conta pendente. Todas as conexões MT5 estão ativas."
+  },
   "adminBilling": {
     "title": "Gestão Financeira",
     "subtitle": "Gerencie assinaturas, faturas e reembolsos",

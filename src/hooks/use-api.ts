@@ -479,6 +479,28 @@ export function useAdminResolveDeadLetter() {
   });
 }
 
+// ── Admin Provisioning ─────────────────────────────
+export function useAdminPendingAccounts() {
+  return useQuery({
+    queryKey: ["admin-pending-accounts"],
+    queryFn: () => api.adminGetPendingAccounts(),
+    refetchInterval: 15000,
+  });
+}
+
+export function useAdminCompleteProvision() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (accountId: string) => api.adminCompleteProvision(accountId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-pending-accounts"] });
+      qc.invalidateQueries({ queryKey: ["mt5-accounts"] });
+      toast.success("Account provisioned successfully!");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
 // ── Admin Strategies ───────────────────────────────
 export function useAdminStrategies() {
   return useQuery({

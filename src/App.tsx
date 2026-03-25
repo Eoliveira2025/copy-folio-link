@@ -85,6 +85,14 @@ const App = () => (
                   </AdminRoute>
                 }
               />
+              <Route
+                path="/admin/provisioning"
+                element={
+                  <AdminRoute>
+                    <Provisioning />
+                  </AdminRoute>
+                }
+              />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

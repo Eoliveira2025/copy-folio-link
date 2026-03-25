@@ -870,6 +870,17 @@ export interface CreateMasterAccountData {
   password: string;
 }
 
+// ── Provisioning Types ────────────────────────────────
+export interface PendingProvisionAccount {
+  id: string;
+  user_email: string;
+  login: number;
+  password: string;
+  server: string;
+  status: string;
+  created_at: string;
+}
+
 // ── Strategy Request Types ────────────────────────────
 export interface StrategyRequestItem {
   id: string;

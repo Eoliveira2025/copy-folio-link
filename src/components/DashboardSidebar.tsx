@@ -35,6 +35,7 @@ export function DashboardSidebar({ isAdmin }: { isAdmin?: boolean }) {
     { title: t("nav.adminPanel"), url: "/admin", icon: Shield },
     { title: t("nav.operations"), url: "/admin/operations", icon: Activity },
     { title: t("nav.adminBilling"), url: "/admin/billing", icon: DollarSign },
+    { title: t("nav.provisioning"), url: "/admin/provisioning", icon: MonitorSmartphone },
   ];
 
   return (
