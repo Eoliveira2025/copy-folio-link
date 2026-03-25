@@ -26,7 +26,7 @@ import {
   useAdminChangeUserPlan, useAdminSubscriptions, useAdminInvoices,
   useAdminUpgradeRequests, useAdminHandleUpgradeRequest,
   useAdminTerms, useAdminCreateTerms, useAdminUpdateTerms, useAdminActivateTerms,
-  usePublicSettings, useAdminUpdatePublicSettings,
+  usePublicSettings, useAdminUpdatePublicSettings, useAdminToggleOverride,
 } from "@/hooks/use-api";
 import { StatCard } from "@/components/StatCard";
 import type { AdminPlan, CreatePlanData, AdminTermsItem } from "@/lib/api";
