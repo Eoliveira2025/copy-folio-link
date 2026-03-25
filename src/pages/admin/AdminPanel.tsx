@@ -135,6 +135,7 @@ const AdminPanel = () => {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [subStatusFilter, setSubStatusFilter] = useState("");
+  const [subAccessFilter, setSubAccessFilter] = useState("");
   const [invStatusFilter, setInvStatusFilter] = useState("");
   const [upgradeStatusFilter, setUpgradeStatusFilter] = useState("");
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
