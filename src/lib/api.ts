@@ -629,6 +629,7 @@ export interface BillingStats {
 export interface Subscription {
   id: string;
   status: string;
+  access_status: string;
   plan_name: string | null;
   plan_price: number | null;
   trial_start: string;
@@ -636,6 +637,8 @@ export interface Subscription {
   current_period_start: string | null;
   current_period_end: string | null;
   auto_renew: boolean;
+  manual_override: boolean;
+  blocked_at: string | null;
 }
 
 export interface Invoice {
