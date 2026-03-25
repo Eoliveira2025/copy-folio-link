@@ -12,6 +12,7 @@ class MT5Status(str, enum.Enum):
     CONNECTED = "connected"
     DISCONNECTED = "disconnected"
     BLOCKED = "blocked"
+    PENDING_PROVISION = "pending_provision"
 
 
 class MT5Account(Base):
@@ -22,7 +23,7 @@ class MT5Account(Base):
     login: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)
     encrypted_password: Mapped[str] = mapped_column(String(512), nullable=False)
     server: Mapped[str] = mapped_column(String(255), nullable=False)
-    status: Mapped[MT5Status] = mapped_column(SAEnum(MT5Status), default=MT5Status.DISCONNECTED)
+    status: Mapped[MT5Status] = mapped_column(SAEnum(MT5Status), default=MT5Status.PENDING_PROVISION)
     balance: Mapped[float | None] = mapped_column(default=None)
     equity: Mapped[float | None] = mapped_column(default=None)
     last_connected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

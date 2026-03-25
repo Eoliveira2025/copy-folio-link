@@ -6,11 +6,12 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from app.core.config import get_settings
-from app.models.user import User
+from app.models.user import User, UserRoleMapping, UserRole
 from app.models.subscription import Subscription, SubscriptionStatus
 from app.models.password_reset import PasswordResetToken
 from app.schemas.auth import (
@@ -88,8 +89,16 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         hashed_password=hash_password(body.password),
         full_name=body.full_name,
     )
+
+    # Save CPF/CNPJ if provided and field exists on model
+    if body.cpf_cnpj and hasattr(User, "cpf_cnpj"):
+        user.cpf_cnpj = body.cpf_cnpj
+
     db.add(user)
     await db.flush()
+
+    # Create default user role
+    db.add(UserRoleMapping(user_id=user.id, role=UserRole.USER))
 
     # Create free trial subscription with next_billing_date
     now = datetime.now(timezone.utc)
@@ -156,15 +165,20 @@ async def refresh_token(refresh_token: str, db: AsyncSession = Depends(get_db)):
 async def get_profile(
     user: User = Depends(get_current_user),
 ):
-    is_superuser = bool(getattr(user, "is_superuser", False))
+    # Check admin role via UserRoleMapping relationship
+    user_role = getattr(user, "role", None)
+    is_admin = False
+    if user_role and getattr(user_role, "role", None) == UserRole.ADMIN:
+        is_admin = True
+
     return UserProfileResponse(
         id=str(user.id),
         email=user.email,
         full_name=user.full_name,
         is_active=user.is_active,
         created_at=user.created_at.isoformat(),
-        is_superuser=is_superuser,
-        role="ADMIN" if is_superuser else "USER",
+        is_superuser=is_admin,
+        role="ADMIN" if is_admin else "USER",
     )
 
 
