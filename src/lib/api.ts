@@ -361,9 +361,19 @@ class ApiClient {
   }
 
   // ── Admin Subscriptions & Invoices ────────────────────
-  async adminListSubscriptions(status?: string) {
-    const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+  async adminListSubscriptions(status?: string, accessStatus?: string) {
+    const params = new URLSearchParams();
+    if (status) params.set("status", status);
+    if (accessStatus) params.set("access_status", accessStatus);
+    const qs = params.toString() ? `?${params.toString()}` : "";
     return this.request<AdminSubscription[]>(`/admin/subscriptions${qs}`);
+  }
+
+  async adminToggleOverride(subscriptionId: string) {
+    return this.request<{ message: string; manual_override: boolean; access_status: string }>(
+      `/billing/admin/subscriptions/${subscriptionId}/override`,
+      { method: "POST" }
+    );
   }
 
   async adminListInvoices(status?: string) {
