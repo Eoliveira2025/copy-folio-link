@@ -1,4 +1,4 @@
-import { LayoutDashboard, Link2, BarChart3, CreditCard, Settings, TrendingUp, Shield, Activity, DollarSign, Package } from "lucide-react";
+import { LayoutDashboard, Link2, BarChart3, CreditCard, Settings, TrendingUp, Shield, Activity, DollarSign, Package, MonitorSmartphone } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
