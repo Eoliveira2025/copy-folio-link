@@ -5,8 +5,8 @@ Revision ID: 008_add_pending_provision_status
 from alembic import op
 import sqlalchemy as sa
 
-revision = "008_add_pending_provision"
-down_revision = "007_add_min_capital_to_strategies"
+revision = "008"
+down_revision = "007"
 branch_labels = None
 depends_on = None
 
