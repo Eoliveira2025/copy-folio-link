@@ -46,6 +46,14 @@ const DashboardHome = () => {
 
   return (
     <div className="space-y-6 max-w-6xl">
+      {/* Billing Access Banner */}
+      {subscription?.access_status && subscription.access_status !== "active" && (
+        <BillingAccessBanner
+          accessStatus={subscription.access_status}
+          blockedAt={subscription.blocked_at}
+        />
+      )}
+
       <div>
         <h1 className="text-2xl font-bold">{t("dashboard.title")}</h1>
         <p className="text-muted-foreground text-sm">{t("dashboard.subtitle")}</p>
