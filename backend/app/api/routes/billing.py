@@ -69,6 +69,7 @@ async def get_subscription(user: User = Depends(get_current_user), db: AsyncSess
     return SubscriptionResponse(
         id=sub.id,
         status=sub.status.value,
+        access_status=sub.access_status.value if sub.access_status else "active",
         plan_name=sub.plan.name if sub.plan else None,
         plan_price=sub.plan.price if sub.plan else None,
         plan_currency=sub.plan.currency if sub.plan else None,
@@ -78,6 +79,8 @@ async def get_subscription(user: User = Depends(get_current_user), db: AsyncSess
         current_period_end=sub.current_period_end,
         next_billing_date=sub.next_billing_date,
         auto_renew=sub.auto_renew,
+        manual_override=sub.manual_override or False,
+        blocked_at=sub.blocked_at,
     )
 
 
