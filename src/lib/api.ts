@@ -723,6 +723,9 @@ export interface AdminSubscription {
   user_id: string;
   plan_name: string | null;
   status: string;
+  access_status: string;
+  manual_override: boolean;
+  blocked_at: string | null;
   trial_start: string | null;
   trial_end: string | null;
   created_at: string;
