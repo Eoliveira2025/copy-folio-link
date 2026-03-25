@@ -23,7 +23,7 @@ class PlanResponse(BaseModel):
 class PlanCreate(BaseModel):
     name: str
     price: float
-    currency: str = "USD"
+    currency: str = "BRL"
     allowed_strategies: list[str]
     trial_days: int = 30
     max_accounts: int = 1

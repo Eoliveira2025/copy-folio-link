@@ -492,6 +492,10 @@ class ApiClient {
     });
   }
 
+  async adminRevealProvisionPassword(accountId: string) {
+    return this.request<{ password: string }>(`/admin/provision/reveal/${accountId}`);
+  }
+
   async adminResetEmergency() {
     return this.request<{ message: string }>("/admin/risk/reset-emergency", {
       method: "POST",

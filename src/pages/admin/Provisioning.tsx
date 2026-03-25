@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useAdminPendingAccounts, useAdminCompleteProvision } from "@/hooks/use-api";
+import { api } from "@/lib/api";
 
 function copyToClipboard(text: string) {
   navigator.clipboard.writeText(text);
@@ -18,9 +19,20 @@ const Provisioning = () => {
   const { data: accounts, isLoading, refetch } = useAdminPendingAccounts();
   const completeProvision = useAdminCompleteProvision();
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, string>>({});
 
-  const togglePassword = (id: string) =>
+  const togglePassword = async (id: string) => {
+    if (!visiblePasswords[id] && !revealedPasswords[id]) {
+      try {
+        const data = await api.adminRevealProvisionPassword(id);
+        setRevealedPasswords((prev) => ({ ...prev, [id]: data.password }));
+      } catch {
+        toast.error("Failed to reveal password");
+        return;
+      }
+    }
     setVisiblePasswords((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -97,7 +109,7 @@ const Provisioning = () => {
                   </span>
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-lg">
-                      {visiblePasswords[account.id] ? account.password : "••••••••"}
+                      {visiblePasswords[account.id] ? (revealedPasswords[account.id] || "••••••••") : "••••••••"}
                     </span>
                     <Button
                       variant="ghost"
@@ -115,7 +127,7 @@ const Provisioning = () => {
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7"
-                      onClick={() => copyToClipboard(account.password)}
+                      onClick={() => copyToClipboard(revealedPasswords[account.id] || "")}
                     >
                       <Copy className="w-3.5 h-3.5" />
                     </Button>
