@@ -148,7 +148,10 @@
     "disconnecting": "Disconnecting...",
     "blockedMessage": "Account blocked due to unpaid invoice. Please pay to reconnect.",
     "loginPlaceholder": "e.g. 12345678",
-    "passwordPlaceholder": "Your MT5 password"
+    "passwordPlaceholder": "Your MT5 password",
+    "pendingTitle": "Awaiting Connection",
+    "pendingMessage": "Your credentials have been submitted. The administrator will perform the first manual login. Once confirmed, the system takes over automatically.",
+    "pendingStatus": "Pending"
   },
   "strategies": {
     "title": "Strategies",

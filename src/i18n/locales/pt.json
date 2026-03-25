@@ -148,7 +148,10 @@
     "disconnecting": "Desconectando...",
     "blockedMessage": "Conta bloqueada por fatura não paga. Pague para reconectar.",
     "loginPlaceholder": "ex. 12345678",
-    "passwordPlaceholder": "Sua senha MT5"
+    "passwordPlaceholder": "Sua senha MT5",
+    "pendingTitle": "Aguardando Conexão",
+    "pendingMessage": "Seus dados foram enviados. O administrador fará a primeira conexão manualmente. Após a confirmação, o sistema assume automaticamente.",
+    "pendingStatus": "Aguardando"
   },
   "strategies": {
     "title": "Estratégias",
