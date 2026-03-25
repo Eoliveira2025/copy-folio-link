@@ -93,6 +93,12 @@ def check_payments():
                         if sub.status == SubscriptionStatus.BLOCKED:
                             sub.status = SubscriptionStatus.ACTIVE
 
+                        # Reset access control after payment
+                        from app.models.subscription import AccessStatus
+                        sub.access_status = AccessStatus.ACTIVE
+                        sub.blocked_at = None
+                        sub.manual_override = False
+
                         # Advance next_billing_date after successful payment
                         now = datetime.now(timezone.utc)
                         cycle = sub.billing_cycle_days or 30
