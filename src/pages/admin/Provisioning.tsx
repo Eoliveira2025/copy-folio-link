@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useAdminPendingAccounts, useAdminCompleteProvision } from "@/hooks/use-api";
+import { api } from "@/lib/api";
 
 function copyToClipboard(text: string) {
   navigator.clipboard.writeText(text);
@@ -18,9 +19,20 @@ const Provisioning = () => {
   const { data: accounts, isLoading, refetch } = useAdminPendingAccounts();
   const completeProvision = useAdminCompleteProvision();
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, string>>({});
 
-  const togglePassword = (id: string) =>
+  const togglePassword = async (id: string) => {
+    if (!visiblePasswords[id] && !revealedPasswords[id]) {
+      try {
+        const data = await api.adminRevealProvisionPassword(id);
+        setRevealedPasswords((prev) => ({ ...prev, [id]: data.password }));
+      } catch {
+        toast.error("Failed to reveal password");
+        return;
+      }
+    }
     setVisiblePasswords((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   return (
     <div className="space-y-6 max-w-5xl">
