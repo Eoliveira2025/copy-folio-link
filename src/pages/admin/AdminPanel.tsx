@@ -166,6 +166,7 @@ const AdminPanel = () => {
   const activateTerms = useAdminActivateTerms();
   const { data: publicSettings } = usePublicSettings();
   const updatePublicSettings = useAdminUpdatePublicSettings();
+  const toggleOverride = useAdminToggleOverride();
   const [affiliateLink, setAffiliateLink] = useState("");
 
   const handleSearch = (val: string) => { setSearch(val); setTimeout(() => setDebouncedSearch(val), 300); };
