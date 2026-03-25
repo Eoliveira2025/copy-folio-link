@@ -415,6 +415,12 @@ async def _handle_payment_confirmation(invoice: Invoice, db: AsyncSession):
         if subscription.status in (SubscriptionStatus.BLOCKED, SubscriptionStatus.TRIAL):
             subscription.status = SubscriptionStatus.ACTIVE
 
+        # Reset access control fields after confirmed payment
+        from app.models.subscription import AccessStatus
+        subscription.access_status = AccessStatus.ACTIVE
+        subscription.blocked_at = None
+        subscription.manual_override = False
+
         mt5_result = await db.execute(
             select(MT5Account).where(MT5Account.user_id == subscription.user_id)
         )
