@@ -96,7 +96,8 @@
     "adminPanel": "Admin Panel",
     "adminBilling": "Billing Admin",
     "engineActive": "v1.0.0 · Copy Engine Active",
-    "operations": "Operations"
+    "operations": "Operations",
+    "provisioning": "Provisioning"
   },
   "dashboard": {
     "title": "Dashboard",
