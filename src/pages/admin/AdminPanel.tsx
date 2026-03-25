@@ -153,7 +153,7 @@ const AdminPanel = () => {
   const { data: users, isLoading: usersLoading } = useAdminUsers(debouncedSearch);
   const { data: dashboard, isLoading: dashLoading } = useAdminDashboard();
   const { data: plans, isLoading: plansLoading } = useAdminPlans();
-  const { data: subscriptions, isLoading: subsLoading } = useAdminSubscriptions(subStatusFilter || undefined);
+  const { data: subscriptions, isLoading: subsLoading } = useAdminSubscriptions(subStatusFilter || undefined, subAccessFilter || undefined);
   const { data: invoices, isLoading: invsLoading } = useAdminInvoices(invStatusFilter || undefined);
   const { data: upgradeRequests, isLoading: upgradesLoading } = useAdminUpgradeRequests(upgradeStatusFilter || undefined);
   const { data: termsDocuments, isLoading: termsLoading } = useAdminTerms();
