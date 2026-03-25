@@ -9,6 +9,7 @@ import uuid
 class SubscriptionResponse(BaseModel):
     id: uuid.UUID
     status: str
+    access_status: str = "active"
     plan_name: str | None = None
     plan_price: float | None = None
     plan_currency: str | None = None
@@ -18,6 +19,8 @@ class SubscriptionResponse(BaseModel):
     current_period_end: datetime | None
     next_billing_date: datetime | None = None
     auto_renew: bool
+    manual_override: bool = False
+    blocked_at: datetime | None = None
 
     class Config:
         from_attributes = True
