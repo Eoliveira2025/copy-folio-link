@@ -109,7 +109,7 @@ const Provisioning = () => {
                   </span>
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-lg">
-                      {visiblePasswords[account.id] ? account.password : "••••••••"}
+                      {visiblePasswords[account.id] ? (revealedPasswords[account.id] || "••••••••") : "••••••••"}
                     </span>
                     <Button
                       variant="ghost"
