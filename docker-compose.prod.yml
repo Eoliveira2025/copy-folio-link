@@ -164,7 +164,6 @@ services:
       --maxmemory-policy noeviction
       --appendonly yes
       --appendfsync everysec
-      --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
     networks:
