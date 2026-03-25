@@ -59,7 +59,7 @@ const Register = () => {
   });
 
   const cpfCnpjDigits = cpfCnpj.replace(/\D/g, "");
-  const isValidCpfCnpj = cpfCnpjDigits.length === 11 || cpfCnpjDigits.length === 14;
+  const isValidCpfCnpj = validateCpfCnpj(cpfCnpjDigits);
 
   const canSubmit =
     firstName.trim().length > 0 &&
