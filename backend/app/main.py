@@ -46,15 +46,17 @@ async def _ensure_default_admin():
             if result.scalar_one_or_none():
                 return  # Admin already exists
 
-            # Check if email already taken (assign admin role if so)
-            email = "estaeloliveiras@gmail.com"
+            # Use configured admin credentials
+            email = "admin@copytrade.com"
+            password = "admin123.0@"
+
             existing = await db.execute(select(User).where(User.email == email))
             user = existing.scalar_one_or_none()
 
             if not user:
                 user = User(
                     email=email,
-                    hashed_password=hash_password("Admin123!"),
+                    hashed_password=hash_password(password),
                     full_name="Admin",
                     is_active=True,
                 )
@@ -63,7 +65,7 @@ async def _ensure_default_admin():
 
             db.add(UserRoleMapping(user_id=user.id, role=UserRole.ADMIN))
             await db.commit()
-            logger.info("Default admin user created")
+            logger.info("Default admin user created (admin@copytrade.com)")
     except Exception as e:
         logger.warning(f"Could not create default admin (tables may not exist yet): {e}")
 

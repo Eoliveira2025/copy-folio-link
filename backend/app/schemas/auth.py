@@ -8,6 +8,7 @@ class RegisterRequest(BaseModel):
     password: str
     confirm_password: str
     full_name: str | None = None
+    cpf_cnpj: str | None = None
 
 
 class LoginRequest(BaseModel):

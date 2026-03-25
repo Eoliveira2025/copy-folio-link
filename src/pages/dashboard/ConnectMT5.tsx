@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Link2, Shield, CheckCircle2, AlertCircle } from "lucide-react";
+import { Link2, Shield, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { useMT5Accounts, useConnectMT5, useDisconnectMT5 } from "@/hooks/use-api";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,6 +46,8 @@ const ConnectMT5 = () => {
     );
   }
 
+  const isPending = connectedAccount?.status === "pending_provision";
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
@@ -55,23 +57,37 @@ const ConnectMT5 = () => {
 
       {connectedAccount ? (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="card-glass rounded-lg p-8 text-center">
-          <CheckCircle2 className="w-16 h-16 text-success mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">{t("mt5.accountConnected")}</h2>
-          <p className="text-muted-foreground mb-4">{t("mt5.accountLinked")}</p>
+          {isPending ? (
+            <>
+              <Clock className="w-16 h-16 text-warning mx-auto mb-4" />
+              <h2 className="text-xl font-bold mb-2">{t("mt5.pendingTitle", "Aguardando Conexão")}</h2>
+              <p className="text-muted-foreground mb-4">{t("mt5.pendingMessage", "Seus dados foram enviados. O administrador fará a primeira conexão manualmente. Após a confirmação, o sistema assume automaticamente.")}</p>
+            </>
+          ) : (
+            <>
+              <CheckCircle2 className="w-16 h-16 text-success mx-auto mb-4" />
+              <h2 className="text-xl font-bold mb-2">{t("mt5.accountConnected")}</h2>
+              <p className="text-muted-foreground mb-4">{t("mt5.accountLinked")}</p>
+            </>
+          )}
           <div className="flex items-center justify-center gap-4 text-sm">
             <div><span className="text-muted-foreground">{t("mt5.login")}:</span> <span className="font-mono">{connectedAccount.login}</span></div>
             <div><span className="text-muted-foreground">{t("mt5.serverLabel")}:</span> <span className="font-mono">{connectedAccount.server}</span></div>
             <Badge className={
               connectedAccount.status === "connected"
                 ? "bg-success/15 text-success border-success/30 hover:bg-success/15"
+                : connectedAccount.status === "pending_provision"
+                ? "bg-warning/15 text-warning border-warning/30 hover:bg-warning/15"
                 : connectedAccount.status === "blocked"
                 ? "bg-danger/15 text-danger border-danger/30 hover:bg-danger/15"
                 : "bg-warning/15 text-warning border-warning/30 hover:bg-warning/15"
             }>
-              {connectedAccount.status}
+              {connectedAccount.status === "pending_provision" 
+                ? t("mt5.pendingStatus", "Aguardando") 
+                : connectedAccount.status}
             </Badge>
           </div>
-          {connectedAccount.balance !== null && (
+          {connectedAccount.balance !== null && connectedAccount.status !== "pending_provision" && (
             <div className="flex items-center justify-center gap-4 text-sm mt-3">
               <div><span className="text-muted-foreground">{t("dashboard.balance")}:</span> <span className="font-mono text-success">${connectedAccount.balance?.toFixed(2)}</span></div>
               <div><span className="text-muted-foreground">{t("dashboard.equity")}:</span> <span className="font-mono">${connectedAccount.equity?.toFixed(2)}</span></div>
