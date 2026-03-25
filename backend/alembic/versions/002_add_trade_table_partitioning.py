@@ -68,7 +68,7 @@ def upgrade() -> None:
     op.execute("CREATE INDEX ix_trade_events_ts ON trade_events (timestamp)")
 
     # Step 7: Drop old table
-    op.execute("DROP TABLE trade_events_old")
+    op.execute("DROP TABLE trade_events_old CASCADE")
 
     # Similarly partition trade_copies by executed_at
     op.execute("ALTER TABLE trade_copies RENAME TO trade_copies_old")
