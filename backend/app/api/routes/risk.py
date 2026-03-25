@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
+from sqlalchemy.exc import SQLAlchemyError
 from pydantic import BaseModel
 
 from app.core.database import get_db
@@ -217,10 +218,15 @@ async def reset_emergency(
 @router.get("/settings/public")
 async def get_public_settings(db: AsyncSession = Depends(get_db)):
     """Public settings accessible without auth (e.g. affiliate link)."""
-    result = await db.execute(
-        select(SystemSettings).order_by(desc(SystemSettings.created_at)).limit(1)
-    )
-    settings = result.scalar_one_or_none()
+    try:
+        result = await db.execute(
+            select(SystemSettings).order_by(desc(SystemSettings.created_at)).limit(1)
+        )
+        settings = result.scalar_one_or_none()
+    except SQLAlchemyError:
+        logger.exception("Failed to load public system settings")
+        settings = None
+
     return {
         "affiliate_broker_link": settings.affiliate_broker_link if settings else None,
     }

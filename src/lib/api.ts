@@ -3,7 +3,21 @@
  * Handles JWT token management and request/response formatting.
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+const resolveApiBase = () => {
+  const configuredBase = import.meta.env.VITE_API_URL?.trim();
+
+  if (configuredBase) {
+    return configuredBase.replace(/\/$/, "");
+  }
+
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/api/v1`;
+  }
+
+  return "/api/v1";
+};
+
+const API_BASE = resolveApiBase();
 
 class ApiClient {
   private accessToken: string | null = null;
@@ -49,19 +63,30 @@ class ApiClient {
       headers["Authorization"] = `Bearer ${this.accessToken}`;
     }
 
-    const response = await fetch(`${API_BASE}${path}`, {
-      ...options,
-      headers,
-    });
+    let response: Response;
+
+    try {
+      response = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers,
+      });
+    } catch {
+      throw new ApiError(0, "Não foi possível conectar à API");
+    }
 
     if (response.status === 401 && this.refreshToken) {
       const refreshed = await this.tryRefresh();
       if (refreshed) {
         headers["Authorization"] = `Bearer ${this.accessToken}`;
-        const retryResponse = await fetch(`${API_BASE}${path}`, {
-          ...options,
-          headers,
-        });
+        let retryResponse: Response;
+        try {
+          retryResponse = await fetch(`${API_BASE}${path}`, {
+            ...options,
+            headers,
+          });
+        } catch {
+          throw new ApiError(0, "Não foi possível conectar à API");
+        }
         if (!retryResponse.ok) {
           throw new ApiError(retryResponse.status, await retryResponse.text());
         }

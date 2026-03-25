@@ -5,11 +5,12 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from jose import JWTError
 
 from app.core.database import get_db
 from app.core.security import decode_token
-from app.models.user import User
+from app.models.user import User, UserRole, UserRoleMapping
 
 bearer_scheme = HTTPBearer()
 
@@ -24,7 +25,11 @@ async def get_current_user(
     except (JWTError, KeyError, ValueError):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
-    result = await db.execute(select(User).where(User.id == user_id, User.is_active == True))
+    result = await db.execute(
+        select(User)
+        .options(selectinload(User.role))
+        .where(User.id == user_id, User.is_active == True)
+    )
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
@@ -33,7 +38,18 @@ async def get_current_user(
 
 async def require_admin(
     user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ) -> User:
-    if not bool(getattr(user, "is_superuser", False)):
+    user_role = getattr(user, "role", None)
+    if user_role and getattr(user_role, "role", None) == UserRole.ADMIN:
+        return user
+
+    role_result = await db.execute(
+        select(UserRoleMapping).where(
+            UserRoleMapping.user_id == user.id,
+            UserRoleMapping.role == UserRole.ADMIN,
+        )
+    )
+    if not role_result.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return user
