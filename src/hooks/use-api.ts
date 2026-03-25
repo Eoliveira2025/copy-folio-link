@@ -284,10 +284,22 @@ export function useAdminChangeUserPlan() {
 }
 
 // ── Admin Subscriptions & Invoices ──────────────────
-export function useAdminSubscriptions(status?: string) {
+export function useAdminSubscriptions(status?: string, accessStatus?: string) {
   return useQuery({
-    queryKey: ["admin-subscriptions", status],
-    queryFn: () => api.adminListSubscriptions(status),
+    queryKey: ["admin-subscriptions", status, accessStatus],
+    queryFn: () => api.adminListSubscriptions(status, accessStatus),
+  });
+}
+
+export function useAdminToggleOverride() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (subscriptionId: string) => api.adminToggleOverride(subscriptionId),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["admin-subscriptions"] });
+      toast.success(data.message);
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 }
 

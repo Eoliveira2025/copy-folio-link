@@ -26,7 +26,7 @@ import {
   useAdminChangeUserPlan, useAdminSubscriptions, useAdminInvoices,
   useAdminUpgradeRequests, useAdminHandleUpgradeRequest,
   useAdminTerms, useAdminCreateTerms, useAdminUpdateTerms, useAdminActivateTerms,
-  usePublicSettings, useAdminUpdatePublicSettings,
+  usePublicSettings, useAdminUpdatePublicSettings, useAdminToggleOverride,
 } from "@/hooks/use-api";
 import { StatCard } from "@/components/StatCard";
 import type { AdminPlan, CreatePlanData, AdminTermsItem } from "@/lib/api";
@@ -135,6 +135,7 @@ const AdminPanel = () => {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [subStatusFilter, setSubStatusFilter] = useState("");
+  const [subAccessFilter, setSubAccessFilter] = useState("");
   const [invStatusFilter, setInvStatusFilter] = useState("");
   const [upgradeStatusFilter, setUpgradeStatusFilter] = useState("");
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
@@ -152,7 +153,7 @@ const AdminPanel = () => {
   const { data: users, isLoading: usersLoading } = useAdminUsers(debouncedSearch);
   const { data: dashboard, isLoading: dashLoading } = useAdminDashboard();
   const { data: plans, isLoading: plansLoading } = useAdminPlans();
-  const { data: subscriptions, isLoading: subsLoading } = useAdminSubscriptions(subStatusFilter || undefined);
+  const { data: subscriptions, isLoading: subsLoading } = useAdminSubscriptions(subStatusFilter || undefined, subAccessFilter || undefined);
   const { data: invoices, isLoading: invsLoading } = useAdminInvoices(invStatusFilter || undefined);
   const { data: upgradeRequests, isLoading: upgradesLoading } = useAdminUpgradeRequests(upgradeStatusFilter || undefined);
   const { data: termsDocuments, isLoading: termsLoading } = useAdminTerms();
@@ -165,6 +166,7 @@ const AdminPanel = () => {
   const activateTerms = useAdminActivateTerms();
   const { data: publicSettings } = usePublicSettings();
   const updatePublicSettings = useAdminUpdatePublicSettings();
+  const toggleOverride = useAdminToggleOverride();
   const [affiliateLink, setAffiliateLink] = useState("");
 
   const handleSearch = (val: string) => { setSearch(val); setTimeout(() => setDebouncedSearch(val), 300); };
@@ -306,26 +308,60 @@ const AdminPanel = () => {
 
         {/* Subscriptions Tab */}
         <TabsContent value="subscriptions" className="mt-4 space-y-4">
-          <div className="flex gap-2">
-            {["", "trial", "active", "blocked", "expired"].map((s) => (
-              <Button key={s} variant={subStatusFilter === s ? "default" : "outline"} size="sm" onClick={() => setSubStatusFilter(s)} className="text-xs">{s || t("common.all")}</Button>
-            ))}
+          <div className="flex flex-wrap gap-2">
+            <div className="flex gap-1">
+              <span className="text-xs text-muted-foreground self-center mr-1">Status:</span>
+              {["", "trial", "active", "blocked", "expired"].map((s) => (
+                <Button key={s} variant={subStatusFilter === s ? "default" : "outline"} size="sm" onClick={() => setSubStatusFilter(s)} className="text-xs">{s || t("common.all")}</Button>
+              ))}
+            </div>
+            <div className="flex gap-1">
+              <span className="text-xs text-muted-foreground self-center mr-1">Access:</span>
+              {["", "active", "warning", "grace", "blocked"].map((s) => (
+                <Button key={`acc-${s}`} variant={subAccessFilter === s ? "default" : "outline"} size="sm" onClick={() => setSubAccessFilter(s)} className="text-xs">{s || t("common.all")}</Button>
+              ))}
+            </div>
           </div>
           {subsLoading ? <Skeleton className="h-48" /> : (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card-glass rounded-lg overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead><tr className="text-muted-foreground text-left border-b border-border bg-muted/30">
-                    <th className="p-3 font-medium">{t("admin.user")}</th><th className="p-3 font-medium">{t("financial.plan")}</th><th className="p-3 font-medium">{t("financial.status")}</th><th className="p-3 font-medium">{t("admin.trialStart")}</th><th className="p-3 font-medium">{t("admin.trialEnd")}</th><th className="p-3 font-medium">{t("admin.created")}</th>
+                    <th className="p-3 font-medium">{t("admin.user")}</th><th className="p-3 font-medium">{t("financial.plan")}</th><th className="p-3 font-medium">{t("financial.status")}</th><th className="p-3 font-medium">Access</th><th className="p-3 font-medium">{t("admin.trialEnd")}</th><th className="p-3 font-medium">{t("common.actions")}</th>
                   </tr></thead>
                   <tbody>
-                    {subscriptions?.map((sub) => (
-                      <tr key={sub.id} className="border-b border-border/50 last:border-0 hover:bg-muted/20">
-                        <td className="p-3">{sub.user_email}</td><td className="p-3">{sub.plan_name || <span className="text-muted-foreground">—</span>}</td>
-                        <td className="p-3"><Badge className={statusStyle[sub.status] || ""}>{sub.status}</Badge></td>
-                        <td className="p-3 text-muted-foreground">{formatDate(sub.trial_start)}</td><td className="p-3 text-muted-foreground">{formatDate(sub.trial_end)}</td><td className="p-3 text-muted-foreground">{formatDate(sub.created_at)}</td>
-                      </tr>
-                    ))}
+                    {subscriptions?.map((sub) => {
+                      const accessStyle: Record<string, string> = {
+                        active: "bg-success/15 text-success border-success/30 hover:bg-success/15",
+                        warning: "bg-warning/15 text-warning border-warning/30 hover:bg-warning/15",
+                        grace: "bg-orange-500/15 text-orange-500 border-orange-500/30 hover:bg-orange-500/15",
+                        blocked: "bg-danger/15 text-danger border-danger/30 hover:bg-danger/15",
+                      };
+                      return (
+                        <tr key={sub.id} className="border-b border-border/50 last:border-0 hover:bg-muted/20">
+                          <td className="p-3">{sub.user_email}</td>
+                          <td className="p-3">{sub.plan_name || <span className="text-muted-foreground">—</span>}</td>
+                          <td className="p-3"><Badge className={statusStyle[sub.status] || ""}>{sub.status}</Badge></td>
+                          <td className="p-3">
+                            <Badge className={accessStyle[sub.access_status] || ""}>{sub.access_status}</Badge>
+                            {sub.manual_override && <Badge variant="outline" className="ml-1 text-[10px]">Override</Badge>}
+                          </td>
+                          <td className="p-3 text-muted-foreground">{formatDate(sub.trial_end)}</td>
+                          <td className="p-3">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs gap-1"
+                              onClick={() => toggleOverride.mutate(sub.id)}
+                              disabled={toggleOverride.isPending}
+                            >
+                              <Shield className="w-3 h-3" />
+                              {sub.manual_override ? "Remove Override" : "Manual Override"}
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                     {(!subscriptions || subscriptions.length === 0) && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">{t("admin.noSubscriptions")}</td></tr>}
                   </tbody>
                 </table>

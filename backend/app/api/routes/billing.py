@@ -69,6 +69,7 @@ async def get_subscription(user: User = Depends(get_current_user), db: AsyncSess
     return SubscriptionResponse(
         id=sub.id,
         status=sub.status.value,
+        access_status=sub.access_status.value if sub.access_status else "active",
         plan_name=sub.plan.name if sub.plan else None,
         plan_price=sub.plan.price if sub.plan else None,
         plan_currency=sub.plan.currency if sub.plan else None,
@@ -78,6 +79,8 @@ async def get_subscription(user: User = Depends(get_current_user), db: AsyncSess
         current_period_end=sub.current_period_end,
         next_billing_date=sub.next_billing_date,
         auto_renew=sub.auto_renew,
+        manual_override=sub.manual_override or False,
+        blocked_at=sub.blocked_at,
     )
 
 
@@ -588,10 +591,12 @@ async def admin_billing_stats(
 @router.get("/admin/subscriptions")
 async def admin_list_subscriptions(
     status: str | None = None,
+    access_status: str | None = None,
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    """List all subscriptions with user and plan info."""
+    """List all subscriptions with user and plan info. Filter by status or access_status."""
+    from app.models.subscription import AccessStatus
     query = (
         select(Subscription)
         .options(selectinload(Subscription.plan), selectinload(Subscription.user))
@@ -601,6 +606,13 @@ async def admin_list_subscriptions(
         try:
             sub_status = SubscriptionStatus(status)
             query = query.where(Subscription.status == sub_status)
+        except ValueError:
+            pass
+
+    if access_status:
+        try:
+            acc_status = AccessStatus(access_status)
+            query = query.where(Subscription.access_status == acc_status)
         except ValueError:
             pass
 
@@ -615,6 +627,9 @@ async def admin_list_subscriptions(
             plan_name=s.plan.name if s.plan else None,
             plan_price=s.plan.price if s.plan else None,
             status=s.status.value,
+            access_status=s.access_status.value if s.access_status else "active",
+            manual_override=s.manual_override or False,
+            blocked_at=s.blocked_at,
             trial_start=s.trial_start,
             trial_end=s.trial_end,
             current_period_start=s.current_period_start,
@@ -625,6 +640,56 @@ async def admin_list_subscriptions(
         )
         for s in subs
     ]
+
+
+@router.post("/admin/subscriptions/{subscription_id}/override")
+async def admin_manual_override(
+    subscription_id: str,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Toggle manual override on a subscription — allows blocked user to operate."""
+    import uuid as uuid_mod
+    from app.models.subscription import AccessStatus
+    try:
+        sub_uuid = uuid_mod.UUID(subscription_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid subscription ID")
+
+    sub_result = await db.execute(select(Subscription).where(Subscription.id == sub_uuid))
+    sub = sub_result.scalar_one_or_none()
+    if not sub:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+
+    sub.manual_override = not sub.manual_override
+
+    if sub.manual_override:
+        # Unblock if currently blocked
+        if sub.access_status == AccessStatus.BLOCKED:
+            sub.access_status = AccessStatus.ACTIVE
+            sub.status = SubscriptionStatus.ACTIVE
+            sub.blocked_at = None
+
+            # Reconnect MT5 accounts
+            mt5_accounts = await db.execute(
+                select(MT5Account).where(MT5Account.user_id == sub.user_id, MT5Account.status == MT5Status.BLOCKED)
+            )
+            for account in mt5_accounts.scalars().all():
+                account.status = MT5Status.CONNECTED
+
+    await db.commit()
+
+    import logging
+    logging.getLogger("app.audit.access_control").warning(
+        f"AUDIT: Admin {admin.email} toggled manual_override={'ON' if sub.manual_override else 'OFF'} "
+        f"for subscription {subscription_id} (user={sub.user_id})"
+    )
+
+    return {
+        "message": f"Manual override {'enabled' if sub.manual_override else 'disabled'}",
+        "manual_override": sub.manual_override,
+        "access_status": sub.access_status.value if sub.access_status else "active",
+    }
 
 
 @router.get("/admin/invoices")

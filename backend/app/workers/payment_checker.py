@@ -41,6 +41,10 @@ celery_app.conf.beat_schedule = {
         "task": "app.workers.payment_checker.block_overdue_accounts",
         "schedule": crontab(hour=1, minute=0),
     },
+    "access-check-every-5min": {
+        "task": "app.workers.payment_checker.check_access_status",
+        "schedule": 300,  # every 5 minutes
+    },
 }
 
 celery_app.conf.timezone = "UTC"
@@ -271,3 +275,10 @@ def block_overdue_accounts():
 
         db.commit()
     return f"Blocked {blocked} overdue accounts"
+
+
+@celery_app.task
+def check_access_status():
+    """Run the access status checker every 5 minutes."""
+    from app.workers.access_checker import run_access_check
+    return run_access_check()

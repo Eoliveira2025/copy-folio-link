@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { useMT5Accounts, useSubscription, useStrategies, useUpgradeEligibility, useRequestUpgrade } from "@/hooks/use-api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
+import { BillingAccessBanner } from "@/components/BillingAccessBanner";
 
 const DashboardHome = () => {
   const { t } = useTranslation();
@@ -45,6 +46,14 @@ const DashboardHome = () => {
 
   return (
     <div className="space-y-6 max-w-6xl">
+      {/* Billing Access Banner */}
+      {subscription?.access_status && subscription.access_status !== "active" && (
+        <BillingAccessBanner
+          accessStatus={subscription.access_status}
+          blockedAt={subscription.blocked_at}
+        />
+      )}
+
       <div>
         <h1 className="text-2xl font-bold">{t("dashboard.title")}</h1>
         <p className="text-muted-foreground text-sm">{t("dashboard.subtitle")}</p>
