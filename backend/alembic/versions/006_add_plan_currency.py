@@ -6,8 +6,8 @@ Revises: 005_add_affiliate_broker_link
 from alembic import op
 import sqlalchemy as sa
 
-revision = "006_add_plan_currency"
-down_revision = "005_add_affiliate_broker_link"
+revision = "006"
+down_revision = "005"
 branch_labels = None
 depends_on = None
 
