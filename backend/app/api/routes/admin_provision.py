@@ -16,6 +16,7 @@ from app.services import copy_engine
 
 router = APIRouter()
 logger = logging.getLogger("app.admin_provision")
+audit_logger = logging.getLogger("app.audit.provision")
 
 
 @router.get("/provision/pending")
@@ -23,7 +24,8 @@ async def list_pending_accounts(
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    """List all MT5 accounts awaiting manual first login by admin."""
+    """List all MT5 accounts awaiting manual first login by admin.
+    Passwords are returned masked. Use /provision/reveal/{id} to get plain text."""
     result = await db.execute(
         select(MT5Account)
         .where(MT5Account.status == MT5Status.PENDING_PROVISION)
@@ -33,28 +35,47 @@ async def list_pending_accounts(
 
     response = []
     for a in accounts:
-        # Get user email
         user_result = await db.execute(select(User).where(User.id == a.user_id))
         user = user_result.scalar_one_or_none()
-
-        # Decrypt password for admin to use in manual login
-        try:
-            plain_password = decrypt_mt5_password(a.encrypted_password)
-        except Exception:
-            plain_password = "[DECRYPTION_ERROR]"
-            logger.error(f"Failed to decrypt password for MT5 account {a.login}")
 
         response.append({
             "id": str(a.id),
             "user_email": user.email if user else "unknown",
             "login": a.login,
-            "password": plain_password,
+            "password": "••••••••",
             "server": a.server,
             "status": a.status.value,
             "created_at": a.created_at.isoformat(),
         })
 
+    audit_logger.info(f"Admin {admin.email} listed {len(response)} pending provision accounts")
     return response
+
+
+@router.get("/provision/reveal/{account_id}")
+async def reveal_provision_password(
+    account_id: str,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Reveal decrypted password for a pending provision account. Audit-logged."""
+    result = await db.execute(
+        select(MT5Account).where(MT5Account.id == account_id)
+    )
+    account = result.scalar_one_or_none()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    try:
+        plain_password = decrypt_mt5_password(account.encrypted_password)
+    except Exception:
+        audit_logger.error(f"Admin {admin.email} failed to decrypt password for account {account.login}")
+        raise HTTPException(status_code=500, detail="Failed to decrypt password")
+
+    audit_logger.warning(
+        f"AUDIT: Admin {admin.email} revealed password for MT5 account {account.login} (account_id={account_id})"
+    )
+    return {"password": plain_password}
 
 
 @router.post("/provision/complete/{account_id}")

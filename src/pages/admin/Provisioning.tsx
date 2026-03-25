@@ -127,7 +127,7 @@ const Provisioning = () => {
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7"
-                      onClick={() => copyToClipboard(account.password)}
+                      onClick={() => copyToClipboard(revealedPasswords[account.id] || "")}
                     >
                       <Copy className="w-3.5 h-3.5" />
                     </Button>
