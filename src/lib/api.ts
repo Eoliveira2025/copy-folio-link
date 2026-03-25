@@ -456,6 +456,17 @@ class ApiClient {
     return this.request<RiskIncident[]>("/admin/risk/incidents");
   }
 
+  // ── Admin Provisioning ─────────────────────────────
+  async adminGetPendingAccounts() {
+    return this.request<PendingProvisionAccount[]>("/admin/provision/pending");
+  }
+
+  async adminCompleteProvision(accountId: string) {
+    return this.request<{ message: string }>(`/admin/provision/complete/${accountId}`, {
+      method: "POST",
+    });
+  }
+
   async adminResetEmergency() {
     return this.request<{ message: string }>("/admin/risk/reset-emergency", {
       method: "POST",
