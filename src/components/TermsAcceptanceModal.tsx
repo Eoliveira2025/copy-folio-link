@@ -57,8 +57,11 @@ export function TermsAcceptanceModal({ onAccepted }: TermsAcceptanceModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="max-w-2xl [&>button]:hidden" onPointerDownOutside={(e) => e.preventDefault()}>
-        <DialogHeader>
+      <DialogContent
+        className="max-w-2xl [&>button]:hidden bg-background border-border flex flex-col max-h-[90vh]"
+        onPointerDownOutside={(e) => e.preventDefault()}
+      >
+        <DialogHeader className="shrink-0">
           <div className="flex items-center gap-3 mb-1">
             <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center">
               <Shield className="w-5 h-5 text-primary" />
@@ -70,32 +73,34 @@ export function TermsAcceptanceModal({ onAccepted }: TermsAcceptanceModalProps) 
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[400px] rounded-md border border-border bg-muted/30 p-4">
+        <ScrollArea className="flex-1 min-h-0 max-h-[50vh] rounded-md border border-border bg-muted/10 p-4">
           <div
-            className="text-sm [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mt-6 [&_h1]:mb-3 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_p]:text-muted-foreground [&_p]:mb-3 [&_p]:leading-relaxed [&_ul]:list-disc [&_ul]:ml-5 [&_ul]:mb-3 [&_ol]:list-decimal [&_ol]:ml-5 [&_ol]:mb-3 [&_li]:text-muted-foreground [&_li]:mb-1 [&_strong]:text-foreground"
+            className="text-sm text-foreground [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mt-6 [&_h1]:mb-3 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_p]:text-muted-foreground [&_p]:mb-3 [&_p]:leading-relaxed [&_ul]:list-disc [&_ul]:ml-5 [&_ul]:mb-3 [&_ol]:list-decimal [&_ol]:ml-5 [&_ol]:mb-3 [&_li]:text-muted-foreground [&_li]:mb-1 [&_strong]:text-foreground"
             dangerouslySetInnerHTML={{ __html: termsContent }}
           />
         </ScrollArea>
 
-        <div className="flex items-start gap-3 mt-2">
-          <Checkbox
-            id="modal-terms"
-            checked={accepted}
-            onCheckedChange={(c) => setAccepted(c === true)}
-            className="mt-0.5"
-          />
-          <Label htmlFor="modal-terms" className="text-sm text-muted-foreground font-normal leading-relaxed cursor-pointer">
-            {t("terms.agreeUpdated")}
-          </Label>
-        </div>
+        <div className="shrink-0 pt-4 border-t border-border space-y-3">
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="modal-terms"
+              checked={accepted}
+              onCheckedChange={(c) => setAccepted(c === true)}
+              className="mt-0.5"
+            />
+            <Label htmlFor="modal-terms" className="text-sm text-muted-foreground font-normal leading-relaxed cursor-pointer">
+              {t("terms.agreeUpdated")}
+            </Label>
+          </div>
 
-        <Button
-          onClick={handleAccept}
-          disabled={!accepted || submitting}
-          className="w-full mt-2"
-        >
-          {submitting ? t("terms.accepting") : t("terms.acceptContinue")}
-        </Button>
+          <Button
+            onClick={handleAccept}
+            disabled={!accepted || submitting}
+            className="w-full"
+          >
+            {submitting ? t("terms.accepting") : t("terms.acceptContinue")}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

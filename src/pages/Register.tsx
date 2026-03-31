@@ -251,32 +251,34 @@ const Register = () => {
 
       {/* Terms Modal */}
       <Dialog open={termsModalOpen} onOpenChange={setTermsModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh]">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl bg-background border-border flex flex-col max-h-[85vh]">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-primary" />
               {t("auth.termsAndConditions")}
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[55vh] rounded-md border border-border bg-muted/30 p-4">
+          <ScrollArea className="flex-1 min-h-0 max-h-[50vh] rounded-md border border-border bg-muted/10 p-4">
             {activeTerms?.content ? (
               <div
-                className="text-sm [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mt-6 [&_h1]:mb-3 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_p]:text-muted-foreground [&_p]:mb-3 [&_p]:leading-relaxed [&_ul]:list-disc [&_ul]:ml-5 [&_ul]:mb-3 [&_ol]:list-decimal [&_ol]:ml-5 [&_ol]:mb-3 [&_li]:text-muted-foreground [&_li]:mb-1 [&_strong]:text-foreground"
+                className="text-sm text-foreground [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mt-6 [&_h1]:mb-3 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_p]:text-muted-foreground [&_p]:mb-3 [&_p]:leading-relaxed [&_ul]:list-disc [&_ul]:ml-5 [&_ul]:mb-3 [&_ol]:list-decimal [&_ol]:ml-5 [&_ol]:mb-3 [&_li]:text-muted-foreground [&_li]:mb-1 [&_strong]:text-foreground"
                 dangerouslySetInnerHTML={{ __html: activeTerms.content }}
               />
             ) : (
               <p className="text-muted-foreground text-sm">{t("auth.termsLoading")}</p>
             )}
           </ScrollArea>
-          <Button
-            onClick={() => {
-              setTermsAccepted(true);
-              setTermsModalOpen(false);
-            }}
-            className="w-full"
-          >
-            {t("auth.acceptTermsButton")}
-          </Button>
+          <div className="shrink-0 pt-4 border-t border-border">
+            <Button
+              onClick={() => {
+                setTermsAccepted(true);
+                setTermsModalOpen(false);
+              }}
+              className="w-full"
+            >
+              {t("auth.acceptTermsButton")}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
