@@ -3,7 +3,7 @@
 import uuid
 import enum
 from datetime import datetime, timezone
-from sqlalchemy import String, ForeignKey, DateTime, Enum as SAEnum, Float
+from sqlalchemy import String, ForeignKey, DateTime, Enum as SAEnum, Float, Boolean, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
@@ -35,6 +35,15 @@ class Invoice(Base):
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     external_id: Mapped[str | None] = mapped_column(String(255))  # Gateway reference
     provider: Mapped[PaymentProvider | None] = mapped_column(SAEnum(PaymentProvider))
+
+    # Admin / manual operations metadata
+    admin_notes: Mapped[str | None] = mapped_column(Text)
+    manual_payment: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    manual_payment_by: Mapped[str | None] = mapped_column(String(255))
+    manual_payment_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancelled_by: Mapped[str | None] = mapped_column(String(255))
+    original_due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     subscription = relationship("Subscription", back_populates="invoices")
     payments = relationship("Payment", back_populates="invoice", cascade="all, delete-orphan")

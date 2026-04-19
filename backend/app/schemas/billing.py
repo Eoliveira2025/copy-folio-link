@@ -36,6 +36,8 @@ class InvoiceResponse(BaseModel):
     paid_at: datetime | None
     provider: str | None
     checkout_url: str | None = None
+    manual_payment: bool = False
+    cancelled_at: datetime | None = None
 
     class Config:
         from_attributes = True
@@ -108,6 +110,7 @@ class AdminSubscriptionResponse(BaseModel):
 class AdminInvoiceResponse(BaseModel):
     id: uuid.UUID
     subscription_id: uuid.UUID
+    user_id: uuid.UUID | None = None
     user_email: str | None = None
     plan_name: str | None = None
     amount: float
@@ -118,6 +121,13 @@ class AdminInvoiceResponse(BaseModel):
     paid_at: datetime | None
     provider: str | None
     external_id: str | None = None
+    admin_notes: str | None = None
+    manual_payment: bool = False
+    manual_payment_by: str | None = None
+    manual_payment_at: datetime | None = None
+    cancelled_at: datetime | None = None
+    cancelled_by: str | None = None
+    original_due_date: datetime | None = None
 
     class Config:
         from_attributes = True
@@ -131,6 +141,23 @@ class AdminRefundRequest(BaseModel):
     invoice_id: uuid.UUID
     amount: float | None = None  # None = full refund
     reason: str | None = None
+
+
+class AdminMarkPaidRequest(BaseModel):
+    note: str | None = None
+
+
+class AdminCancelInvoiceRequest(BaseModel):
+    note: str | None = None
+
+
+class AdminExtendDueDateRequest(BaseModel):
+    new_due_date: datetime
+    note: str | None = None
+
+
+class AdminInvoiceNoteRequest(BaseModel):
+    note: str
 
 
 class BillingStatsResponse(BaseModel):

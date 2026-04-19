@@ -168,6 +168,61 @@ export function useAdminRefundInvoice() {
   });
 }
 
+export function useAdminMarkInvoicePaid() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { invoiceId: string; note?: string }) =>
+      api.adminMarkInvoicePaid(data.invoiceId, data.note),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-invoices"] });
+      qc.invalidateQueries({ queryKey: ["admin-billing-stats"] });
+      qc.invalidateQueries({ queryKey: ["admin-subscriptions"] });
+      toast.success("Fatura marcada como paga");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminCancelInvoice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { invoiceId: string; note?: string }) =>
+      api.adminCancelInvoice(data.invoiceId, data.note),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-invoices"] });
+      qc.invalidateQueries({ queryKey: ["admin-billing-stats"] });
+      toast.success("Fatura cancelada");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminExtendInvoiceDueDate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { invoiceId: string; newDueDate: string; note?: string }) =>
+      api.adminExtendInvoiceDueDate(data.invoiceId, data.newDueDate, data.note),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-invoices"] });
+      toast.success("Vencimento estendido");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminAddInvoiceNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { invoiceId: string; note: string }) =>
+      api.adminAddInvoiceNote(data.invoiceId, data.note),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-invoices"] });
+      toast.success("Observação adicionada");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
 // ── Admin ───────────────────────────────────────────
 export function useAdminUsers(search: string) {
   return useQuery({
