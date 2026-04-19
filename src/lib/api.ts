@@ -281,6 +281,34 @@ class ApiClient {
     });
   }
 
+  async adminMarkInvoicePaid(invoiceId: string, note?: string) {
+    return this.request<{ message: string }>(`/billing/admin/invoices/${invoiceId}/mark-paid`, {
+      method: "POST",
+      body: JSON.stringify({ note }),
+    });
+  }
+
+  async adminCancelInvoice(invoiceId: string, note?: string) {
+    return this.request<{ message: string }>(`/billing/admin/invoices/${invoiceId}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ note }),
+    });
+  }
+
+  async adminExtendInvoiceDueDate(invoiceId: string, newDueDate: string, note?: string) {
+    return this.request<{ message: string }>(`/billing/admin/invoices/${invoiceId}/extend-due-date`, {
+      method: "POST",
+      body: JSON.stringify({ new_due_date: newDueDate, note }),
+    });
+  }
+
+  async adminAddInvoiceNote(invoiceId: string, note: string) {
+    return this.request<{ message: string }>(`/billing/admin/invoices/${invoiceId}/note`, {
+      method: "POST",
+      body: JSON.stringify({ note }),
+    });
+  }
+
   // ── Admin ─────────────────────────────────────────────
   async adminSearchUsers(query: string = "") {
     return this.request<AdminUser[]>(`/admin/users?q=${encodeURIComponent(query)}`);
@@ -642,10 +670,12 @@ export interface Subscription {
   access_status: string;
   plan_name: string | null;
   plan_price: number | null;
+  plan_currency?: string | null;
   trial_start: string;
   trial_end: string | null;
   current_period_start: string | null;
   current_period_end: string | null;
+  next_billing_date?: string | null;
   auto_renew: boolean;
   manual_override: boolean;
   blocked_at: string | null;
@@ -660,6 +690,8 @@ export interface Invoice {
   due_date: string;
   paid_at: string | null;
   provider: string | null;
+  manual_payment?: boolean;
+  cancelled_at?: string | null;
 }
 
 export interface UpgradeEligibility {
@@ -744,6 +776,7 @@ export interface AdminSubscription {
 export interface AdminInvoice {
   id: string;
   subscription_id: string;
+  user_id?: string | null;
   user_email: string | null;
   plan_name: string | null;
   amount: number;
@@ -754,6 +787,13 @@ export interface AdminInvoice {
   paid_at: string | null;
   provider: string | null;
   external_id: string | null;
+  admin_notes?: string | null;
+  manual_payment?: boolean;
+  manual_payment_by?: string | null;
+  manual_payment_at?: string | null;
+  cancelled_at?: string | null;
+  cancelled_by?: string | null;
+  original_due_date?: string | null;
 }
 
 // ── Terms Types ───────────────────────────────────────
