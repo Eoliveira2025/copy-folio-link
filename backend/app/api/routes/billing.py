@@ -23,6 +23,8 @@ from app.schemas.billing import (
     UpgradeRequestCreate, UpgradeRequestResponse,
     AdminSubscriptionResponse, AdminInvoiceResponse,
     AdminCancelSubscriptionRequest, AdminRefundRequest, BillingStatsResponse,
+    AdminMarkPaidRequest, AdminCancelInvoiceRequest, AdminExtendDueDateRequest,
+    AdminInvoiceNoteRequest,
 )
 from app.services.payments import get_gateway, GatewayStatus, BillingType
 from app.services import copy_engine
@@ -92,7 +94,22 @@ async def list_invoices(user: User = Depends(get_current_user), db: AsyncSession
         .where(Subscription.user_id == user.id)
         .order_by(Invoice.issue_date.desc())
     )
-    return result.scalars().all()
+    invoices = result.scalars().all()
+    return [
+        InvoiceResponse(
+            id=inv.id,
+            amount=inv.amount,
+            currency=inv.currency,
+            status=inv.status.value,
+            issue_date=inv.issue_date,
+            due_date=inv.due_date,
+            paid_at=inv.paid_at,
+            provider=inv.provider.value if inv.provider else None,
+            manual_payment=inv.manual_payment or False,
+            cancelled_at=inv.cancelled_at,
+        )
+        for inv in invoices
+    ]
 
 
 # ── Checkout ───────────────────────────────────────────────
@@ -726,6 +743,7 @@ async def admin_list_invoices(
         AdminInvoiceResponse(
             id=inv.id,
             subscription_id=inv.subscription_id,
+            user_id=inv.subscription.user.id if inv.subscription and inv.subscription.user else None,
             user_email=inv.subscription.user.email if inv.subscription and inv.subscription.user else None,
             plan_name=inv.subscription.plan.name if inv.subscription and inv.subscription.plan else None,
             amount=inv.amount,
@@ -736,9 +754,171 @@ async def admin_list_invoices(
             paid_at=inv.paid_at,
             provider=inv.provider.value if inv.provider else None,
             external_id=inv.external_id,
+            admin_notes=inv.admin_notes,
+            manual_payment=inv.manual_payment or False,
+            manual_payment_by=inv.manual_payment_by,
+            manual_payment_at=inv.manual_payment_at,
+            cancelled_at=inv.cancelled_at,
+            cancelled_by=inv.cancelled_by,
+            original_due_date=inv.original_due_date,
         )
         for inv in invoices
     ]
+
+
+# ── Admin: invoice operations (mark paid / cancel / extend / note) ──
+
+def _append_note(existing: str | None, new_note: str | None, prefix: str) -> str | None:
+    """Append a timestamped note to admin_notes."""
+    if not new_note:
+        return existing
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    line = f"[{stamp}] {prefix}: {new_note}"
+    return f"{existing}\n{line}" if existing else line
+
+
+@router.post("/admin/invoices/{invoice_id}/mark-paid")
+async def admin_mark_invoice_paid(
+    invoice_id: str,
+    body: AdminMarkPaidRequest,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Manually mark an invoice as paid (no gateway interaction). Requires admin note context."""
+    import uuid as uuid_mod
+    try:
+        inv_uuid = uuid_mod.UUID(invoice_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid invoice ID")
+
+    inv_result = await db.execute(select(Invoice).where(Invoice.id == inv_uuid))
+    invoice = inv_result.scalar_one_or_none()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    if invoice.status == InvoiceStatus.PAID:
+        raise HTTPException(status_code=400, detail="Invoice already paid")
+    if invoice.status == InvoiceStatus.CANCELLED:
+        raise HTTPException(status_code=400, detail="Cannot mark a cancelled invoice as paid")
+
+    invoice.manual_payment = True
+    invoice.manual_payment_by = admin.email
+    invoice.manual_payment_at = datetime.now(timezone.utc)
+    invoice.admin_notes = _append_note(invoice.admin_notes, body.note, f"Marked PAID by {admin.email}")
+
+    await _handle_payment_confirmation(invoice, db)
+    await db.commit()
+
+    logger.info(f"AUDIT: Admin {admin.email} manually marked invoice {invoice.id} as PAID")
+    return {"message": "Invoice marked as paid", "invoice_id": str(invoice.id)}
+
+
+@router.post("/admin/invoices/{invoice_id}/cancel")
+async def admin_cancel_invoice(
+    invoice_id: str,
+    body: AdminCancelInvoiceRequest,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Cancel a pending or overdue invoice. Does NOT cancel the subscription."""
+    import uuid as uuid_mod
+    try:
+        inv_uuid = uuid_mod.UUID(invoice_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid invoice ID")
+
+    inv_result = await db.execute(select(Invoice).where(Invoice.id == inv_uuid))
+    invoice = inv_result.scalar_one_or_none()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    if invoice.status == InvoiceStatus.PAID:
+        raise HTTPException(status_code=400, detail="Cannot cancel a paid invoice — use refund instead")
+    if invoice.status == InvoiceStatus.CANCELLED:
+        raise HTTPException(status_code=400, detail="Invoice already cancelled")
+
+    invoice.status = InvoiceStatus.CANCELLED
+    invoice.cancelled_at = datetime.now(timezone.utc)
+    invoice.cancelled_by = admin.email
+    invoice.admin_notes = _append_note(invoice.admin_notes, body.note, f"CANCELLED by {admin.email}")
+
+    await db.commit()
+    logger.info(f"AUDIT: Admin {admin.email} cancelled invoice {invoice.id}")
+    return {"message": "Invoice cancelled", "invoice_id": str(invoice.id)}
+
+
+@router.post("/admin/invoices/{invoice_id}/extend-due-date")
+async def admin_extend_due_date(
+    invoice_id: str,
+    body: AdminExtendDueDateRequest,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Extend the due date of a pending/overdue invoice."""
+    import uuid as uuid_mod
+    try:
+        inv_uuid = uuid_mod.UUID(invoice_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid invoice ID")
+
+    inv_result = await db.execute(select(Invoice).where(Invoice.id == inv_uuid))
+    invoice = inv_result.scalar_one_or_none()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    if invoice.status == InvoiceStatus.PAID:
+        raise HTTPException(status_code=400, detail="Cannot extend a paid invoice")
+    if invoice.status == InvoiceStatus.CANCELLED:
+        raise HTTPException(status_code=400, detail="Cannot extend a cancelled invoice")
+
+    new_due = body.new_due_date
+    if new_due.tzinfo is None:
+        new_due = new_due.replace(tzinfo=timezone.utc)
+    if new_due <= datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="New due date must be in the future")
+
+    if invoice.original_due_date is None:
+        invoice.original_due_date = invoice.due_date
+    old_due = invoice.due_date
+    invoice.due_date = new_due
+
+    # If was overdue and new date is in future, return to PENDING
+    if invoice.status == InvoiceStatus.OVERDUE:
+        invoice.status = InvoiceStatus.PENDING
+
+    note_text = body.note or f"Due date extended from {old_due.strftime('%Y-%m-%d')} to {new_due.strftime('%Y-%m-%d')}"
+    invoice.admin_notes = _append_note(invoice.admin_notes, note_text, f"DUE EXTENDED by {admin.email}")
+
+    await db.commit()
+    logger.info(f"AUDIT: Admin {admin.email} extended due date of invoice {invoice.id} to {new_due}")
+    return {"message": "Due date extended", "new_due_date": new_due.isoformat()}
+
+
+@router.post("/admin/invoices/{invoice_id}/note")
+async def admin_add_invoice_note(
+    invoice_id: str,
+    body: AdminInvoiceNoteRequest,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Append an internal admin note to an invoice."""
+    import uuid as uuid_mod
+    try:
+        inv_uuid = uuid_mod.UUID(invoice_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid invoice ID")
+
+    inv_result = await db.execute(select(Invoice).where(Invoice.id == inv_uuid))
+    invoice = inv_result.scalar_one_or_none()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    if not body.note or not body.note.strip():
+        raise HTTPException(status_code=400, detail="Note cannot be empty")
+
+    invoice.admin_notes = _append_note(invoice.admin_notes, body.note, f"NOTE by {admin.email}")
+    await db.commit()
+    return {"message": "Note added"}
 
 
 @router.post("/admin/subscriptions/{subscription_id}/cancel")
