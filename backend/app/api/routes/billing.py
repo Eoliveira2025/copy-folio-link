@@ -106,7 +106,7 @@ async def list_invoices(user: User = Depends(get_current_user), db: AsyncSession
             paid_at=inv.paid_at,
             provider=inv.provider.value if inv.provider else None,
             manual_payment=inv.manual_payment or False,
-            cancelled_at=inv.cancelled_at,
+            original_due_date=inv.original_due_date,
         )
         for inv in invoices
     ]
@@ -757,9 +757,6 @@ async def admin_list_invoices(
             admin_notes=inv.admin_notes,
             manual_payment=inv.manual_payment or False,
             manual_payment_by=inv.manual_payment_by,
-            manual_payment_at=inv.manual_payment_at,
-            cancelled_at=inv.cancelled_at,
-            cancelled_by=inv.cancelled_by,
             original_due_date=inv.original_due_date,
         )
         for inv in invoices
@@ -803,7 +800,6 @@ async def admin_mark_invoice_paid(
 
     invoice.manual_payment = True
     invoice.manual_payment_by = admin.email
-    invoice.manual_payment_at = datetime.now(timezone.utc)
     invoice.admin_notes = _append_note(invoice.admin_notes, body.note, f"Marked PAID by {admin.email}")
 
     await _handle_payment_confirmation(invoice, db)
@@ -838,8 +834,6 @@ async def admin_cancel_invoice(
         raise HTTPException(status_code=400, detail="Invoice already cancelled")
 
     invoice.status = InvoiceStatus.CANCELLED
-    invoice.cancelled_at = datetime.now(timezone.utc)
-    invoice.cancelled_by = admin.email
     invoice.admin_notes = _append_note(invoice.admin_notes, body.note, f"CANCELLED by {admin.email}")
 
     await db.commit()
