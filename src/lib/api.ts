@@ -764,12 +764,17 @@ export interface AdminSubscription {
   user_email: string;
   user_id: string;
   plan_name: string | null;
+  plan_price?: number | null;
   status: string;
   access_status: string;
   manual_override: boolean;
   blocked_at: string | null;
   trial_start: string | null;
   trial_end: string | null;
+  current_period_start?: string | null;
+  current_period_end?: string | null;
+  next_billing_date?: string | null;
+  auto_renew?: boolean;
   created_at: string;
 }
 
