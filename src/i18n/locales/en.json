@@ -90,7 +90,7 @@
     "connectMT5": "Connect MT5",
     "strategies": "Strategies",
     "plans": "Plans",
-    "financial": "Financial",
+    "financial": "Billing",
     "settings": "Settings",
     "admin": "Admin",
     "adminPanel": "Admin Panel",
@@ -179,8 +179,8 @@
     "extreme": "Extreme"
   },
   "financial": {
-    "title": "Financial",
-    "subtitle": "Manage your subscription and invoices",
+    "title": "Billing",
+    "subtitle": "Your subscription, recurrence, and invoice history",
     "currentSubscription": "Current Subscription",
     "plan": "Plan",
     "price": "Price",
