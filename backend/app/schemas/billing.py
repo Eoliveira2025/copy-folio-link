@@ -37,7 +37,7 @@ class InvoiceResponse(BaseModel):
     provider: str | None
     checkout_url: str | None = None
     manual_payment: bool = False
-    cancelled_at: datetime | None = None
+    original_due_date: datetime | None = None
 
     class Config:
         from_attributes = True
@@ -124,9 +124,6 @@ class AdminInvoiceResponse(BaseModel):
     admin_notes: str | None = None
     manual_payment: bool = False
     manual_payment_by: str | None = None
-    manual_payment_at: datetime | None = None
-    cancelled_at: datetime | None = None
-    cancelled_by: str | None = None
     original_due_date: datetime | None = None
 
     class Config:

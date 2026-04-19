@@ -36,13 +36,10 @@ class Invoice(Base):
     external_id: Mapped[str | None] = mapped_column(String(255))  # Gateway reference
     provider: Mapped[PaymentProvider | None] = mapped_column(SAEnum(PaymentProvider))
 
-    # Admin / manual operations metadata
+    # Admin / manual operations metadata (incremental & safe — phase 1)
     admin_notes: Mapped[str | None] = mapped_column(Text)
     manual_payment: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     manual_payment_by: Mapped[str | None] = mapped_column(String(255))
-    manual_payment_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    cancelled_by: Mapped[str | None] = mapped_column(String(255))
     original_due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     subscription = relationship("Subscription", back_populates="invoices")
