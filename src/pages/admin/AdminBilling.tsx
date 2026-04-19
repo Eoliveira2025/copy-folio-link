@@ -730,10 +730,10 @@ const AdminBilling = () => {
                     <div className="font-mono text-xs">{safeFormat(detailInvoice.paid_at, "dd MMM yyyy HH:mm")}</div>
                   </div>
                 )}
-                {detailInvoice.cancelled_at && (
+                {detailInvoice.status === "cancelled" && (
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">{t("adminBilling.cancelledOn")}</div>
-                    <div className="font-mono text-xs">{safeFormat(detailInvoice.cancelled_at, "dd MMM yyyy HH:mm")}</div>
+                    <div className="text-xs italic text-muted-foreground">{t("adminBilling.seeNotes")}</div>
                   </div>
                 )}
                 <div>
@@ -800,19 +800,14 @@ const AdminBilling = () => {
                     </div>
                   )}
 
-                  {detailInvoice.cancelled_at && (
+                  {detailInvoice.status === "cancelled" && (
                     <div className="relative">
                       <div className="absolute -left-[22px] top-1 w-3 h-3 rounded-full bg-destructive" />
                       <div className="text-xs">
                         <span className="font-medium">{t("adminBilling.cancelledOn")}</span>
-                        <span className="text-muted-foreground ml-2 font-mono">
-                          {safeFormat(detailInvoice.cancelled_at, "dd MMM yyyy HH:mm")}
+                        <span className="text-muted-foreground ml-2 italic">
+                          {t("adminBilling.seeNotes")}
                         </span>
-                        {detailInvoice.cancelled_by && (
-                          <div className="text-[10px] text-muted-foreground mt-0.5">
-                            by {detailInvoice.cancelled_by}
-                          </div>
-                        )}
                       </div>
                     </div>
                   )}

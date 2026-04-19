@@ -691,7 +691,7 @@ export interface Invoice {
   paid_at: string | null;
   provider: string | null;
   manual_payment?: boolean;
-  cancelled_at?: string | null;
+  original_due_date?: string | null;
 }
 
 export interface UpgradeEligibility {
@@ -795,9 +795,6 @@ export interface AdminInvoice {
   admin_notes?: string | null;
   manual_payment?: boolean;
   manual_payment_by?: string | null;
-  manual_payment_at?: string | null;
-  cancelled_at?: string | null;
-  cancelled_by?: string | null;
   original_due_date?: string | null;
 }
 
