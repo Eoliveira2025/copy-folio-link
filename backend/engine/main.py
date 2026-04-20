@@ -57,6 +57,7 @@ from engine.distributor import TradeDistributor
 from engine.executor import ExecutionWorker
 from engine.health_monitor import HealthMonitor
 from engine.result_tracker import ResultTracker
+from engine.recovery_worker import RecoveryWorker
 from engine.metrics import get_metrics, MetricsPublisher
 
 settings = get_engine_settings()
@@ -159,6 +160,7 @@ class CopyEngine:
         self.distributor: TradeDistributor | None = None
         self.health_monitor: HealthMonitor | None = None
         self.result_tracker: ResultTracker | None = None
+        self.recovery_worker: RecoveryWorker | None = None
         self.metrics_publisher: MetricsPublisher | None = None
         self.executor_processes: List[multiprocessing.Process] = []
         self._metrics = get_metrics()
@@ -189,6 +191,11 @@ class CopyEngine:
         self.result_tracker = ResultTracker()
         self.result_tracker.start()
         logger.info("✓ Result Tracker started")
+
+        # 3.1 Recovery Worker (failed-trade smart recovery)
+        self.recovery_worker = RecoveryWorker()
+        self.recovery_worker.start()
+        logger.info("✓ Recovery Worker started")
 
         # 4. Trade Distributor
         self.distributor = TradeDistributor()
@@ -246,6 +253,8 @@ class CopyEngine:
             self.health_monitor.stop()
         if self.result_tracker:
             self.result_tracker.stop()
+        if self.recovery_worker:
+            self.recovery_worker.stop()
         if self.metrics_publisher:
             self.metrics_publisher.stop()
 
