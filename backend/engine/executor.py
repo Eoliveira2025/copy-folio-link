@@ -137,6 +137,8 @@ class ExecutionWorker:
         if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
             order.status = CopyStatus.FAILED
             order.error = f"Order failed: {result.comment if result else 'no response'} (code: {result.retcode if result else 'N/A'})"
+            order.mt5_retcode = result.retcode if result else None
+            order.mt5_retcode_comment = result.comment if result else None
             logger.error(f"[{self.login}] OPEN failed: {order.error}")
         else:
             order.status = CopyStatus.EXECUTED
@@ -205,6 +207,8 @@ class ExecutionWorker:
         if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
             order.status = CopyStatus.FAILED
             order.error = f"Close failed: {result.comment if result else 'N/A'}"
+            order.mt5_retcode = result.retcode if result else None
+            order.mt5_retcode_comment = result.comment if result else None
         else:
             order.status = CopyStatus.EXECUTED
             order.executed_price = result.price
