@@ -163,6 +163,7 @@ class RecoveryWorker(threading.Thread):
     # ── OPEN recovery ───────────────────────────────────────────
 
     def handle_open(self, payload: dict):
+        self._cfg = get_recovery_config()  # honor DB overrides (TTL-cached)
         order_id = payload["order_id"]
         client_mt5_id = payload["client_mt5_account_id"]
         symbol = payload["symbol"]
@@ -302,6 +303,7 @@ class RecoveryWorker(threading.Thread):
     # ── CLOSE recovery ──────────────────────────────────────────
 
     def handle_close(self, payload: dict):
+        self._cfg = get_recovery_config()  # honor DB overrides (TTL-cached)
         order_id = payload["order_id"]
         client_mt5_id = payload["client_mt5_account_id"]
         symbol = payload["symbol"]
