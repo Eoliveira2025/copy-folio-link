@@ -499,6 +499,20 @@ class ApiClient {
     return this.request<{ message: string }>(`/admin/dead-letter/${tradeId}/resolve?note=${encodeURIComponent(note)}`, { method: "POST" });
   }
 
+  // ── Admin Copy Recoveries ───────────────────────────
+  async adminGetRecoveries(filters: { status?: string; recovery_type?: string; limit?: number } = {}) {
+    const params = new URLSearchParams();
+    if (filters.status) params.set("status", filters.status);
+    if (filters.recovery_type) params.set("recovery_type", filters.recovery_type);
+    if (filters.limit) params.set("limit", String(filters.limit));
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return this.request<CopyRecovery[]>(`/admin/operations/recoveries${qs}`);
+  }
+
+  async adminGetRecoveriesSummary() {
+    return this.request<RecoverySummary>("/admin/operations/recoveries/summary");
+  }
+
   // ── Admin Risk Protection ───────────────────────────
   async adminGetRiskSettings() {
     return this.request<RiskSettings>("/admin/risk/settings");
@@ -919,6 +933,48 @@ export interface DeadLetterTrade {
   resolution_note: string | null;
   created_at: string;
   resolved_at: string | null;
+}
+
+// ── Copy Recovery Types ───────────────────────────────
+export interface CopyRecovery {
+  id: string;
+  order_id: string;
+  symbol: string;
+  action: string;            // open / close / modify
+  direction: string;         // BUY / SELL
+  volume: number;
+  master_ticket: number;
+  client_ticket: number | null;
+  recovery_type: "open_recovery" | "close_recovery";
+  attempt_number: number;
+  max_attempts: number;
+  decision: string;          // retry_allowed / retry_rejected / retry_executed / retry_fatal / informational
+  reason_code: string | null;
+  status: string;            // failed_retryable / retried_success / retried_rejected / close_retrying / close_retry_success / close_retry_failed / no_position_to_close
+  original_price: number | null;
+  current_price: number | null;
+  price_delta_points: number | null;
+  mt5_retcode: number | null;
+  mt5_retcode_comment: string | null;
+  error_message: string | null;
+  decided_at: string;
+  executed_at: string | null;
+  mt5_account_id: string;
+  user_id: string | null;
+  user_email: string | null;
+  account_login: number | null;
+  account_server: string | null;
+}
+
+export interface RecoverySummary {
+  reprocessing: number;
+  retried_success: number;
+  retried_rejected: number;
+  close_retrying: number;
+  close_retry_success: number;
+  close_retry_failed: number;
+  no_position: number;
+  last_24h: number;
 }
 
 // ── Admin Strategy Types ──────────────────────────────

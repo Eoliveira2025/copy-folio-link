@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAdminOperations, useAdminDeadLetterTrades, useAdminRetryDeadLetter, useAdminResolveDeadLetter } from "@/hooks/use-api";
+import RecoveriesPanel from "@/components/admin/RecoveriesPanel";
 
 const statusColor: Record<string, string> = {
   healthy: "bg-success/15 text-success border-success/30",
@@ -101,6 +102,9 @@ const OperationsDashboard = () => {
           ))}
         </div>
       </div>
+
+      {/* Copy Recoveries */}
+      <RecoveriesPanel />
 
       {/* Dead Letter Queue */}
       <div>
