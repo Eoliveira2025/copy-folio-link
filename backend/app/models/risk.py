@@ -4,6 +4,7 @@ import uuid
 import enum
 from datetime import datetime, timezone
 from sqlalchemy import String, DateTime, Float, Boolean, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
@@ -15,6 +16,7 @@ class SystemSettings(Base):
     global_max_drawdown_percent: Mapped[float] = mapped_column(Float, nullable=False, default=50.0)
     protection_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     affiliate_broker_link: Mapped[str | None] = mapped_column(String(500))
+    recovery_overrides: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
