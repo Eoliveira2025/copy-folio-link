@@ -61,6 +61,19 @@ class ExecutionWorker:
         logger.info(f"[{self.login}] Connected to {self.server}")
         return True
 
+    def _publish_tick_cache(self, symbol: str, bid: float, ask: float, point: float):
+        """Publish latest tick for the recovery worker to consult (TTL 2s)."""
+        try:
+            if not self.redis_client:
+                return
+            key = f"copytrade:tick:{self.client_mt5_id}:{symbol}"
+            import json as _json
+            self.redis_client.setex(key, 2, _json.dumps({
+                "bid": bid, "ask": ask, "point": point, "ts": time.time()
+            }))
+        except Exception:
+            pass
+
     def _check_slippage(self, order: CopyOrder) -> bool:
         """
         Check if current price has slipped beyond acceptable range.
@@ -83,6 +96,9 @@ class ExecutionWorker:
         point = symbol_info.point
         if point <= 0:
             return True
+
+        # Cache tick for recovery worker
+        self._publish_tick_cache(order.symbol, tick.bid, tick.ask, point)
 
         slippage_points = abs(current_price - order.master_price) / point
         order.slippage_points = slippage_points
