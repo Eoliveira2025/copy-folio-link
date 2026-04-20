@@ -114,6 +114,13 @@ class CopyOrder:
     max_attempts: int = 3
     error: Optional[str] = None
 
+    # Recovery layer (opt-in, set by recovery worker)
+    is_recovery: bool = False
+    recovery_type: Optional[str] = None   # open_recovery / close_recovery
+    recovery_attempt: int = 0
+    recovery_max_attempts: int = 0
+    original_master_price: float = 0.0    # snapshot at first failure
+
     # MT5 raw outcome (populated on failure for recovery worker)
     mt5_retcode: Optional[int] = None
     mt5_retcode_comment: Optional[str] = None
