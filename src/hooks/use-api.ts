@@ -546,6 +546,23 @@ export function useAdminResolveDeadLetter() {
   });
 }
 
+// ── Admin Copy Recoveries ─────────────────────────
+export function useAdminRecoveries(filters: { status?: string; recovery_type?: string; limit?: number } = {}) {
+  return useQuery({
+    queryKey: ["admin-recoveries", filters],
+    queryFn: () => api.adminGetRecoveries(filters),
+    refetchInterval: 10000,
+  });
+}
+
+export function useAdminRecoveriesSummary() {
+  return useQuery({
+    queryKey: ["admin-recoveries-summary"],
+    queryFn: () => api.adminGetRecoveriesSummary(),
+    refetchInterval: 15000,
+  });
+}
+
 // ── Admin Provisioning ─────────────────────────────
 export function useAdminPendingAccounts() {
   return useQuery({
