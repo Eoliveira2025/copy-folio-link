@@ -346,6 +346,40 @@ class ExecutionWorker:
                     except Exception as dlq_err:
                         logger.error(f"[{self.login}] Failed to push to DLQ: {dlq_err}")
 
+                    # ── Publish recovery event (non-blocking, parallel to DLQ) ──
+                    try:
+                        reason_code, retcode_comment = classify_mt5_error(order.mt5_retcode, order.error)
+                        recovery_channel = (
+                            "copytrade:recovery:close"
+                            if order.action == TradeAction.CLOSE
+                            else "copytrade:recovery:open"
+                        )
+                        recovery_payload = {
+                            "order_id": order.order_id,
+                            "client_mt5_account_id": order.client_mt5_account_id,
+                            "client_login": order.client_login,
+                            "symbol": order.symbol,
+                            "action": order.action.value,
+                            "direction": order.direction.value,
+                            "volume": order.volume,
+                            "master_price": order.master_price,
+                            "master_ticket": order.master_ticket,
+                            "magic_number": order.magic_number,
+                            "sl": order.sl,
+                            "tp": order.tp,
+                            "max_slippage_points": order.max_slippage_points,
+                            "error": order.error,
+                            "mt5_retcode": order.mt5_retcode,
+                            "mt5_retcode_comment": order.mt5_retcode_comment or retcode_comment,
+                            "reason_code": reason_code,
+                            "event_detected_at": order.event_detected_at,
+                            "raw_order": order.to_json(),
+                        }
+                        import json as _json
+                        self.redis_client.publish(recovery_channel, _json.dumps(recovery_payload))
+                    except Exception as rec_err:
+                        logger.error(f"[{self.login}] Failed to publish recovery event: {rec_err}")
+
                 # Publish result
                 result_json = order.to_json()
                 pipe = self.redis_client.pipeline(transaction=False)
