@@ -114,6 +114,10 @@ class CopyOrder:
     max_attempts: int = 3
     error: Optional[str] = None
 
+    # MT5 raw outcome (populated on failure for recovery worker)
+    mt5_retcode: Optional[int] = None
+    mt5_retcode_comment: Optional[str] = None
+
     # Slippage control
     max_slippage_points: int = 30  # Maximum allowed slippage
     master_price: float = 0.0  # Original master price for slippage calc
