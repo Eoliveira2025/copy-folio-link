@@ -10,6 +10,7 @@ from app.models.trade import TradeEvent, TradeCopy
 from app.models.upgrade_request import UpgradeRequest
 from app.models.terms import TermsDocument, TermsAcceptance
 from app.models.risk import SystemSettings, RiskIncident
+from app.models.copy_recovery import TradeCopyRecovery
 
 __all__ = [
     "User",
@@ -28,4 +29,5 @@ __all__ = [
     "TermsAcceptance",
     "SystemSettings",
     "RiskIncident",
+    "TradeCopyRecovery",
 ]

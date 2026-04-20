@@ -1,7 +1,7 @@
 """API router aggregation."""
 
 from fastapi import APIRouter
-from app.api.routes import auth, mt5, strategies, billing, admin, legal, risk, operations, dead_letter, admin_provision
+from app.api.routes import auth, mt5, strategies, billing, admin, legal, risk, operations, dead_letter, admin_provision, recoveries
 
 api_router = APIRouter()
 
@@ -15,3 +15,4 @@ api_router.include_router(legal.router, prefix="/legal", tags=["Legal"])
 api_router.include_router(risk.router, prefix="/admin", tags=["Risk Protection"])
 api_router.include_router(operations.router, prefix="/admin", tags=["Operations"])
 api_router.include_router(dead_letter.router, prefix="/admin", tags=["Dead Letter Queue"])
+api_router.include_router(recoveries.router, prefix="/admin", tags=["Copy Recoveries"])
