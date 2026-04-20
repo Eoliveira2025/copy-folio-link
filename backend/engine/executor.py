@@ -22,6 +22,7 @@ from engine.config import get_engine_settings
 from engine.models import CopyOrder, CopyStatus, TradeAction, TradeDirection
 from engine.metrics import get_metrics
 from engine.health_monitor import send_heartbeat
+from engine.recovery_reasons import classify_mt5_error
 
 settings = get_engine_settings()
 logger = logging.getLogger("engine.executor")
