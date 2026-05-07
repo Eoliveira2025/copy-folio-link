@@ -3,7 +3,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RefreshCw, Radio } from "lucide-react";
-import { api } from "@/lib/api";
+
+const API_BASE = (import.meta.env.VITE_API_URL || "/api/v1") as string;
+async function fetchJson<T>(path: string): Promise<T> {
+  const token = localStorage.getItem("access_token");
+  const r = await fetch(`${API_BASE}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!r.ok) throw new Error(String(r.status));
+  return r.json() as Promise<T>;
+}
 
 interface BridgeSignal {
   id: string;
@@ -34,8 +43,8 @@ export function BridgeTab() {
     setLoading(true);
     try {
       const [s, sig] = await Promise.all([
-        api.get<BridgeStats>("/admin/bridge/stats").catch(() => null),
-        api.get<BridgeSignal[]>("/admin/bridge/signals?limit=50").catch(() => []),
+        fetchJson<BridgeStats>("/admin/bridge/stats").catch(() => null),
+        fetchJson<BridgeSignal[]>("/admin/bridge/signals?limit=50").catch(() => []),
       ]);
       setStats(s);
       setSignals(sig || []);
