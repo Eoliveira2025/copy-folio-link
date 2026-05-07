@@ -11,6 +11,7 @@ from app.models.upgrade_request import UpgradeRequest
 from app.models.terms import TermsDocument, TermsAcceptance
 from app.models.risk import SystemSettings, RiskIncident
 from app.models.copy_recovery import TradeCopyRecovery
+from app.models.bridge import BridgeSignal, BridgeExecutionOrder
 
 __all__ = [
     "User",
@@ -30,4 +31,6 @@ __all__ = [
     "SystemSettings",
     "RiskIncident",
     "TradeCopyRecovery",
+    "BridgeSignal",
+    "BridgeExecutionOrder",
 ]
