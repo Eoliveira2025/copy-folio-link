@@ -12,7 +12,7 @@ import {
 import {
   Search, RefreshCw, Users, BarChart3, Server, Shield, CreditCard,
   FileText, Package, Plus, Pencil, Trash2, ArrowUpDown, AlertTriangle,
-  ArrowUpCircle, Check, X, Scale, Power, Eye, Settings, Crosshair, Send,
+  ArrowUpCircle, Check, X, Scale, Power, Eye, Settings, Crosshair, Send, Radio,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,6 +34,7 @@ import { api } from "@/lib/api";
 import { RiskProtectionTab } from "@/components/admin/RiskProtectionTab";
 import { StrategiesTab } from "@/components/admin/StrategiesTab";
 import { StrategyRequestsTab } from "@/components/admin/StrategyRequestsTab";
+import { BridgeTab } from "@/components/admin/BridgeTab";
 
 const statusStyle: Record<string, string> = {
   active: "bg-success/15 text-success border-success/30 hover:bg-success/15",
@@ -212,6 +213,7 @@ const AdminPanel = () => {
           <TabsTrigger value="risk" className="gap-2"><AlertTriangle className="w-4 h-4" /> {t("admin.risk")}</TabsTrigger>
           <TabsTrigger value="legal" className="gap-2"><Scale className="w-4 h-4" /> {t("admin.legal")}</TabsTrigger>
           <TabsTrigger value="servers" className="gap-2"><Server className="w-4 h-4" /> {t("admin.servers")}</TabsTrigger>
+          <TabsTrigger value="bridge" className="gap-2"><Radio className="w-4 h-4" /> Bridge</TabsTrigger>
           <TabsTrigger value="settings" className="gap-2"><Settings className="w-4 h-4" /> {t("settings.title")}</TabsTrigger>
         </TabsList>
 
