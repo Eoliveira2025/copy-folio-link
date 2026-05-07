@@ -148,3 +148,72 @@ para o mesmo sinal.
 
 Setar `BRIDGE_ENABLED=false` e parar o worker `bridge_distributor`. O sistema
 antigo continua intocado.
+
+---
+
+## Bridge Auditor (Fiscal de Execução)
+
+Camada complementar que **valida cada ordem copiada** após a execução,
+comparando o estado real da conta cliente com o que o sistema mandou executar.
+
+### Como funciona
+
+1. Quando uma `bridge_execution_orders` muda para `executed`, o worker
+   `app.workers.bridge_auditor` cria uma `bridge_audits` com status `pending`.
+2. Após `BRIDGE_AUDITOR_DELAY_SECONDS`, publica um payload na fila Redis
+   `bridge:audit:check:{client_login}` para o Windows Executor verificar a
+   posição (`CHECK_POSITION` / `CHECK_CLOSED` / `CHECK_SL_TP`).
+3. O executor responde em `bridge:audit:result` com `status` (`matched`,
+   `not_found`, `still_open`, `already_closed`, `wrong_lot`, `wrong_direction`,
+   `wrong_symbol`, `sl_tp_mismatch`, `error`) e o payload da posição.
+4. O auditor atualiza `bridge_audits.audit_status` conforme o resultado.
+
+### Ações corretivas (auto-fix)
+
+`BRIDGE_AUDITOR_AUTO_FIX_ENABLED` controla se o auditor pode enviar comandos
+corretivos:
+
+- `FORCE_CLOSE` quando o master fechou e o cliente continua aberto
+- `FORCE_MODIFY_SL_TP` em caso de divergência de SL/TP
+
+Os comandos vão para `bridge:audit:fix:{client_login}` e o executor responde
+em `bridge:audit:fix:result`.
+
+### Regra de segurança (não negociável)
+
+O auditor **só** pode tocar em posições identificadas como nossas:
+- `magic` igual ao derivado de `execution_order_id`, **ou**
+- `comment` contendo o `master_ticket` ou os marcadores `ctp:` /
+  `copytradepro`
+
+Se a posição não tem vínculo, o auditor registra `failure_reason` e **não**
+fecha nem modifica nada. Auto-fix começa **desativado** por padrão.
+
+### Ativação
+
+```
+BRIDGE_AUDITOR_ENABLED=true
+BRIDGE_AUDITOR_AUTO_FIX_ENABLED=false   # ative só após validar em demo
+```
+
+Suba o worker:
+```
+python -m app.workers.bridge_auditor
+```
+
+### Painel
+
+Admin > Bridge > **Fiscal de Execução** mostra KPIs (pending, matched,
+not_executed, still_open, auto_fixed, auto_fix_failed, sl_tp_mismatch,
+failed_to_check) e a lista de auditorias com filtros por status.
+
+### Testes em demo
+
+1. Disparar OPEN na master, esperar a execução, verificar `audit_status =
+   matched`.
+2. Fechar manualmente no executor (sem propagar) → auditoria deve marcar
+   `not_executed` para o próximo OPEN.
+3. Master fecha, cliente fica aberto: com auto-fix off → `still_open` e
+   nenhuma ação. Com auto-fix on e magic correto → `auto_fixed`.
+4. Posição manual do cliente nunca é fechada (auditor refusa por falta de
+   vínculo).
