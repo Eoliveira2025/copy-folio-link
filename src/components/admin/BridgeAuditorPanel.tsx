@@ -87,13 +87,13 @@ export function BridgeAuditorPanel() {
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [filter]);
 
-  const alerts: { label: string; tone: "danger" | "warning"; n: number }[] = stats ? [
-    { label: "Executadas e não encontradas", tone: "danger", n: stats.not_executed },
-    { label: "Master fechou, cliente aberto", tone: "danger", n: stats.still_open },
-    { label: "Correções com falha", tone: "danger", n: stats.auto_fix_failed },
-    { label: "SL/TP divergente", tone: "warning", n: stats.sl_tp_mismatch },
-    { label: "Falhou ao verificar", tone: "warning", n: stats.failed_to_check },
-  ].filter(a => a.n > 0) : [];
+  const alerts: { label: string; tone: "danger" | "warning"; n: number }[] = stats ? ([
+    { label: "Executadas e não encontradas", tone: "danger" as const, n: stats.not_executed },
+    { label: "Master fechou, cliente aberto", tone: "danger" as const, n: stats.still_open },
+    { label: "Correções com falha", tone: "danger" as const, n: stats.auto_fix_failed },
+    { label: "SL/TP divergente", tone: "warning" as const, n: stats.sl_tp_mismatch },
+    { label: "Falhou ao verificar", tone: "warning" as const, n: stats.failed_to_check },
+  ].filter(a => a.n > 0)) : [];
 
   return (
     <div className="space-y-4">
