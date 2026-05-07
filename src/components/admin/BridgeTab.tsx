@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, Radio } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RefreshCw, Radio, ShieldCheck } from "lucide-react";
+import { BridgeAuditorPanel } from "./BridgeAuditorPanel";
 
 const API_BASE = (import.meta.env.VITE_API_URL || "/api/v1") as string;
 async function fetchJson<T>(path: string): Promise<T> {
@@ -57,78 +59,91 @@ export function BridgeTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Radio className="w-5 h-5 text-primary" />
-          <h2 className="text-lg font-semibold">Bridge</h2>
-          {stats && (
-            <Badge variant="outline" className={stats.enabled
-              ? "bg-success/15 text-success border-success/30"
-              : "bg-muted text-muted-foreground border-border"}>
-              {stats.enabled ? "Ativo" : "Inativo"}
-            </Badge>
-          )}
-          <Badge variant="outline" className="bg-info/15 text-info border-info/30">
-            modo paralelo
-          </Badge>
-        </div>
-        <Button variant="outline" size="sm" onClick={load} className="gap-2">
-          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          Atualizar
-        </Button>
-      </div>
+      <Tabs defaultValue="overview">
+        <TabsList className="bg-secondary">
+          <TabsTrigger value="overview" className="gap-2"><Radio className="w-4 h-4" /> Visão geral</TabsTrigger>
+          <TabsTrigger value="auditor" className="gap-2"><ShieldCheck className="w-4 h-4" /> Fiscal de Execução</TabsTrigger>
+        </TabsList>
 
-      {loading && !stats ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20" />)}
-        </div>
-      ) : stats ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPI label="Sinais 24h" value={stats.signals_24h} />
-          <KPI label="Em fila" value={stats.orders_queued} />
-          <KPI label="Executadas" value={stats.orders_executed} />
-          <KPI label="Falhas" value={stats.orders_failed} tone="danger" />
-        </div>
-      ) : (
-        <div className="card-glass p-6 text-sm text-muted-foreground">
-          Endpoint Bridge ainda não disponível no backend.
-        </div>
-      )}
-
-      <div className="card-glass rounded-lg overflow-hidden">
-        <div className="px-4 py-3 border-b border-border text-sm font-medium">
-          Últimos sinais recebidos
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/30 text-muted-foreground">
-              <tr className="text-left">
-                <th className="p-3 font-medium">Quando</th>
-                <th className="p-3 font-medium">Master</th>
-                <th className="p-3 font-medium">Ação</th>
-                <th className="p-3 font-medium">Símbolo</th>
-                <th className="p-3 font-medium">Volume</th>
-                <th className="p-3 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {signals.map((s) => (
-                <tr key={s.id} className="border-b border-border/50 last:border-0 hover:bg-muted/20">
-                  <td className="p-3 font-mono text-xs">{new Date(s.created_at).toLocaleString()}</td>
-                  <td className="p-3">{s.master_id}</td>
-                  <td className="p-3"><Badge variant="outline">{s.action}</Badge></td>
-                  <td className="p-3 font-mono">{s.symbol}</td>
-                  <td className="p-3 font-mono">{Number(s.volume).toFixed(2)}</td>
-                  <td className="p-3"><Badge variant="outline">{s.status}</Badge></td>
-                </tr>
-              ))}
-              {signals.length === 0 && (
-                <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Nenhum sinal recebido ainda</td></tr>
+        <TabsContent value="overview" className="mt-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Radio className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-semibold">Bridge</h2>
+              {stats && (
+                <Badge variant="outline" className={stats.enabled
+                  ? "bg-success/15 text-success border-success/30"
+                  : "bg-muted text-muted-foreground border-border"}>
+                  {stats.enabled ? "Ativo" : "Inativo"}
+                </Badge>
               )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+              <Badge variant="outline" className="bg-info/15 text-info border-info/30">
+                modo paralelo
+              </Badge>
+            </div>
+            <Button variant="outline" size="sm" onClick={load} className="gap-2">
+              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+              Atualizar
+            </Button>
+          </div>
+
+          {loading && !stats ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20" />)}
+            </div>
+          ) : stats ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <KPI label="Sinais 24h" value={stats.signals_24h} />
+              <KPI label="Em fila" value={stats.orders_queued} />
+              <KPI label="Executadas" value={stats.orders_executed} />
+              <KPI label="Falhas" value={stats.orders_failed} tone="danger" />
+            </div>
+          ) : (
+            <div className="card-glass p-6 text-sm text-muted-foreground">
+              Endpoint Bridge ainda não disponível no backend.
+            </div>
+          )}
+
+          <div className="card-glass rounded-lg overflow-hidden">
+            <div className="px-4 py-3 border-b border-border text-sm font-medium">
+              Últimos sinais recebidos
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/30 text-muted-foreground">
+                  <tr className="text-left">
+                    <th className="p-3 font-medium">Quando</th>
+                    <th className="p-3 font-medium">Master</th>
+                    <th className="p-3 font-medium">Ação</th>
+                    <th className="p-3 font-medium">Símbolo</th>
+                    <th className="p-3 font-medium">Volume</th>
+                    <th className="p-3 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {signals.map((s) => (
+                    <tr key={s.id} className="border-b border-border/50 last:border-0 hover:bg-muted/20">
+                      <td className="p-3 font-mono text-xs">{new Date(s.created_at).toLocaleString()}</td>
+                      <td className="p-3">{s.master_id}</td>
+                      <td className="p-3"><Badge variant="outline">{s.action}</Badge></td>
+                      <td className="p-3 font-mono">{s.symbol}</td>
+                      <td className="p-3 font-mono">{Number(s.volume).toFixed(2)}</td>
+                      <td className="p-3"><Badge variant="outline">{s.status}</Badge></td>
+                    </tr>
+                  ))}
+                  {signals.length === 0 && (
+                    <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Nenhum sinal recebido ainda</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="auditor" className="mt-4">
+          <BridgeAuditorPanel />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 """API router aggregation."""
 
 from fastapi import APIRouter
-from app.api.routes import auth, mt5, strategies, billing, admin, legal, risk, operations, dead_letter, admin_provision, recoveries, bridge, bridge_admin
+from app.api.routes import auth, mt5, strategies, billing, admin, legal, risk, operations, dead_letter, admin_provision, recoveries, bridge, bridge_admin, bridge_auditor_admin
 
 api_router = APIRouter()
 
@@ -18,3 +18,4 @@ api_router.include_router(dead_letter.router, prefix="/admin", tags=["Dead Lette
 api_router.include_router(recoveries.router, prefix="/admin", tags=["Copy Recoveries"])
 api_router.include_router(bridge.router, prefix="/bridge", tags=["Bridge"])
 api_router.include_router(bridge_admin.router, prefix="/admin", tags=["Bridge Admin"])
+api_router.include_router(bridge_auditor_admin.router, prefix="/admin", tags=["Bridge Auditor"])
