@@ -34,4 +34,5 @@ __all__ = [
     "TradeCopyRecovery",
     "BridgeSignal",
     "BridgeExecutionOrder",
+    "BridgeAudit",
 ]
