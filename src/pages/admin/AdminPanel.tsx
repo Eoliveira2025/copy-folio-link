@@ -552,6 +552,10 @@ const AdminPanel = () => {
         </TabsContent>
 
         {/* Settings Tab */}
+        <TabsContent value="bridge" className="mt-4">
+          <BridgeTab />
+        </TabsContent>
+
         <TabsContent value="settings" className="mt-4">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card-glass rounded-lg p-6 space-y-6">
             <h3 className="font-semibold text-lg">{t("admin.publicSettings")}</h3>
