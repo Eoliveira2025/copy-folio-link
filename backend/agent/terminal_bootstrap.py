@@ -74,8 +74,12 @@ def bootstrap_terminal(
     logger.info(f"[Bootstrap] Instance path: {instance_path}")
 
     try:
+        # Detect client-light mode: only when AGENT_CLIENT_LIGHT=true AND
+        # the instance folder name starts with "client_". Masters never light.
+        light = _is_client_light(instance_path)
+
         # ── Step 1: Write common.ini ──────────────────────────────
-        _write_common_ini(instance_path, login, server)
+        _write_common_ini(instance_path, login, server, light=light)
 
         # ── Step 2: Write origin.ini (server info for first launch) ─
         _write_origin_ini(instance_path, server)
@@ -90,11 +94,26 @@ def bootstrap_terminal(
         # ── Step 5: Write server.ini in config folder ─────────────
         _write_server_ini(config_dir, server)
 
-        logger.info(f"[Bootstrap] ✅ Instance configured successfully for login={login}")
+        if light:
+            logger.info(f"[Bootstrap] ✅ Instance configured (CLIENT-LIGHT) for login={login}")
+        else:
+            logger.info(f"[Bootstrap] ✅ Instance configured successfully for login={login}")
         return True
 
     except Exception as e:
         logger.error(f"[Bootstrap] ❌ Failed to configure instance: {e}", exc_info=True)
+        return False
+
+
+def _is_client_light(instance_path: Path) -> bool:
+    """Return True only if AGENT_CLIENT_LIGHT is on AND folder is a client."""
+    try:
+        from agent.config import get_agent_settings
+        s = get_agent_settings()
+        if not getattr(s, "AGENT_CLIENT_LIGHT", False):
+            return False
+        return instance_path.name.startswith("client_")
+    except Exception:
         return False
 
 
