@@ -29,6 +29,7 @@ class TaskStatus(str, enum.Enum):
     DONE = "DONE"
     FAILED = "FAILED"
     DUPLICATE = "DUPLICATE"
+    BLOCKED_BY_SAFETY = "BLOCKED_BY_SAFETY"
 
 
 @dataclass

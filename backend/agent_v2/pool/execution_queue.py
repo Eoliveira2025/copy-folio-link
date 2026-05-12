@@ -19,6 +19,7 @@ from uuid import UUID
 
 from ..utils.logger import get_logger
 from ..exec.order_task import OrderTask, TaskStatus
+from ..exec.safety_guard import can_execute_order
 from .account_session import AccountSession, LoginFailedError
 
 
@@ -66,6 +67,7 @@ class ExecutionQueue:
         account_login_resolver: Callable[[UUID], int],
         handler: TaskHandler = _default_dry_run_handler,
         idempotency_cache: Optional[_IdempotencyCache] = None,
+        account_type_resolver: Optional[Callable[[UUID], str]] = None,
     ):
         self.pool_id = pool_id
         self.terminal_id = terminal_id
@@ -74,6 +76,9 @@ class ExecutionQueue:
         self.account_login_resolver = account_login_resolver
         self.handler = handler
         self._idem = idempotency_cache or _IdempotencyCache()
+        # Default: treat unknown accounts as 'demo' so DRY_RUN/DEMO_ONLY tests
+        # pass without DB. Real wiring lands in increment 5 (account registry).
+        self.account_type_resolver = account_type_resolver or (lambda _aid: "demo")
         self._q: "Queue[Optional[OrderTask]]" = Queue()
         self._worker: Optional[threading.Thread] = None
         self._stop = threading.Event()
@@ -151,10 +156,42 @@ class ExecutionQueue:
             )
             return
 
+        # ── Safety guard: DRY_RUN / DEMO_ONLY / LIVE_WHITELIST ────
+        try:
+            account_type = self.account_type_resolver(task.account_id) or "demo"
+        except Exception:
+            account_type = "demo"
+        decision = can_execute_order(task.account_id, login, account_type)
+        guard_fields = {**decision.log_fields(), "account_type": account_type}
+
         try:
             with self.session.acquire(
                 account_id=task.account_id, login=login
             ) as session_info:
+                if not decision.allowed:
+                    # Block real order_send. In DRY_RUN we still simulate via
+                    # the dry-run handler so the queue exercises end-to-end.
+                    if decision.simulate_only:
+                        retcode = self.handler(task, session_info)
+                        latency_ms = (time.monotonic() - t0) * 1000.0
+                        task.status = TaskStatus.DONE
+                        log.info(
+                            "task simulated (dry_run)",
+                            extra={
+                                "action": "task_simulated",
+                                "retcode": retcode,
+                                "latency_ms": round(latency_ms, 2),
+                                **guard_fields,
+                            },
+                        )
+                        return
+                    task.status = TaskStatus.BLOCKED_BY_SAFETY
+                    task.failure_reason = decision.reason_if_blocked
+                    log.warning(
+                        "task blocked by safety",
+                        extra={"action": "task_blocked_by_safety", **guard_fields},
+                    )
+                    return
                 retcode = self.handler(task, session_info)
                 latency_ms = (time.monotonic() - t0) * 1000.0
                 task.status = TaskStatus.DONE
@@ -168,6 +205,7 @@ class ExecutionQueue:
                             session_info.get("login_latency_ms", 0.0), 2
                         ),
                         "switched": session_info.get("switched", False),
+                        **guard_fields,
                     },
                 )
         except LoginFailedError as e:
