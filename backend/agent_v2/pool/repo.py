@@ -142,3 +142,94 @@ def next_pool_name(strategy_key: str, existing: Iterable[str]) -> str:
     while n in used_nums:
         n += 1
     return f"{prefix}{n:02d}"
+
+
+# ──────────────────────────────────────────────────────────────────
+# account_terminal_map
+# ──────────────────────────────────────────────────────────────────
+@dataclass
+class AccountMappingRow:
+    account_id: UUID
+    pool_id: UUID
+    terminal_id: UUID
+    master_id: UUID
+    strategy_id: UUID
+
+
+def get_account_mapping(account_id: UUID) -> Optional[AccountMappingRow]:
+    with session_scope() as s:
+        row = s.execute(
+            text(
+                "SELECT account_id, pool_id, terminal_id, master_id, strategy_id "
+                "FROM account_terminal_map WHERE account_id = :aid"
+            ),
+            {"aid": str(account_id)},
+        ).fetchone()
+    if not row:
+        return None
+    return AccountMappingRow(
+        account_id=row.account_id,
+        pool_id=row.pool_id,
+        terminal_id=row.terminal_id,
+        master_id=row.master_id,
+        strategy_id=row.strategy_id,
+    )
+
+
+def insert_account_mapping(
+    *,
+    account_id: UUID,
+    pool_id: UUID,
+    terminal_id: UUID,
+    master_id: UUID,
+    strategy_id: UUID,
+) -> AccountMappingRow:
+    with session_scope() as s:
+        s.execute(
+            text(
+                "INSERT INTO account_terminal_map "
+                "(account_id, pool_id, terminal_id, master_id, strategy_id) "
+                "VALUES (:aid,:pid,:tid,:mid,:sid)"
+            ),
+            {
+                "aid": str(account_id),
+                "pid": str(pool_id),
+                "tid": str(terminal_id),
+                "mid": str(master_id),
+                "sid": str(strategy_id),
+            },
+        )
+        # bump pool load atomically
+        s.execute(
+            text(
+                "UPDATE pool_terminal SET current_load = current_load + 1, "
+                "updated_at = now() WHERE id = :pid"
+            ),
+            {"pid": str(pool_id)},
+        )
+    return AccountMappingRow(
+        account_id=account_id, pool_id=pool_id, terminal_id=terminal_id,
+        master_id=master_id, strategy_id=strategy_id,
+    )
+
+
+def delete_account_mapping(account_id: UUID) -> None:
+    with session_scope() as s:
+        row = s.execute(
+            text("SELECT pool_id FROM account_terminal_map WHERE account_id = :aid"),
+            {"aid": str(account_id)},
+        ).fetchone()
+        if not row:
+            return
+        s.execute(
+            text("DELETE FROM account_terminal_map WHERE account_id = :aid"),
+            {"aid": str(account_id)},
+        )
+        s.execute(
+            text(
+                "UPDATE pool_terminal SET current_load = GREATEST(current_load - 1, 0), "
+                "updated_at = now() WHERE id = :pid"
+            ),
+            {"pid": str(row.pool_id)},
+        )
+

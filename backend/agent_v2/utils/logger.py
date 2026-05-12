@@ -20,7 +20,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any
 
-from .config import get_v2_settings
+from ..config import get_v2_settings
 
 _CTX_FIELDS = (
     "master_id",
