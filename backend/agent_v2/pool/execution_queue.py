@@ -205,6 +205,7 @@ class ExecutionQueue:
                             session_info.get("login_latency_ms", 0.0), 2
                         ),
                         "switched": session_info.get("switched", False),
+                        **guard_fields,
                     },
                 )
         except LoginFailedError as e:
