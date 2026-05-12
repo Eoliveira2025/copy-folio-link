@@ -57,6 +57,14 @@ class AgentV2Settings(BaseSettings):
     MAX_SLIPPAGE_POINTS: int = 30
     SLIPPAGE_REJECT_ENABLED: bool = True
 
+    # Circuit breaker (per pool)
+    POOL_CB_FAILURE_THRESHOLD: int = 5      # consecutive failures → FAILED
+    POOL_CB_RESET_AFTER_SUCCESS: bool = True
+
+    # Rate limit (per pool, token bucket)
+    POOL_RATE_LIMIT_PER_S: float = 20.0
+    POOL_RATE_LIMIT_BURST: int = 20
+
     # ── Lot calculation ───────────────────────────────────────────
     MIN_LOT: float = 0.01
     MAX_LOT: float = 100.0
