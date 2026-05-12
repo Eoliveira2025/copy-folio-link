@@ -19,6 +19,7 @@ from uuid import UUID
 
 from ..utils.logger import get_logger
 from ..exec.order_task import OrderTask, TaskStatus
+from ..exec.safety_guard import can_execute_order
 from .account_session import AccountSession, LoginFailedError
 
 
