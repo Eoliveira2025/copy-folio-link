@@ -286,6 +286,8 @@ def _execute_open(order: dict, ticket_map: Dict[int, int], log) -> dict:
 
 def _execute_close(order: dict, ticket_map: Dict[int, int], log) -> dict:
     """Close matching client position."""
+    _ensure_symbol(order.get("symbol", ""), log)
+
     master_ticket = order["master_ticket"]
     client_ticket = ticket_map.get(master_ticket)
 
