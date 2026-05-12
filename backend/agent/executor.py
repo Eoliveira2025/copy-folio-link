@@ -345,6 +345,8 @@ def _execute_close(order: dict, ticket_map: Dict[int, int], log) -> dict:
 
 def _execute_modify(order: dict, ticket_map: Dict[int, int], log) -> dict:
     """Modify SL/TP on client position."""
+    _ensure_symbol(order.get("symbol", ""), log)
+
     client_ticket = ticket_map.get(order["master_ticket"])
     if not client_ticket:
         order["status"] = "skipped"
