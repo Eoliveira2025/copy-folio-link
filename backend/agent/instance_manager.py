@@ -68,13 +68,20 @@ class MT5InstanceManager:
 
     # ── Public API ────────────────────────────────────────────────
 
-    def get_terminal_path(self, account_key: str) -> str:
+    def get_terminal_path(self, account_key: str, light: bool = False) -> str:
         """
         Return the terminal64.exe path for an account.
         Creates the instance folder (copies base MT5) if it doesn't exist.
 
         account_key: e.g. "master_<uuid>" or "client_<uuid>"
+        light: if True AND account_key starts with "client_", create a
+               minimal copy without heavy subdirs (Bases, MQL5/Experts,
+               MQL5/Indicators, MQL5/Scripts, Templates, Profiles).
+               Ignored for masters and for already-existing folders.
         """
+        # Safety: only clients may be light. Masters are NEVER altered.
+        light_effective = bool(light) and account_key.startswith("client_")
+
         with self._lock:
             if account_key in self._instances:
                 folder = Path(self._instances[account_key])
@@ -84,7 +91,7 @@ class MT5InstanceManager:
                 # Folder recorded but exe missing — recreate
                 logger.warning(f"Instance folder missing for {account_key}, recreating...")
 
-            folder = self._create_instance(account_key)
+            folder = self._create_instance(account_key, light=light_effective)
             self._instances[account_key] = str(folder)
             self._save_mapping()
             return str(folder / "terminal64.exe")
