@@ -153,9 +153,15 @@ class CopyAgent:
                 return
 
         # Get dedicated terminal path for this client
+        # AGENT_CLIENT_LIGHT only affects NEW client folders; existing ones are reused as-is.
         account_key = f"client_{client_id}"
-        terminal_path = self.instance_manager.get_terminal_path(account_key)
-        logger.info(f"Client {client.login} → instance: {terminal_path}")
+        terminal_path = self.instance_manager.get_terminal_path(
+            account_key, light=settings.AGENT_CLIENT_LIGHT
+        )
+        logger.info(
+            f"Client {client.login} → instance: {terminal_path} "
+            f"(light={settings.AGENT_CLIENT_LIGHT})"
+        )
 
         proc = multiprocessing.Process(
             target=executor_process,
