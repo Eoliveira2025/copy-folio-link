@@ -84,6 +84,19 @@ def executor_process(client_id: str, login: int, password: str, server: str,
     ticket_map: Dict[int, int] = {}  # master_ticket → client_ticket
     orders_processed = 0
 
+    # Optional: in-process close reconciler (off by default).
+    # Shares ticket_map with this worker; runs in a daemon thread.
+    reconciler = None
+    if settings.CLOSE_RECONCILER_ENABLED:
+        try:
+            from agent.close_reconciler import CloseReconciler
+            reconciler = CloseReconciler(client_id=client_id, log=log,
+                                         ticket_map=ticket_map)
+            reconciler.start()
+        except Exception as e:
+            log.error(f"CloseReconciler failed to start: {e}", exc_info=True)
+            reconciler = None
+
     log.info(f"Execution worker started, listening on {queue_key}")
 
     while True:
@@ -135,6 +148,17 @@ def executor_process(client_id: str, login: int, password: str, server: str,
                     delay = (settings.RETRY_BASE_DELAY_MS * (2 ** (attempt - 1))) / 1000.0
                     log.warning(f"Retry {attempt}/{order['max_attempts']} in {delay*1000:.0f}ms")
                     time.sleep(delay)
+
+            # Close reconciler hand-off (no-op when flag is OFF).
+            # Schedules a defensive verification for every CLOSE attempt:
+            #  - on failure  -> reconciler will retry / detect manual close
+            #  - on success  -> reconciler will confirm position truly gone
+            #  - on skipped  -> reconciler will confirm there was nothing left
+            if reconciler is not None and action == "close":
+                try:
+                    reconciler.enqueue(order)
+                except Exception as e:
+                    log.error(f"reconciler.enqueue failed: {e}")
 
             # Compute total latency
             detected_at = order.get("event_detected_at", 0)

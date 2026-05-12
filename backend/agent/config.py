@@ -32,6 +32,18 @@ class AgentSettings(BaseSettings):
     )
     AGENT_CLIENT_LIGHT_MAX_BARS: int = 1000
 
+    # ── Close Reconciler (off by default — defensive close verifier) ──
+    # When true, after every CLOSE attempt the executor schedules an
+    # in-process verification: it checks if the matching client position
+    # still exists and, if so, retries closing it at market price using
+    # progressive delays. Never fires duplicate closes; never touches
+    # unrelated positions; identifies positions by client_ticket (preferred)
+    # or by exact comment "CT:{master_ticket}" + symbol + magic match.
+    CLOSE_RECONCILER_ENABLED: bool = False
+    CLOSE_RECONCILER_MAX_ATTEMPTS: int = 5
+    CLOSE_RECONCILER_RETRY_DELAYS_SECONDS: str = "2,5,10,20,30"
+    CLOSE_RECONCILER_ACCEPT_MANUAL_CLOSE: bool = True
+
     # ── Master Listener ───────────────────────────────────────────
     MASTER_POLL_INTERVAL_MS: int = 50      # 50ms polling (20 polls/sec)
     ORDER_HISTORY_POLL_INTERVAL_MS: int = 100
