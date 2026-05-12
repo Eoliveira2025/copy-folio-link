@@ -156,10 +156,42 @@ class ExecutionQueue:
             )
             return
 
+        # ── Safety guard: DRY_RUN / DEMO_ONLY / LIVE_WHITELIST ────
+        try:
+            account_type = self.account_type_resolver(task.account_id) or "demo"
+        except Exception:
+            account_type = "demo"
+        decision = can_execute_order(task.account_id, login, account_type)
+        guard_fields = {**decision.log_fields(), "account_type": account_type}
+
         try:
             with self.session.acquire(
                 account_id=task.account_id, login=login
             ) as session_info:
+                if not decision.allowed:
+                    # Block real order_send. In DRY_RUN we still simulate via
+                    # the dry-run handler so the queue exercises end-to-end.
+                    if decision.simulate_only:
+                        retcode = self.handler(task, session_info)
+                        latency_ms = (time.monotonic() - t0) * 1000.0
+                        task.status = TaskStatus.DONE
+                        log.info(
+                            "task simulated (dry_run)",
+                            extra={
+                                "action": "task_simulated",
+                                "retcode": retcode,
+                                "latency_ms": round(latency_ms, 2),
+                                **guard_fields,
+                            },
+                        )
+                        return
+                    task.status = TaskStatus.BLOCKED_BY_SAFETY
+                    task.failure_reason = decision.reason_if_blocked
+                    log.warning(
+                        "task blocked by safety",
+                        extra={"action": "task_blocked_by_safety", **guard_fields},
+                    )
+                    return
                 retcode = self.handler(task, session_info)
                 latency_ms = (time.monotonic() - t0) * 1000.0
                 task.status = TaskStatus.DONE
