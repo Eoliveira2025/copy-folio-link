@@ -185,9 +185,36 @@ def executor_process(client_id: str, login: int, password: str, server: str,
             time.sleep(0.5)
 
 
+def _ensure_symbol(symbol: str, log) -> bool:
+    """
+    Defensive: make sure the symbol is selected in Market Watch before any
+    order_send / tick query. Required for client-light terminals that boot
+    without a profile/template.
+
+    Never raises. Returns True if symbol is selectable, False otherwise.
+    Does NOT alter copy/lot/open/close logic.
+    """
+    if not symbol:
+        return False
+    try:
+        info = mt5.symbol_info(symbol)
+        if info is not None and getattr(info, "visible", False):
+            return True
+        ok = mt5.symbol_select(symbol, True)
+        if not ok:
+            err = mt5.last_error()
+            log.error(f"symbol_select({symbol}) failed: {err}")
+            return False
+        return True
+    except Exception as e:
+        log.error(f"symbol_select({symbol}) raised: {e}")
+        return False
+
+
 def _execute_open(order: dict, ticket_map: Dict[int, int], log) -> dict:
     """Execute market order with slippage protection."""
     symbol = order["symbol"]
+    _ensure_symbol(symbol, log)
 
     # Slippage check
     if settings.SLIPPAGE_REJECT_ENABLED and order.get("master_price", 0) > 0:
