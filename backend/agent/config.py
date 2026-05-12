@@ -21,6 +21,17 @@ class AgentSettings(BaseSettings):
     MT5_INSTANCE_MAPPING_FILE: str = r"C:\MT5_Instances\instances.json"
     MT5_INIT_TIMEOUT_MS: int = 60000
 
+    # ── Client light mode (off by default — DOES NOT affect masters) ──
+    # When true, NEW client instance folders are created without heavy
+    # subdirs (Bases, MQL5/Experts, MQL5/Indicators, MQL5/Scripts,
+    # Templates, Profiles) and bootstrap writes a lighter common.ini.
+    # Existing client folders are NOT modified retroactively.
+    AGENT_CLIENT_LIGHT: bool = False
+    AGENT_CLIENT_LIGHT_SKIP_DIRS: str = (
+        "Bases,MQL5/Experts,MQL5/Indicators,MQL5/Scripts,Templates,Profiles"
+    )
+    AGENT_CLIENT_LIGHT_MAX_BARS: int = 1000
+
     # ── Master Listener ───────────────────────────────────────────
     MASTER_POLL_INTERVAL_MS: int = 50      # 50ms polling (20 polls/sec)
     ORDER_HISTORY_POLL_INTERVAL_MS: int = 100
