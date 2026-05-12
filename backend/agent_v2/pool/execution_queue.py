@@ -67,6 +67,7 @@ class ExecutionQueue:
         account_login_resolver: Callable[[UUID], int],
         handler: TaskHandler = _default_dry_run_handler,
         idempotency_cache: Optional[_IdempotencyCache] = None,
+        account_type_resolver: Optional[Callable[[UUID], str]] = None,
     ):
         self.pool_id = pool_id
         self.terminal_id = terminal_id
@@ -75,6 +76,9 @@ class ExecutionQueue:
         self.account_login_resolver = account_login_resolver
         self.handler = handler
         self._idem = idempotency_cache or _IdempotencyCache()
+        # Default: treat unknown accounts as 'demo' so DRY_RUN/DEMO_ONLY tests
+        # pass without DB. Real wiring lands in increment 5 (account registry).
+        self.account_type_resolver = account_type_resolver or (lambda _aid: "demo")
         self._q: "Queue[Optional[OrderTask]]" = Queue()
         self._worker: Optional[threading.Thread] = None
         self._stop = threading.Event()
