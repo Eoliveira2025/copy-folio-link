@@ -43,6 +43,14 @@ class AgentV2Settings(BaseSettings):
     SESSION_LOGIN_TIMEOUT_S: int = 15
     SESSION_STICKY_HOLD_MS: int = 500   # mantém conta logada se houver fila pendente
 
+    # ── Execution safety (DEMO → REAL path) ───────────────────────
+    # Modes: DRY_RUN | DEMO_ONLY | LIVE_WHITELIST
+    EXECUTION_MODE: str = "DRY_RUN"
+    ORDER_EXECUTION_ENABLED: bool = False
+    # Comma-separated lists of account_id (UUID) OR login (int)
+    LIVE_WHITELIST_ACCOUNTS: str = ""
+    DEMO_WHITELIST_ACCOUNTS: str = ""
+
     # ── Execution ─────────────────────────────────────────────────
     MAX_RETRY_ATTEMPTS: int = 3
     RETRY_BASE_DELAY_MS: int = 100
