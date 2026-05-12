@@ -136,7 +136,7 @@ class MT5InstanceManager:
 
     # ── Instance creation ─────────────────────────────────────────
 
-    def _create_instance(self, account_key: str) -> Path:
+    def _create_instance(self, account_key: str, light: bool = False) -> Path:
         """Copy the base MT5 installation to a new unique folder."""
         folder = self.instances_dir / account_key
 
@@ -148,23 +148,40 @@ class MT5InstanceManager:
             # Folder exists but no exe — remove and recreate
             shutil.rmtree(folder, ignore_errors=True)
 
-        logger.info(f"Creating MT5 instance: {self.base_path} → {folder}")
+        mode = "LIGHT" if light else "FULL"
+        logger.info(f"Creating MT5 instance ({mode}): {self.base_path} → {folder}")
         start = time.time()
 
+        # Build ignore patterns. Light mode (clients only) skips heavy subdirs.
+        ignore_patterns = ["Logs", "*.log"]
+        if light:
+            extra = [
+                p.strip() for p in
+                getattr(settings, "AGENT_CLIENT_LIGHT_SKIP_DIRS", "").split(",")
+                if p.strip()
+            ]
+            # shutil.ignore_patterns matches base names; include both raw and
+            # leaf segment so e.g. "MQL5/Experts" → "Experts" leaf is ignored
+            # when copytree visits the MQL5 directory.
+            for p in extra:
+                ignore_patterns.append(p)
+                leaf = p.replace("\\", "/").split("/")[-1]
+                if leaf and leaf not in ignore_patterns:
+                    ignore_patterns.append(leaf)
+
         try:
-            # Full copy of base installation
             shutil.copytree(
                 str(self.base_path),
                 str(folder),
                 dirs_exist_ok=True,
-                ignore=shutil.ignore_patterns("Logs", "*.log"),
+                ignore=shutil.ignore_patterns(*ignore_patterns),
             )
         except Exception as e:
             logger.error(f"Failed to copy MT5 base to {folder}: {e}")
             raise
 
         elapsed = time.time() - start
-        logger.info(f"Instance created in {elapsed:.1f}s: {folder}")
+        logger.info(f"Instance created in {elapsed:.1f}s ({mode}): {folder}")
 
         # Verify terminal exists
         exe = folder / "terminal64.exe"
