@@ -219,10 +219,13 @@ def bootstrap_and_connect(
 # ── Private helpers ──────────────────────────────────────────────────
 
 
-def _write_common_ini(instance_path: Path, login: int, server: str):
+def _write_common_ini(instance_path: Path, login: int, server: str, light: bool = False):
     """
     Write/update common.ini in the MT5 instance root.
     This is the PRIMARY config file MT5 reads on startup.
+
+    light=True → client-light mode: disable Experts at startup, reduce
+    MaxBars, ensure News disabled. Does NOT change copy logic.
     """
     ini_path = instance_path / "common.ini"
 
@@ -246,23 +249,51 @@ def _write_common_ini(instance_path: Path, login: int, server: str):
     config["Common"]["NewsEnable"] = "0"
     config["Common"]["CertInstall"] = "1"
 
-    # Disable UI elements for headless operation
     if "StartUp" not in config:
         config["StartUp"] = {}
-    config["StartUp"]["Expert"] = "1"
-    config["StartUp"]["ExpertEnabled"] = "1"
-    config["StartUp"]["OneClick"] = "0"
+
+    if light:
+        # Client-light: no EAs, reduced bars, no profile/template load.
+        try:
+            from agent.config import get_agent_settings
+            max_bars = int(get_agent_settings().AGENT_CLIENT_LIGHT_MAX_BARS)
+        except Exception:
+            max_bars = 1000
+
+        config["StartUp"]["Expert"] = "0"
+        config["StartUp"]["ExpertEnabled"] = "0"
+        config["StartUp"]["OneClick"] = "0"
+        config["StartUp"]["Profile"] = ""
+        config["StartUp"]["Template"] = ""
+
+        if "Experts" not in config:
+            config["Experts"] = {}
+        config["Experts"]["Enabled"] = "0"
+        config["Experts"]["AllowLiveTrading"] = "0"
+        config["Experts"]["AllowDllImport"] = "0"
+
+        if "Charts" not in config:
+            config["Charts"] = {}
+        config["Charts"]["MaxBars"] = str(max_bars)
+        config["Charts"]["ProfileLast"] = ""
+
+        config["Common"]["NewsEnable"] = "0"
+    else:
+        # Default behaviour (unchanged)
+        config["StartUp"]["Expert"] = "1"
+        config["StartUp"]["ExpertEnabled"] = "1"
+        config["StartUp"]["OneClick"] = "0"
 
     # Write as UTF-16 (MT5 native encoding)
     try:
         with open(ini_path, "w", encoding="utf-16") as f:
             config.write(f)
-        logger.debug(f"[Bootstrap] Wrote common.ini: {ini_path}")
+        logger.debug(f"[Bootstrap] Wrote common.ini (light={light}): {ini_path}")
     except Exception:
         # Fallback to UTF-8 if UTF-16 fails
         with open(ini_path, "w", encoding="utf-8") as f:
             config.write(f)
-        logger.debug(f"[Bootstrap] Wrote common.ini (utf-8 fallback): {ini_path}")
+        logger.debug(f"[Bootstrap] Wrote common.ini utf-8 fallback (light={light}): {ini_path}")
 
 
 def _write_origin_ini(instance_path: Path, server: str):
