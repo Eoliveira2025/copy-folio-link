@@ -166,15 +166,20 @@ class OrderExecutor:
                 log, task, session_info,
             )
 
-        # 5) symbol_select + tick
-        if not mt5.symbol_select(task.symbol, True):
-            self._fail(f"SYMBOL_SELECT_FAILED:{task.symbol}", log, task, session_info)
-        sym = mt5.symbol_info(task.symbol)
+        # 5) symbol resolution + select + tick
+        broker_symbol = SymbolDiscoveryService.resolve(task.account_id, task.symbol)
+        
+        if not mt5.symbol_select(broker_symbol, True):
+            self._fail(f"SYMBOL_SELECT_FAILED:{broker_symbol}", log, task, session_info)
+        sym = mt5.symbol_info(broker_symbol)
         if sym is None:
-            self._fail(f"SYMBOL_INFO_NONE:{task.symbol}", log, task, session_info)
-        tick = mt5.symbol_info_tick(task.symbol)
+            self._fail(f"SYMBOL_INFO_NONE:{broker_symbol}", log, task, session_info)
+        tick = mt5.symbol_info_tick(broker_symbol)
         if tick is None or not tick.bid or not tick.ask:
-            self._fail(f"BAD_TICK:{task.symbol}", log, task, session_info)
+            self._fail(f"BAD_TICK:{broker_symbol}", log, task, session_info)
+
+        # Update task symbol to the resolved one for subsequent mt5 calls
+        task.symbol = broker_symbol
 
         if task.action == OrderAction.OPEN:
             return self._do_open(mt5, sym, tick, task, session_info, log)
