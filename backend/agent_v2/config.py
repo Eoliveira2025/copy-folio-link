@@ -110,15 +110,21 @@ class AgentV2Settings(BaseSettings):
 
     # ── Institutional Upgrades ────────────────────────────────────
     V2_INSTITUTIONAL_SAFE_MODE_ENABLED: bool = False
-    V2_PROCESS_RECYCLER_ENABLED: bool = False
-    V2_RESOURCE_GUARD_ENABLED: bool = False
-    V2_EXECUTION_DEDUP_ENABLED: bool = False
+    V2_PROCESS_RECYCLER_ENABLED: bool = True  # Enabled for recycling/reuse
+    V2_RESOURCE_GUARD_ENABLED: bool = True   # Enabled for admission control
+    V2_EXECUTION_DEDUP_ENABLED: bool = True
     V2_AUTO_RECOVERY_AFTER_REBOOT: bool = False
     V2_HEARTBEAT_INTERVAL_S: int = 5
-    V2_VPS_ID: str = "institutional-01"  # Unique ID for each VPS
+    V2_VPS_ID: str = "institutional-01"
     V2_DISTRIBUTED_LOCK_TTL_S: int = 10
-    V2_SHADOW_MODE: bool = False        # If true, log but don't execute orders
-    V2_ROUTING_VERSION: str = "v2"      # This VPS only executes 'v2' accounts
+    V2_SHADOW_MODE: bool = False
+    V2_ROUTING_VERSION: str = "v2"
+    
+    # ── Operational Density ──────────────────────────────────────
+    V2_MAX_ACCOUNTS_PER_VPS: int = 100        # Target for high density
+    V2_CAPACITY_LIMIT_PCT: float = 0.9       # Admit up to 90% of max
+    V2_RAM_PER_TERMINAL_MB: int = 60         # Expected footprint after optimization
+
 
 
     # ── Redis tuning ──────────────────────────────────────────────
