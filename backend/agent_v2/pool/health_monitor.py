@@ -54,7 +54,7 @@ class HealthMonitor:
         for t in terminals:
             # Check process liveness
             if not t.is_alive():
-                self.log.warning("terminal process dead, restarting", terminal_id=str(t.terminal_id))
+                self.log.warning("terminal process dead, restarting", extra={"terminal_id": str(t.terminal_id)})
                 t.start()
                 continue
             
