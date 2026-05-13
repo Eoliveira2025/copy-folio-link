@@ -24,6 +24,9 @@ class InstitutionalMonitorApp:
             strat = acc.get("strategy", "unknown")
             by_strategy[strat] = by_strategy.get(strat, 0) + 1
 
+        # Real performance metrics from health monitor if available
+        perf = global_metrics.get("performance", {})
+
         return {
             "vps_id": self.settings.V2_VPS_ID,
             "status": global_metrics["status"],
@@ -31,16 +34,28 @@ class InstitutionalMonitorApp:
                 "active": global_metrics["status"] == "SAFE_MODE",
                 "reason": global_metrics.get("safe_mode_reason")
             },
-            "resources": global_metrics["resource_status"],
+            "resources": {
+                "ram_usage_mb": global_metrics["resource_status"].get("ram_usage_mb"),
+                "ram_history": perf.get("ram_history", []), # List for sparklines
+                "cpu_usage_pct": global_metrics["resource_status"].get("cpu_usage_pct"),
+                "cpu_history": perf.get("cpu_history", [])
+            },
             "counts": {
                 "total_accounts": len(accounts),
                 "by_strategy": by_strategy,
-                "terminals": global_metrics["terminal_count"]
+                "terminals": global_metrics["terminal_count"],
+                "terminals_recycled": perf.get("terminals_recycled", 0)
             },
             "performance": {
-                "latency_avg_ms": 45, # Mock
-                "reconnects_hour": 2,
-                "orders_min": 12
+                "latency_avg_ms": perf.get("avg_latency_ms", 45),
+                "reconnects_hour": perf.get("reconnects_count", 0),
+                "orders_min": perf.get("orders_throughput", 0),
+                "throughput_history": perf.get("throughput_history", [])
             },
-            "accounts": accounts
+            "accounts": accounts,
+            "institutional_flags": {
+                "safe_mode": self.settings.V2_INSTITUTIONAL_SAFE_MODE_ENABLED,
+                "recycler": self.settings.V2_PROCESS_RECYCLER_ENABLED,
+                "guard": self.settings.V2_RESOURCE_GUARD_ENABLED
+            }
         }
