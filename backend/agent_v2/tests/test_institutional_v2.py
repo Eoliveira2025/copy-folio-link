@@ -13,7 +13,7 @@ sys.modules['MetaTrader5'] = MagicMock()
 from backend.agent_v2.pool.strategy_router import StrategyRouter
 from backend.agent_v2.pool.terminal_process import PooledTerminalProcess
 from backend.agent_v2.pool.account_session import AccountSession
-from backend.agent_v2.exec.order_task import OrderTask
+from backend.agent_v2.exec.order_task import OrderTask, OrderAction
 
 class TestInstitutionalV2(unittest.TestCase):
 
@@ -26,6 +26,9 @@ class TestInstitutionalV2(unittest.TestCase):
         
         self.account_low = uuid4()
         self.account_medium = uuid4()
+        self.master_id = uuid4()
+        self.pool_id = uuid4()
+        self.terminal_id = uuid4()
 
     def test_strategy_isolation(self):
         """Test that LOW client cannot receive MEDIUM order."""
@@ -36,20 +39,24 @@ class TestInstitutionalV2(unittest.TestCase):
         # Mapping for LOW account
         low_mapping = MagicMock()
         low_mapping.strategy_id = self.low_strategy
-        low_mapping.terminal_id = uuid4()
+        low_mapping.terminal_id = self.terminal_id
         
         repo.get_account_mapping.return_value = low_mapping
         
         # 2. Create task for LOW account
         task = OrderTask(
             account_id=self.account_low,
+            pool_id=self.pool_id,
+            terminal_id=self.terminal_id,
+            master_id=self.master_id,
+            strategy_id=self.low_strategy, # Task says it's for LOW
             master_ticket=123,
             symbol="EURUSD",
-            action="OPEN",
+            action=OrderAction.OPEN,
             volume=0.01
         )
         
-        # 3. Attempt to route with MEDIUM strategy
+        # 3. Attempt to route with MEDIUM strategy (master says it's MEDIUM)
         result = self.router.route_and_execute(task, master_strategy_id=self.medium_strategy)
         
         # 4. Must be blocked
@@ -63,7 +70,7 @@ class TestInstitutionalV2(unittest.TestCase):
         
         mapping = MagicMock()
         mapping.strategy_id = self.low_strategy
-        mapping.terminal_id = uuid4()
+        mapping.terminal_id = self.terminal_id
         repo.get_account_mapping.return_value = mapping
         
         details = MagicMock()
@@ -80,9 +87,13 @@ class TestInstitutionalV2(unittest.TestCase):
         
         task = OrderTask(
             account_id=self.account_low,
+            pool_id=self.pool_id,
+            terminal_id=self.terminal_id,
+            master_id=self.master_id,
+            strategy_id=self.low_strategy,
             master_ticket=123,
             symbol="EURUSD",
-            action="OPEN",
+            action=OrderAction.OPEN,
             volume=0.01
         )
         
