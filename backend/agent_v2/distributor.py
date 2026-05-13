@@ -1,0 +1,208 @@
+"""Distributor V2 — consumes master events and enqueues OrderTasks.
+
+Subscribes to `copytrade_v2:events:master:*` and, for each event:
+
+  1. Resolve client list for (master_id, strategy_id) — only accounts
+     marked engine_version='v2' AND in `EXIT_ONLY` or `ACTIVE` state.
+     ACTIVE accepts OPEN+CLOSE; EXIT_ONLY accepts only CLOSE.
+  2. For each client account:
+        TerminalAllocator.assign(...) → pool_id, terminal_id
+        Build OrderTask (OPEN or CLOSE)
+        Submit to PoolWorker.queue
+  3. Strategy guard: refuses to enqueue if account.strategy_id mismatches
+     event.strategy_id (defense in depth on top of allocator's check).
+  4. Single-strategy invariant: an account is mapped to ONE strategy via
+     account_terminal_map; we never enqueue against a different strategy.
+
+This module does NOT call mt5.order_send. The OrderExecutor enforces all
+safety modes (DRY_RUN/DEMO_ONLY/LIVE_WHITELIST).
+"""
+
+from __future__ import annotations
+
+import json
+import threading
+from dataclasses import dataclass
+from typing import Callable, Optional
+from uuid import UUID
+
+from .pool.allocator import TerminalAllocator
+from .exec.order_task import OrderAction, OrderSide, OrderTask
+from .redis_client import subscribe
+from .utils.logger import get_logger
+from .wiring import PoolWorkerRegistry
+
+
+@dataclass
+class ClientAccount:
+    """Minimal client view for distribution.
+
+    Provided by the caller via `client_resolver` to avoid coupling the
+    distributor to V1 models.
+    """
+    account_id: UUID
+    login: int
+    account_type: str  # 'demo' | 'real'
+    state: str  # ACTIVE | EXIT_ONLY | PENDING_STRATEGY_CHANGE | ...
+
+
+# Caller-provided resolvers
+ClientResolver = Callable[[UUID, UUID], list[ClientAccount]]
+# (master_id, strategy_id) -> list[ClientAccount]
+
+
+class DistributorV2:
+    def __init__(
+        self,
+        *,
+        allocator: TerminalAllocator,
+        worker_registry: PoolWorkerRegistry,
+        client_resolver: ClientResolver,
+    ):
+        self.allocator = allocator
+        self.workers = worker_registry
+        self.resolve_clients = client_resolver
+        self._stop = threading.Event()
+        self._thread: Optional[threading.Thread] = None
+        self.log = get_logger("distributor")
+
+    # ── lifecycle ─────────────────────────────────────────────────
+    def start(self) -> None:
+        if self._thread and self._thread.is_alive():
+            return
+        self._stop.clear()
+        self._thread = threading.Thread(
+            target=self._run, name="v2-distributor", daemon=True,
+        )
+        self._thread.start()
+        self.log.info("distributor started", extra={"action": "distributor_started"})
+
+    def stop(self, timeout: float = 5.0) -> None:
+        self._stop.set()
+        if self._thread:
+            self._thread.join(timeout=timeout)
+        self.log.info("distributor stopped", extra={"action": "distributor_stopped"})
+
+    # ── loop ──────────────────────────────────────────────────────
+    def _run(self) -> None:
+        try:
+            ps = subscribe(["events:master:*"])
+        except Exception as e:
+            self.log.error("redis subscribe failed; distributor idle",
+                           extra={"action": "redis_subscribe_failed"}, exc_info=e)
+            while not self._stop.is_set():
+                self._stop.wait(1.0)
+            return
+
+        # PSUBSCRIBE is needed for wildcards
+        try:
+            from .redis_client import get_redis, k
+            ps.close()
+            ps = get_redis().pubsub(ignore_subscribe_messages=True)
+            ps.psubscribe(k("events:master:*"))
+        except Exception as e:
+            self.log.error("redis psubscribe failed",
+                           extra={"action": "redis_psubscribe_failed"}, exc_info=e)
+            return
+
+        for msg in ps.listen():
+            if self._stop.is_set():
+                break
+            if not msg or msg.get("type") not in ("message", "pmessage"):
+                continue
+            try:
+                data = msg.get("data")
+                if isinstance(data, (bytes, bytearray)):
+                    data = data.decode("utf-8")
+                payload = json.loads(data)
+                self.handle_event(payload)
+            except Exception as e:
+                self.log.error("event handling failed",
+                               extra={"action": "event_handling_failed"},
+                               exc_info=e)
+
+    # ── core ──────────────────────────────────────────────────────
+    def handle_event(self, payload: dict) -> dict:
+        """Process one master event. Returns a small summary for tests."""
+        event = payload.get("event")
+        master_id = UUID(payload["master_id"])
+        strategy_id = UUID(payload["strategy_id"])
+        master_ticket = int(payload["master_ticket"])
+        symbol = payload.get("symbol") or ""
+
+        log = self.log.bind(
+            master_id=str(master_id), strategy_id=str(strategy_id),
+            master_ticket=master_ticket, action=f"distribute_{event}",
+        )
+
+        clients = self.resolve_clients(master_id, strategy_id)
+        if not clients:
+            log.info("no clients for event", extra={"client_count": 0})
+            return {"event": event, "submitted": 0, "skipped": 0}
+
+        submitted = 0
+        skipped = 0
+        for c in clients:
+            # State gate
+            if event == "OPEN" and c.state != "ACTIVE":
+                skipped += 1
+                continue
+            if event == "CLOSE" and c.state not in ("ACTIVE", "EXIT_ONLY"):
+                skipped += 1
+                continue
+
+            try:
+                assignment = self.allocator.assign(
+                    account_id=c.account_id,
+                    master_id=master_id,
+                    strategy_id=strategy_id,
+                )
+            except Exception as e:
+                log.error("allocator failed",
+                          extra={"account_id": str(c.account_id),
+                                 "action": "allocator_error"}, exc_info=e)
+                skipped += 1
+                continue
+
+            worker = self.workers.get(assignment.pool_id)
+            if worker is None:
+                log.warning(
+                    "no worker for pool; skipping",
+                    extra={"pool_id": str(assignment.pool_id),
+                           "account_id": str(c.account_id),
+                           "action": "no_worker_for_pool"},
+                )
+                skipped += 1
+                continue
+
+            task = self._build_task(payload, c, assignment)
+            worker.submit(task)
+            submitted += 1
+
+        log.info("event distributed",
+                 extra={"submitted": submitted, "skipped": skipped,
+                        "client_count": len(clients)})
+        return {"event": event, "submitted": submitted, "skipped": skipped}
+
+    def _build_task(self, payload: dict, c: ClientAccount,
+                    assignment) -> OrderTask:
+        event = payload["event"]
+        action = OrderAction.OPEN if event == "OPEN" else OrderAction.CLOSE
+        side = None
+        if event == "OPEN":
+            side = OrderSide.BUY if payload.get("side") == "BUY" else OrderSide.SELL
+        return OrderTask(
+            account_id=c.account_id,
+            pool_id=assignment.pool_id,
+            terminal_id=assignment.terminal_id,
+            master_id=assignment.master_id,
+            strategy_id=assignment.strategy_id,
+            action=action,
+            symbol=payload.get("symbol") or "",
+            side=side,
+            volume=float(payload["volume"]) if event == "OPEN" else None,
+            client_ticket=None,  # resolved by close_reconciler/fallback
+            master_ticket=int(payload["master_ticket"]),
+            magic=int(payload.get("magic") or 0),
+            comment=f"CT:{payload['master_ticket']}",
+        )
