@@ -30,20 +30,18 @@ from .pool.allocator import TerminalAllocator
 from .exec.order_task import OrderAction, OrderSide, OrderTask
 from .redis_client import subscribe
 from .utils.logger import get_logger
+from .utils.trading import VolumeCalculator, SymbolMapper, get_master_stats
 from .wiring import PoolWorkerRegistry
 
 
 @dataclass
 class ClientAccount:
-    """Minimal client view for distribution.
-
-    Provided by the caller via `client_resolver` to avoid coupling the
-    distributor to V1 models.
-    """
+    """Minimal client view for distribution."""
     account_id: UUID
     login: int
     account_type: str  # 'demo' | 'real'
     state: str  # ACTIVE | EXIT_ONLY | PENDING_STRATEGY_CHANGE | ...
+    balance: float = 1000.0 # Loaded by resolver
 
 
 # Caller-provided resolvers
@@ -58,10 +56,12 @@ class DistributorV2:
         allocator: TerminalAllocator,
         worker_registry: PoolWorkerRegistry,
         client_resolver: ClientResolver,
+        symbol_mapper: Optional[SymbolMapper] = None,
     ):
         self.allocator = allocator
         self.workers = worker_registry
         self.resolve_clients = client_resolver
+        self.symbol_mapper = symbol_mapper or SymbolMapper(default_suffix="m")
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self.log = get_logger("distributor")
@@ -188,9 +188,26 @@ class DistributorV2:
                     assignment) -> OrderTask:
         event = payload["event"]
         action = OrderAction.OPEN if event == "OPEN" else OrderAction.CLOSE
+        
+        symbol = self.symbol_mapper.map(payload.get("symbol") or "")
+        
+        volume = None
+        if event == "OPEN":
+            master_vol = float(payload["volume"])
+            master_stats = get_master_stats(assignment.master_id)
+            master_balance = master_stats.get("balance", 0.0)
+            
+            # Simple scaling
+            volume = VolumeCalculator.calculate(
+                master_volume=master_vol,
+                master_balance=master_balance,
+                client_balance=c.balance
+            )
+
         side = None
         if event == "OPEN":
             side = OrderSide.BUY if payload.get("side") == "BUY" else OrderSide.SELL
+
         return OrderTask(
             account_id=c.account_id,
             pool_id=assignment.pool_id,
@@ -198,9 +215,9 @@ class DistributorV2:
             master_id=assignment.master_id,
             strategy_id=assignment.strategy_id,
             action=action,
-            symbol=payload.get("symbol") or "",
+            symbol=symbol,
             side=side,
-            volume=float(payload["volume"]) if event == "OPEN" else None,
+            volume=volume,
             client_ticket=None,  # resolved by close_reconciler/fallback
             master_ticket=int(payload["master_ticket"]),
             magic=int(payload.get("magic") or 0),

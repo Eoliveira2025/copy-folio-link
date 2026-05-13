@@ -233,3 +233,77 @@ def delete_account_mapping(account_id: UUID) -> None:
             {"pid": str(row.pool_id)},
         )
 
+
+# ──────────────────────────────────────────────────────────────────
+# Accounts / Credentials
+# ──────────────────────────────────────────────────────────────────
+@dataclass
+class AccountDetails:
+    id: UUID
+    login: int
+    encrypted_password: str
+    server: str
+    account_type: str  # demo / real
+
+
+def get_account_details(account_id: UUID) -> Optional[AccountDetails]:
+    with session_scope() as s:
+        row = s.execute(
+            text(
+                "SELECT id, login, encrypted_password, server, account_type "
+                "FROM mt5_accounts WHERE id = :aid"
+            ),
+            {"aid": str(account_id)},
+        ).fetchone()
+    if not row:
+        return None
+    return AccountDetails(
+        id=row.id,
+        login=int(row.login),
+        encrypted_password=row.encrypted_password,
+        server=row.server,
+        account_type=row.account_type,
+    )
+
+
+# ──────────────────────────────────────────────────────────────────
+# Orders
+# ──────────────────────────────────────────────────────────────────
+def insert_v2_order(
+    *,
+    account_id: UUID,
+    pool_id: UUID,
+    master_id: UUID,
+    strategy_id: UUID,
+    master_ticket: int,
+    client_ticket: Optional[int] = None,
+    deal_ticket: Optional[int] = None,
+    symbol: str,
+    action: str,
+    side: Optional[str],
+    volume: float,
+    price: Optional[float],
+    status: str,
+    retcode: Optional[int] = None,
+    broker_comment: Optional[str] = None,
+    order_latency_ms: Optional[float] = None,
+    login_latency_ms: Optional[float] = None,
+) -> None:
+    with session_scope() as s:
+        s.execute(
+            text(
+                "INSERT INTO v2_orders "
+                "(account_id, pool_id, master_id, strategy_id, master_ticket, "
+                " client_ticket, deal_ticket, symbol, action, side, volume, price, "
+                " status, retcode, broker_comment, order_latency_ms, login_latency_ms) "
+                "VALUES (:aid,:pid,:mid,:sid,:mt,:ct,:dt,:sym,:act,:side,:vol,:pr,:st,:rc,:bc,:ol,:ll)"
+            ),
+            {
+                "aid": str(account_id), "pid": str(pool_id), "mid": str(master_id),
+                "sid": str(strategy_id), "mt": master_ticket, "ct": client_ticket,
+                "dt": deal_ticket, "sym": symbol, "act": action, "side": side,
+                "vol": volume, "pr": price, "st": status, "rc": retcode,
+                "bc": broker_comment, "ol": order_latency_ms, "ll": login_latency_ms,
+            },
+        )
+
