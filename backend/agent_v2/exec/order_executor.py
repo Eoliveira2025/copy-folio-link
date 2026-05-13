@@ -345,3 +345,30 @@ class OrderExecutor:
                 "circuit_open": self.cb.is_open(),
             },
         )
+        
+        # Persist to v2_orders (best effort)
+        try:
+            status = "DONE" if retcode >= 0 and retcode < 20000 else "FAILED"
+            if retcode == 10009: status = "DONE" # TRADE_RETCODE_DONE
+            
+            insert_v2_order(
+                account_id=task.account_id,
+                pool_id=self.pool_id,
+                master_id=self.master_id,
+                strategy_id=self.strategy_id,
+                master_ticket=task.master_ticket or 0,
+                client_ticket=order_ticket,
+                deal_ticket=deal_ticket,
+                symbol=task.symbol,
+                action=task.action.value if hasattr(task.action, 'value') else str(task.action),
+                side=task.side.value if task.side and hasattr(task.side, 'value') else (str(task.side) if task.side else None),
+                volume=float(task.volume) if task.volume else 0.0,
+                price=None, # will be updated by reconciler or history poll
+                status=status,
+                retcode=retcode,
+                broker_comment=comment,
+                order_latency_ms=order_latency_ms,
+                login_latency_ms=login_latency_ms,
+            )
+        except Exception as e:
+            log.error("failed to persist v2_order", exc_info=e)
