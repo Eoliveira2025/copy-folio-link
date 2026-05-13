@@ -29,7 +29,7 @@ class SessionManager:
         with self._lock:
             ctx = self._sessions.pop(account_id, None)
             if ctx:
-                self.log.info("session removed", account_id=str(account_id))
+                self.log.info("session removed", extra={"account_id": str(account_id)})
             return ctx
 
     def get_session(self, account_id: UUID) -> Optional[AccountContext]:
