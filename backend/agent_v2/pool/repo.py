@@ -307,3 +307,43 @@ def insert_v2_order(
             },
         )
 
+
+# ──────────────────────────────────────────────────────────────────
+# account_symbol_map
+# ──────────────────────────────────────────────────────────────────
+def get_symbol_map(account_id: UUID, raw_symbol: str) -> Optional[dict]:
+    with session_scope() as s:
+        row = s.execute(
+            text(
+                "SELECT broker_symbol, source FROM account_symbol_map "
+                "WHERE account_id = :aid AND raw_symbol = :raw"
+            ),
+            {"aid": str(account_id), "raw": raw_symbol},
+        ).fetchone()
+    if not row:
+        return None
+    return {"broker_symbol": row.broker_symbol, "source": row.source}
+
+
+def upsert_symbol_map(
+    account_id: UUID, raw_symbol: str, broker_symbol: str, source: str
+) -> None:
+    with session_scope() as s:
+        s.execute(
+            text(
+                "INSERT INTO account_symbol_map (account_id, raw_symbol, broker_symbol, source) "
+                "VALUES (:aid, :raw, :brk, :src) "
+                "ON CONFLICT (account_id, raw_symbol) DO UPDATE "
+                "SET broker_symbol = EXCLUDED.broker_symbol, "
+                "    source = EXCLUDED.source, "
+                "    last_seen_at = now()"
+            ),
+            {
+                "aid": str(account_id),
+                "raw": raw_symbol,
+                "brk": broker_symbol,
+                "src": source,
+            },
+        )
+
+
