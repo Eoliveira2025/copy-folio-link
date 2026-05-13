@@ -52,6 +52,7 @@ def build_pool_worker(
     *,
     pool: TerminalPool,
     account_login_resolver: Callable[[UUID], int],
+    account_details_loader: Callable[[UUID], Optional[AccountDetails]],
     account_type_resolver: Optional[Callable[[UUID], str]] = None,
 ) -> PoolWorker:
     """Wire the full chain for a single pool/terminal."""
@@ -64,6 +65,7 @@ def build_pool_worker(
         pool_id=pool.id,
         terminal_id=pool.id,  # 1 terminal per pool in current scheme
         terminal_path=pool.terminal_path,
+        account_details_loader=account_details_loader,
     )
 
     # When the breaker trips, mark the pool FAILED in DB so allocator
@@ -106,6 +108,7 @@ class PoolWorkerRegistry:
         pool: TerminalPool,
         *,
         account_login_resolver: Callable[[UUID], int],
+        account_details_loader: Callable[[UUID], Optional[AccountDetails]],
         account_type_resolver: Optional[Callable[[UUID], str]] = None,
     ) -> PoolWorker:
         with self._lock:
@@ -115,6 +118,7 @@ class PoolWorkerRegistry:
             w = build_pool_worker(
                 pool=pool,
                 account_login_resolver=account_login_resolver,
+                account_details_loader=account_details_loader,
                 account_type_resolver=account_type_resolver,
             )
             w.start()
