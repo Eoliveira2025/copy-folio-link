@@ -141,11 +141,35 @@ class MasterMonitor:
         # master terminal is already attached for this thread.
         while not self._stop.is_set():
             try:
+                # 1) Sync balance/equity every ~1 min
+                self._sync_balance_if_needed(mt5)
+                # 2) Poll positions
                 self._poll_once(mt5)
             except Exception as e:
                 self.log.error("poll error",
                                extra={"action": "master_poll_error"}, exc_info=e)
             self._stop.wait(self.poll_interval_ms / 1000.0)
+
+    def _sync_balance_if_needed(self, mt5) -> None:
+        now = time.time()
+        # Interval from settings or 60s default
+        interval = getattr(self.settings, "BALANCE_SYNC_INTERVAL_S", 60)
+        if hasattr(self, "_last_balance_sync") and (now - self._last_balance_sync) < interval:
+            return
+
+        ai = mt5.account_info()
+        if ai:
+            from .redis_client import get_redis, k
+            r = get_redis()
+            # Store in Redis for distributor access
+            r.hset(k(f"master:{self.master_id}:stats"), mapping={
+                "balance": float(ai.balance),
+                "equity": float(ai.equity),
+                "updated_at": now
+            })
+            self._last_balance_sync = now
+            self.log.info("master balance synced", 
+                         extra={"balance": ai.balance, "equity": ai.equity})
 
     def _poll_once(self, mt5) -> None:
         positions = mt5.positions_get() or []
