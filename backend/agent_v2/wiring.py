@@ -26,6 +26,7 @@ from .exec.order_task import OrderAction, OrderTask
 from .pool.account_session import AccountSession
 from .pool.execution_queue import ExecutionQueue
 from .pool.terminal_pool import TerminalPool
+from .pool.repo import AccountDetails
 from .utils.logger import get_logger
 
 
