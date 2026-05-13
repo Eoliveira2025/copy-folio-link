@@ -188,9 +188,26 @@ class DistributorV2:
                     assignment) -> OrderTask:
         event = payload["event"]
         action = OrderAction.OPEN if event == "OPEN" else OrderAction.CLOSE
+        
+        symbol = self.symbol_mapper.map(payload.get("symbol") or "")
+        
+        volume = None
+        if event == "OPEN":
+            master_vol = float(payload["volume"])
+            master_stats = get_master_stats(assignment.master_id)
+            master_balance = master_stats.get("balance", 0.0)
+            
+            # Simple scaling
+            volume = VolumeCalculator.calculate(
+                master_volume=master_vol,
+                master_balance=master_balance,
+                client_balance=c.balance
+            )
+
         side = None
         if event == "OPEN":
             side = OrderSide.BUY if payload.get("side") == "BUY" else OrderSide.SELL
+
         return OrderTask(
             account_id=c.account_id,
             pool_id=assignment.pool_id,
@@ -198,9 +215,9 @@ class DistributorV2:
             master_id=assignment.master_id,
             strategy_id=assignment.strategy_id,
             action=action,
-            symbol=payload.get("symbol") or "",
+            symbol=symbol,
             side=side,
-            volume=float(payload["volume"]) if event == "OPEN" else None,
+            volume=volume,
             client_ticket=None,  # resolved by close_reconciler/fallback
             master_ticket=int(payload["master_ticket"]),
             magic=int(payload.get("magic") or 0),
