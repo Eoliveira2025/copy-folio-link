@@ -50,9 +50,37 @@ class JsonFormatter(logging.Formatter):
             value = getattr(record, key, None)
             if value is not None:
                 payload[key] = value
+        
+        # Inject context from extra if present but not in record attributes
+        if hasattr(record, "extra") and isinstance(record.extra, dict):
+            for k, v in record.extra.items():
+                if k not in payload:
+                    payload[k] = v
+
         if record.exc_info:
             payload["exc"] = self.formatException(record.exc_info)
         return json.dumps(payload, default=str, ensure_ascii=False)
+
+
+class SupportFormatter(logging.Formatter):
+    """Human-readable formatter for support and console."""
+    def format(self, record: logging.LogRecord) -> str:
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ctx_list = []
+        for key in _CTX_FIELDS:
+            val = getattr(record, key, None)
+            if val is not None:
+                ctx_list.append(f"{key}={val}")
+        
+        # Also check extra
+        if hasattr(record, "extra") and isinstance(record.extra, dict):
+            for k, v in record.extra.items():
+                if k not in _CTX_FIELDS:
+                    ctx_list.append(f"{k}={v}")
+
+        ctx_str = f" [{', '.join(ctx_list)}]" if ctx_list else ""
+        return f"[{ts}] {record.levelname:7} | {record.name:15} | {record.getMessage()}{ctx_str}"
+
 
 
 class ContextLogger(logging.LoggerAdapter):
@@ -82,7 +110,7 @@ def _configure_root() -> None:
     root.handlers.clear()
 
     stream = logging.StreamHandler(sys.stdout)
-    stream.setFormatter(JsonFormatter())
+    stream.setFormatter(SupportFormatter())
     root.addHandler(stream)
 
     try:
