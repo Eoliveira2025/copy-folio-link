@@ -118,7 +118,46 @@ class PooledTerminalProcess:
         with self._lock:
             if not self._process:
                 return False
+            # Check if process is actually running in OS
+            try:
+                import psutil
+                if not psutil.pid_exists(self._process.pid):
+                    self._process = None
+                    return False
+            except ImportError:
+                pass
             return self._process.poll() is None
+
+    def recycle(self):
+        """Force restart to clear memory/cache."""
+        self.log.info("recycling terminal")
+        self.stop()
+        time.sleep(1)
+        self.start()
+
+    def cleanup_files(self):
+        """Cleanup old log files and cache in instance dir."""
+        with self._lock:
+            if self.account_id:
+                instance_dir = Path(self.settings.V2_POOL_DIR) / str(self.account_id)
+            else:
+                instance_dir = self.terminal_path
+            
+            if not instance_dir.exists():
+                return
+            
+            # Cleanup MQL5/Logs and Logs folders
+            log_dirs = [instance_dir / "MQL5" / "Logs", instance_dir / "Logs"]
+            for d in log_dirs:
+                if d.exists():
+                    try:
+                        for f in d.glob("*.log"):
+                            # Delete logs older than 3 days
+                            if time.time() - f.stat().st_mtime > (3 * 24 * 3600):
+                                f.unlink()
+                    except Exception as e:
+                        self.log.error(f"failed to cleanup logs in {d}", exc_info=e)
+
 
     def get_metrics(self) -> Dict:
         """Get process-level metrics."""
