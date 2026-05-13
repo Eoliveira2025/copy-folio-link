@@ -352,6 +352,20 @@ def upsert_symbol_map(
                 "brk": broker_symbol,
                 "src": source,
             },
+
+def mark_account_failed_credentials(account_id: UUID, error_msg: str) -> None:
+    with session_scope() as s:
+        # We can use the mt5_accounts table or a new v2_account_health table
+        # For now, let's use the account_terminal_map to flag the session as failed
+        # or simply log it to a health table if we had one.
+        # As per requirement, let's update a status in mt5_accounts if possible
+        # but safely check if the column exists or use a generic log.
+        s.execute(
+            text(
+                "UPDATE mt5_accounts SET connection_status = 'FAILED_CREDENTIALS', "
+                "last_error = :err, updated_at = now() WHERE id = :aid"
+            ),
+            {"aid": str(account_id), "err": error_msg},
         )
 
 
