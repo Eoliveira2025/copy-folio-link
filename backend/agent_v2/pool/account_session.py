@@ -19,18 +19,20 @@ import threading
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Callable
 from uuid import UUID
 
 from ..config import get_v2_settings
 from ..utils.logger import get_logger
+from ..utils.security import decrypt_mt5_password
+from .repo import AccountDetails
 
 
 # Toggle real MT5 login from env. Default: dry-run.
 _DRY_RUN_ENV = "V2_SESSION_DRY_RUN"
 
 
-def _dry_run() -> bool:
+def _is_dry_run() -> bool:
     val = os.environ.get(_DRY_RUN_ENV, "true").strip().lower()
     return val not in ("0", "false", "no")
 
