@@ -108,6 +108,13 @@ class AgentV2Settings(BaseSettings):
     # ── Strategy transition ───────────────────────────────────────
     TRANSITION_POLL_INTERVAL_S: int = 5
 
+    # ── Windows VPS Monitor ───────────────────────────────────────
+    WINDOWS_VPS_MONITOR_ENABLED: bool = False
+    MT5_TERMINALS_HIDDEN_MODE: bool = True
+    AUTO_REMOVE_DISCONNECTED_ACCOUNTS: bool = False
+    UPGRADE_STRATEGY_GUARD_ENABLED: bool = True
+    STALE_ACCOUNT_TIMEOUT_S: int = 3600  # 1 hour
+
     # ── Redis tuning ──────────────────────────────────────────────
     REDIS_SOCKET_KEEPALIVE: bool = True
     REDIS_SOCKET_TIMEOUT: int = 5
