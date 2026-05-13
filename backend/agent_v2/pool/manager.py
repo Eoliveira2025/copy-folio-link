@@ -59,3 +59,46 @@ class PoolManager:
     def get_session(self, terminal_id: UUID) -> Optional[AccountSession]:
         return self._sessions.get(terminal_id)
 
+    def reconnect_account(self, terminal_id: UUID) -> bool:
+        """Force a terminal restart and session login."""
+        with self._lock:
+            terminal = self.get_terminal(terminal_id)
+            if terminal:
+                self.log.info("triggering manual reconnect", extra={"terminal_id": str(terminal_id)})
+                terminal.stop()
+                time.sleep(1) # Allow for cleanup
+                terminal.start()
+                return True
+        return False
+
+    def recycle_terminal(self, terminal_id: UUID) -> bool:
+        """Recycle a terminal to clear memory/cache."""
+        with self._lock:
+            terminal = self.get_terminal(terminal_id)
+            if terminal:
+                self.log.info("triggering manual recycle", extra={"terminal_id": str(terminal_id)})
+                terminal.recycle() # Assuming recycle() is implemented in terminal_process
+                return True
+        return False
+
+    def remove_account(self, terminal_id: UUID, force: bool = False) -> bool:
+        """Safely remove an account from the pool."""
+        with self._lock:
+            session = self.get_session(terminal_id)
+            if session and not force:
+                # Check for open positions if not forced
+                if session.has_open_positions():
+                    self.log.warning("refusing to remove account with open positions", extra={"terminal_id": str(terminal_id)})
+                    return False
+
+            terminal = self.get_terminal(terminal_id)
+            if terminal:
+                terminal.stop()
+                del self._terminals[terminal_id]
+                if terminal_id in self._sessions:
+                    del self._sessions[terminal_id]
+                self.log.info("account removed from pool", extra={"terminal_id": str(terminal_id)})
+                return True
+        return False
+
+
