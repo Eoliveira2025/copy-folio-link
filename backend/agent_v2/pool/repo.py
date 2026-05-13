@@ -295,8 +295,16 @@ def insert_v2_order(
                 "INSERT INTO v2_orders "
                 "(account_id, pool_id, master_id, strategy_id, master_ticket, "
                 " client_ticket, deal_ticket, symbol, action, side, volume, price, "
-                " status, retcode, broker_comment, order_latency_ms, login_latency_ms) "
-                "VALUES (:aid,:pid,:mid,:sid,:mt,:ct,:dt,:sym,:act,:side,:vol,:pr,:st,:rc,:bc,:ol,:ll)"
+                " status, retcode, broker_comment, order_latency_ms, login_latency_ms, updated_at) "
+                "VALUES (:aid,:pid,:mid,:sid,:mt,:ct,:dt,:sym,:act,:side,:vol,:pr,:st,:rc,:bc,:ol,:ll, now()) "
+                "ON CONFLICT (account_id, master_ticket, action) DO UPDATE SET "
+                " client_ticket = EXCLUDED.client_ticket, "
+                " deal_ticket = EXCLUDED.deal_ticket, "
+                " status = EXCLUDED.status, "
+                " retcode = EXCLUDED.retcode, "
+                " broker_comment = EXCLUDED.broker_comment, "
+                " price = EXCLUDED.price, "
+                " updated_at = now()"
             ),
             {
                 "aid": str(account_id), "pid": str(pool_id), "mid": str(master_id),
