@@ -23,7 +23,7 @@ class SessionManager:
     def add_session(self, context: AccountContext):
         with self._lock:
             self._sessions[context.account_id] = context
-            self.log.info("session added", account_id=str(context.account_id))
+            self.log.info("session added", extra={"account_id": str(context.account_id)})
 
     def remove_session(self, account_id: UUID) -> Optional[AccountContext]:
         with self._lock:
