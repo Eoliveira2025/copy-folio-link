@@ -9,6 +9,11 @@ import sys
 sys.modules['cryptography'] = MagicMock()
 sys.modules['cryptography.fernet'] = MagicMock()
 sys.modules['MetaTrader5'] = MagicMock()
+sys.modules['psycopg2'] = MagicMock()
+
+# Mock the repo module entirely to avoid DB imports
+mock_repo = MagicMock()
+sys.modules['backend.agent_v2.pool.repo'] = mock_repo
 
 from backend.agent_v2.pool.strategy_router import StrategyRouter
 from backend.agent_v2.pool.terminal_process import PooledTerminalProcess
@@ -33,7 +38,6 @@ class TestInstitutionalV2(unittest.TestCase):
     def test_strategy_isolation(self):
         """Test that LOW client cannot receive MEDIUM order."""
         from backend.agent_v2.pool import repo
-        repo.get_account_mapping = MagicMock()
         
         mapping = MagicMock()
         mapping.strategy_id = self.low_strategy
@@ -58,8 +62,6 @@ class TestInstitutionalV2(unittest.TestCase):
     def test_routing_success(self):
         """Test that order is routed when strategy matches."""
         from backend.agent_v2.pool import repo
-        repo.get_account_mapping = MagicMock()
-        repo.get_account_details = MagicMock()
         
         mapping = MagicMock()
         mapping.strategy_id = self.low_strategy
