@@ -53,22 +53,46 @@ class PooledTerminalProcess:
                                extra={"limit": max_restarts, "count": self._restarts_this_hour})
                 return False
 
+            # 1. Determine instance path
+            # In institutional V2, each account has its own folder to ensure /portable isolation
+            if self.account_id:
+                instance_dir = Path(self.settings.V2_POOL_DIR) / str(self.account_id)
+            else:
+                instance_dir = self.terminal_path
+            
+            instance_dir.mkdir(parents=True, exist_ok=True)
             exe_path = self.terminal_path / "terminal64.exe"
+            
+            # If terminal64.exe is not in instance_dir, it might be the global path
+            if not exe_path.exists():
+                # Fallback to global setting if instance doesn't have it
+                exe_path = Path(self.settings.MT5_TERMINAL_PATH)
+
             if not exe_path.exists():
                 self.log.error("terminal64.exe not found", extra={"path": str(exe_path)})
                 return False
 
             try:
+                # Add identification tag for easy cleanup and monitoring
+                env = os.environ.copy()
+                env["V2_TERMINAL_ID"] = str(self.terminal_id)
+                if self.account_id:
+                    env["V2_ACCOUNT_ID"] = str(self.account_id)
+
                 self._process = subprocess.Popen(
                     [str(exe_path), "/portable"],
-                    cwd=str(self.terminal_path),
+                    cwd=str(instance_dir),
                     stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
+                    stderr=subprocess.DEVNULL,
+                    env=env
                 )
                 self.start_time = time.time()
                 self._restarts_this_hour += 1
                 self.restart_count += 1
-                self.log.info("terminal process started", extra={"pid": self._process.pid})
+                self.log.info("terminal process started", extra={
+                    "pid": self._process.pid,
+                    "cwd": str(instance_dir)
+                })
                 return True
             except Exception as e:
                 self.log.error("failed to start terminal process", exc_info=e)
@@ -105,4 +129,3 @@ class PooledTerminalProcess:
             "pid": self._process.pid if self._process else None,
             "account_id": str(self.account_id) if self.account_id else None
         }
-

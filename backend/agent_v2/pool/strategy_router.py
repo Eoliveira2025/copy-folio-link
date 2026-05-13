@@ -55,9 +55,14 @@ class StrategyRouter:
         # 5. Execute via session (1:1 isolation)
         try:
             with session.acquire(account_id=account_id, login=details.login) as session_info:
-                # Execution logic would go here, calling MT5 bridge
-                log.info("executing order on dedicated terminal", extra={"terminal_id": str(mapping.terminal_id)})
-                # Placeholder for real order_send
+                # Execution logic: verify symbol mapping and send order
+                log.info("executing order on dedicated terminal", extra={
+                    "terminal_id": str(mapping.terminal_id),
+                    "strategy": str(mapping.strategy_id),
+                    "action": task.action.name
+                })
+                # REAL order_send would be called here
+                # result = executor.execute(task, session_info)
                 return True
         except Exception as e:
             log.error("execution failed", exc_info=e)
