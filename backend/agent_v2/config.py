@@ -124,6 +124,8 @@ class AgentV2Settings(BaseSettings):
     V2_MAX_ACCOUNTS_PER_VPS: int = 100        # Target for high density
     V2_CAPACITY_LIMIT_PCT: float = 0.9       # Admit up to 90% of max
     V2_RAM_PER_TERMINAL_MB: int = 60         # Expected footprint after optimization
+    V2_AUTO_REMOVE_DISCONNECTED_ACCOUNTS: bool = False # Start false for safety
+
 
 
 
