@@ -36,15 +36,12 @@ from .wiring import PoolWorkerRegistry
 
 @dataclass
 class ClientAccount:
-    """Minimal client view for distribution.
-
-    Provided by the caller via `client_resolver` to avoid coupling the
-    distributor to V1 models.
-    """
+    """Minimal client view for distribution."""
     account_id: UUID
     login: int
     account_type: str  # 'demo' | 'real'
     state: str  # ACTIVE | EXIT_ONLY | PENDING_STRATEGY_CHANGE | ...
+    balance: float = 1000.0 # Loaded by resolver
 
 
 # Caller-provided resolvers
