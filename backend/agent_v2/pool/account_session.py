@@ -93,26 +93,46 @@ class AccountSession:
     def _do_login(self, account_id: UUID, login: int) -> float:
         """Returns login_latency_ms. Raises LoginFailedError on failure."""
         t0 = time.monotonic()
-        if _dry_run():
+        if _is_dry_run():
             # Simulate ~1s login cost (kept small for tests).
             time.sleep(0.05)
-        else:  # pragma: no cover — real MT5 lands in increment 6
+        else:
             try:
                 import MetaTrader5 as mt5  # type: ignore
             except Exception as e:
                 raise LoginFailedError(f"MetaTrader5 import failed: {e}")
-            try:
-                mt5.shutdown()
-            except Exception:
-                pass
+
+            details = self.account_details_loader(account_id)
+            if not details:
+                raise LoginFailedError(f"account details not found for {account_id}")
+            
+            password = decrypt_mt5_password(details.encrypted_password)
+
+            # 1) Initialize terminal (no-op if already running)
+            # Path should point to terminal64.exe or its dir.
+            exe = self.terminal_path
+            if not exe.lower().endswith(".exe"):
+                exe = os.path.join(exe, "terminal64.exe")
+
             ok = mt5.initialize(
-                path=os.path.join(self.terminal_path, "terminal64.exe"),
-                timeout=self.settings.SESSION_LOGIN_TIMEOUT_S * 1000,
+                path=exe,
+                timeout=self.settings.MT5_INIT_TIMEOUT_MS,
             )
             if not ok:
                 raise LoginFailedError(
                     f"mt5.initialize failed: {mt5.last_error()}"
                 )
+
+            # 2) Perform login
+            ok = mt5.login(
+                login=details.login,
+                password=password,
+                server=details.server,
+            )
+            if not ok:
+                err = mt5.last_error()
+                raise LoginFailedError(f"mt5.login failed for {details.login}: {err}")
+
         latency_ms = (time.monotonic() - t0) * 1000.0
         self._state.account_id = account_id
         self._state.logged_in_at = time.monotonic()
