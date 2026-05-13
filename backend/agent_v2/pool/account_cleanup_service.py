@@ -19,8 +19,9 @@ class AccountCleanupService:
 
     def run_cleanup_cycle(self):
         """Checks for stale accounts and removes them if safe."""
-        if not self.settings.AUTO_REMOVE_DISCONNECTED_ACCOUNTS:
+        if not self.settings.V2_AUTO_REMOVE_DISCONNECTED_ACCOUNTS:
             return
+
 
         self.log.info("running account cleanup cycle")
         
