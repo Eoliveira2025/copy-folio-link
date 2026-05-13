@@ -36,6 +36,7 @@ from uuid import UUID
 
 from ..config import get_v2_settings
 from ..utils.logger import get_logger
+from ..pool.repo import insert_v2_order
 from .order_task import OrderAction, OrderSide, OrderTask
 from .safety_guard import can_execute_order
 from .circuit_breaker import CircuitBreaker
