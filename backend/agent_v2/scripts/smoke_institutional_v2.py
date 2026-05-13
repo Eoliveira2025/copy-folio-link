@@ -18,7 +18,7 @@ def run_test():
     
     # 1. Simulate Terminal Provisioning
     tid1 = uuid.uuid4()
-    tpath1 = "C:\MT5_Pool_V2\smoke_inst_01"
+    tpath1 = r"C:\MT5_Pool_V2\smoke_inst_01"
     
     print(f"Provisioning terminal {tid1}...")
     # In smoke test, terminal start will likely fail FS check on non-Windows, 
