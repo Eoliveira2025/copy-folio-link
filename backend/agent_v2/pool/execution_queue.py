@@ -18,9 +18,12 @@ from typing import Callable, Optional
 from uuid import UUID
 
 from ..utils.logger import get_logger
-from ..exec.order_task import OrderTask, TaskStatus
+from ..exec.order_task import OrderTask, TaskStatus, OrderAction
 from ..exec.safety_guard import can_execute_order
 from .account_session import AccountSession, LoginFailedError
+from .execution_deduplication_service import ExecutionDeduplicationService
+from .failover_safe_mode import FailoverSafeMode
+
 
 
 # Type alias: handler receives (task, session_info) and returns retcode-like int.
@@ -87,6 +90,8 @@ class ExecutionQueue:
             terminal_id=str(terminal_id),
             pool_name=pool_name,
         )
+        self.dedup = ExecutionDeduplicationService()
+        self.safe_mode = FailoverSafeMode()
 
     # ── lifecycle ─────────────────────────────────────────────────
     def start(self) -> None:
@@ -162,6 +167,26 @@ class ExecutionQueue:
         except Exception:
             account_type = "demo"
         decision = can_execute_order(task.account_id, login, account_type)
+        
+        # ── Institutional Guards ────
+        if self.safe_mode.is_active() and task.action == OrderAction.OPEN:
+             task.status = TaskStatus.BLOCKED_BY_SAFETY
+             task.failure_reason = f"SAFE_MODE_ACTIVE: {self.safe_mode.get_reason()}"
+             log.warning("task blocked by safe mode", extra={"action": "safe_mode_blocked"})
+             return
+
+        if self.dedup.is_duplicate(
+            account_id=task.account_id,
+            master_ticket=task.master_ticket or 0,
+            action=task.action.value,
+            symbol=task.symbol,
+            volume=task.volume or 0.0,
+            strategy_id=task.strategy_id
+        ):
+            task.status = TaskStatus.DUPLICATE
+            task.failure_reason = "institutional_deduplication_hit"
+            return
+
         guard_fields = {**decision.log_fields(), "account_type": account_type}
 
         try:
