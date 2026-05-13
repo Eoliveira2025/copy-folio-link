@@ -32,34 +32,27 @@ class TestInstitutionalV2(unittest.TestCase):
 
     def test_strategy_isolation(self):
         """Test that LOW client cannot receive MEDIUM order."""
-        # 1. Setup mapping mock
         from backend.agent_v2.pool import repo
         repo.get_account_mapping = MagicMock()
         
-        # Mapping for LOW account
-        low_mapping = MagicMock()
-        low_mapping.strategy_id = self.low_strategy
-        low_mapping.terminal_id = self.terminal_id
+        mapping = MagicMock()
+        mapping.strategy_id = self.low_strategy
+        mapping.terminal_id = self.terminal_id
+        repo.get_account_mapping.return_value = mapping
         
-        repo.get_account_mapping.return_value = low_mapping
-        
-        # 2. Create task for LOW account
         task = OrderTask(
             account_id=self.account_low,
             pool_id=self.pool_id,
             terminal_id=self.terminal_id,
             master_id=self.master_id,
-            strategy_id=self.low_strategy, # Task says it's for LOW
-            master_ticket=123,
-            symbol="EURUSD",
+            strategy_id=self.low_strategy,
             action=OrderAction.OPEN,
-            volume=0.01
+            symbol="EURUSD",
+            volume=0.01,
+            master_ticket=123
         )
         
-        # 3. Attempt to route with MEDIUM strategy (master says it's MEDIUM)
         result = self.router.route_and_execute(task, master_strategy_id=self.medium_strategy)
-        
-        # 4. Must be blocked
         self.assertFalse(result, "Order should be blocked due to strategy mismatch")
 
     def test_routing_success(self):
@@ -91,10 +84,10 @@ class TestInstitutionalV2(unittest.TestCase):
             terminal_id=self.terminal_id,
             master_id=self.master_id,
             strategy_id=self.low_strategy,
-            master_ticket=123,
-            symbol="EURUSD",
             action=OrderAction.OPEN,
-            volume=0.01
+            symbol="EURUSD",
+            volume=0.01,
+            master_ticket=123
         )
         
         result = self.router.route_and_execute(task, master_strategy_id=self.low_strategy)
