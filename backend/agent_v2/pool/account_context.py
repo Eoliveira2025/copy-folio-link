@@ -38,7 +38,7 @@ class AccountContext:
         self.failure_count = 0
         self.last_error = None
         self.login_latency_ms = latency_ms
-        self.log.info("account login success", latency_ms=round(latency_ms, 2))
+        self.log.info("account login success", extra={"latency_ms": round(latency_ms, 2)})
 
     def mark_login_failure(self, error: str):
         self.is_logged_in = False
