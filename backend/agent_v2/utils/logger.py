@@ -110,7 +110,7 @@ def _configure_root() -> None:
     root.handlers.clear()
 
     stream = logging.StreamHandler(sys.stdout)
-    stream.setFormatter(JsonFormatter())
+    stream.setFormatter(SupportFormatter())
     root.addHandler(stream)
 
     try:
