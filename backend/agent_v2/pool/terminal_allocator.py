@@ -71,7 +71,7 @@ class TerminalAllocatorV2:
                 strategy_id=strategy_id
             )
             self.log.info("account allocated to terminal", 
-                          account_id=str(account_id), terminal_id=str(terminal_id))
+                          extra={"account_id": str(account_id), "terminal_id": str(terminal_id)})
             return terminal_id
 
     def rebalance(self):
