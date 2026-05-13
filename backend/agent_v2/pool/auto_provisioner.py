@@ -38,6 +38,8 @@ from . import repo
 _HEAVY_DIRS = ("Bases", "MQL5/Experts", "MQL5/Indicators",
                "MQL5/Scripts", "Templates", "Profiles")
 
+_TERMINAL_EXE = "terminal64.exe"
+
 
 def strategy_key_for(strategy_name: str) -> str:
     """Normalize strategy name to a folder-safe key."""
