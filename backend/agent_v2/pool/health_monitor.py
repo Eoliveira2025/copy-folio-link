@@ -63,7 +63,7 @@ class HealthMonitor:
             for s in sessions:
                 if not s.is_logged_in and s.should_retry_login():
                     self.log.info("triggering session reconnect", 
-                                  account_id=str(s.account_id), login=s.login)
+                                  extra={"account_id": str(s.account_id), "login": s.login})
                     # The actual login is handled by the AccountSession logic when a task arrives,
                     # or we could trigger an explicit login task here.
 
