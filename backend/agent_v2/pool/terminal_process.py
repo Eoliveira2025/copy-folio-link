@@ -1,4 +1,4 @@
-"""PooledTerminalProcess — manages one MT5 terminal process hosting multiple accounts."""
+"""PooledTerminalProcess — manages one MT5 terminal process dedicated to a single account."""
 
 import os
 import subprocess
@@ -15,10 +15,9 @@ class TerminalProcessError(RuntimeError):
     pass
 
 class PooledTerminalProcess:
-    """Manages a single MT5 terminal instance that can host multiple accounts.
+    """Manages a single MT5 terminal instance.
     
-    This class handles the OS-level process, health monitoring, and basic 
-    provisioning of the terminal folder if it doesn't exist.
+    This class handles the OS-level process for exactly one account session.
     """
 
     def __init__(self, terminal_id: UUID, terminal_path: str):
@@ -35,6 +34,7 @@ class PooledTerminalProcess:
         self.restart_count: int = 0
         self._last_restart_hour: float = time.time()
         self._restarts_this_hour: int = 0
+        self.account_id: Optional[UUID] = None
 
     def start(self) -> bool:
         """Start the MT5 terminal process."""
@@ -42,13 +42,11 @@ class PooledTerminalProcess:
             if self.is_alive():
                 return True
 
-            # Rate limit restarts
             now = time.time()
             if now - self._last_restart_hour > 3600:
                 self._last_restart_hour = now
                 self._restarts_this_hour = 0
             
-            # Use a conservative limit if not defined in settings
             max_restarts = getattr(self.settings, "MAX_RESTARTS_PER_HOUR", 10)
             if self._restarts_this_hour >= max_restarts:
                 self.log.error("max restarts per hour reached", 
@@ -61,8 +59,6 @@ class PooledTerminalProcess:
                 return False
 
             try:
-                # MT5 terminal usually needs to be started from its own directory
-                # /portable flag ensures it stays within its own folder for data
                 self._process = subprocess.Popen(
                     [str(exe_path), "/portable"],
                     cwd=str(self.terminal_path),
@@ -101,12 +97,12 @@ class PooledTerminalProcess:
             return self._process.poll() is None
 
     def get_metrics(self) -> Dict:
-        """Get process-level metrics (CPU/RAM)."""
-        # In a real implementation, we would use psutil here.
-        # For now, returning placeholders to satisfy the architecture.
+        """Get process-level metrics."""
         return {
             "uptime_s": time.time() - self.start_time if self.start_time > 0 else 0,
             "restart_count": self.restart_count,
             "is_alive": self.is_alive(),
-            "pid": self._process.pid if self._process else None
+            "pid": self._process.pid if self._process else None,
+            "account_id": str(self.account_id) if self.account_id else None
         }
+
