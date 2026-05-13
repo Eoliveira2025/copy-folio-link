@@ -201,3 +201,22 @@ class AccountSession:
 
     def login_count(self) -> int:
         return self._state.login_count
+
+    def has_open_positions(self) -> bool:
+        """Check if current account has any open positions."""
+        if _is_dry_run():
+            return False # Simulation: assume clean
+            
+        with self._lock:
+            try:
+                import MetaTrader5 as mt5
+                # Ensure we are initialized and logged in
+                positions = mt5.positions_get()
+                if positions is None:
+                    # Error or no positions
+                    return False
+                return len(positions) > 0
+            except Exception as e:
+                self.log.error("failed to check positions", exc_info=e)
+                return True # Safety first: assume has positions if error
+
