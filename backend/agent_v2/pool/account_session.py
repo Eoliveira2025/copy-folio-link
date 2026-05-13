@@ -61,12 +61,14 @@ class AccountSession:
         pool_id: UUID,
         terminal_id: UUID,
         terminal_path: str,
+        account_details_loader: Callable[[UUID], Optional[AccountDetails]],
         session_ttl_s: float = 600.0,
         sticky_hold_ms: Optional[int] = None,
     ):
         self.pool_id = pool_id
         self.terminal_id = terminal_id
         self.terminal_path = terminal_path
+        self.account_details_loader = account_details_loader
         self.session_ttl_s = session_ttl_s
         self.settings = get_v2_settings()
         self.sticky_hold_ms = (
