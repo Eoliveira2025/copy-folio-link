@@ -108,12 +108,18 @@ class AgentV2Settings(BaseSettings):
     # ── Strategy transition ───────────────────────────────────────
     TRANSITION_POLL_INTERVAL_S: int = 5
 
+    # ── Institutional Upgrades ────────────────────────────────────
+    V2_INSTITUTIONAL_SAFE_MODE_ENABLED: bool = False
+    V2_PROCESS_RECYCLER_ENABLED: bool = False
+    V2_RESOURCE_GUARD_ENABLED: bool = False
+    V2_EXECUTION_DEDUP_ENABLED: bool = False
+    V2_AUTO_RECOVERY_AFTER_REBOOT: bool = False
+    V2_HEARTBEAT_INTERVAL_S: int = 5
+    V2_VPS_ID: str = "vps-01"
+
     # ── Windows VPS Monitor ───────────────────────────────────────
     WINDOWS_VPS_MONITOR_ENABLED: bool = False
-    MT5_TERMINALS_HIDDEN_MODE: bool = True
-    AUTO_REMOVE_DISCONNECTED_ACCOUNTS: bool = False
-    UPGRADE_STRATEGY_GUARD_ENABLED: bool = True
-    STALE_ACCOUNT_TIMEOUT_S: int = 3600  # 1 hour
+
 
     # ── Redis tuning ──────────────────────────────────────────────
     REDIS_SOCKET_KEEPALIVE: bool = True
