@@ -2,15 +2,19 @@
 
 from typing import Dict, Optional, List
 from uuid import UUID
-from .repo import get_account_mapping, get_account_details, insert_v2_order
-from ..exec.order_task import OrderTask, TaskStatus
-from ..utils.logger import get_logger
+from backend.agent_v2.exec.order_task import OrderTask, TaskStatus
+from backend.agent_v2.utils.logger import get_logger
 
 class StrategyRouter:
     """Routes execution tasks to the correct terminal based on strategy isolation."""
 
-    def __init__(self, pool_manager):
+    def __init__(self, pool_manager, repo_module=None):
         self.pool_manager = pool_manager
+        if repo_module is None:
+            from . import repo
+            self.repo = repo
+        else:
+            self.repo = repo_module
         self.log = get_logger("strategy_router")
 
     def route_and_execute(self, task: OrderTask, master_strategy_id: UUID) -> bool:
@@ -19,7 +23,7 @@ class StrategyRouter:
         log = self.log.bind(account_id=str(account_id), master_strategy_id=str(master_strategy_id))
 
         # 1. Get account mapping
-        mapping = get_account_mapping(account_id)
+        mapping = self.repo.get_account_mapping(account_id)
         if not mapping:
             log.error("account not mapped to any terminal")
             return False
@@ -31,7 +35,7 @@ class StrategyRouter:
             return False
 
         # 3. Validation
-        details = get_account_details(account_id)
+        details = self.repo.get_account_details(account_id)
         if not details:
             log.error("account details not found")
             return False
@@ -58,3 +62,4 @@ class StrategyRouter:
         except Exception as e:
             log.error("execution failed", exc_info=e)
             return False
+

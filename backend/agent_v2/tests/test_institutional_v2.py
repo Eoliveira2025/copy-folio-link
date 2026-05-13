@@ -11,10 +11,6 @@ sys.modules['cryptography.fernet'] = MagicMock()
 sys.modules['MetaTrader5'] = MagicMock()
 sys.modules['psycopg2'] = MagicMock()
 
-# Mock the repo module entirely to avoid DB imports
-mock_repo = MagicMock()
-sys.modules['backend.agent_v2.pool.repo'] = mock_repo
-
 from backend.agent_v2.pool.strategy_router import StrategyRouter
 from backend.agent_v2.pool.terminal_process import PooledTerminalProcess
 from backend.agent_v2.pool.account_session import AccountSession
@@ -24,7 +20,8 @@ class TestInstitutionalV2(unittest.TestCase):
 
     def setUp(self):
         self.manager = MagicMock()
-        self.router = StrategyRouter(self.manager)
+        self.mock_repo = MagicMock()
+        self.router = StrategyRouter(self.manager, repo_module=self.mock_repo)
         
         self.low_strategy = uuid4()
         self.medium_strategy = uuid4()
@@ -37,12 +34,10 @@ class TestInstitutionalV2(unittest.TestCase):
 
     def test_strategy_isolation(self):
         """Test that LOW client cannot receive MEDIUM order."""
-        from backend.agent_v2.pool import repo
-        
         mapping = MagicMock()
         mapping.strategy_id = self.low_strategy
         mapping.terminal_id = self.terminal_id
-        repo.get_account_mapping.return_value = mapping
+        self.mock_repo.get_account_mapping.return_value = mapping
         
         task = OrderTask(
             account_id=self.account_low,
@@ -61,16 +56,14 @@ class TestInstitutionalV2(unittest.TestCase):
 
     def test_routing_success(self):
         """Test that order is routed when strategy matches."""
-        from backend.agent_v2.pool import repo
-        
         mapping = MagicMock()
         mapping.strategy_id = self.low_strategy
         mapping.terminal_id = self.terminal_id
-        repo.get_account_mapping.return_value = mapping
+        self.mock_repo.get_account_mapping.return_value = mapping
         
         details = MagicMock()
         details.login = 12345
-        repo.get_account_details.return_value = details
+        self.mock_repo.get_account_details.return_value = details
         
         terminal = MagicMock()
         terminal.is_alive.return_value = True
