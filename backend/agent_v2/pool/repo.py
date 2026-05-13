@@ -295,8 +295,16 @@ def insert_v2_order(
                 "INSERT INTO v2_orders "
                 "(account_id, pool_id, master_id, strategy_id, master_ticket, "
                 " client_ticket, deal_ticket, symbol, action, side, volume, price, "
-                " status, retcode, broker_comment, order_latency_ms, login_latency_ms) "
-                "VALUES (:aid,:pid,:mid,:sid,:mt,:ct,:dt,:sym,:act,:side,:vol,:pr,:st,:rc,:bc,:ol,:ll)"
+                " status, retcode, broker_comment, order_latency_ms, login_latency_ms, updated_at) "
+                "VALUES (:aid,:pid,:mid,:sid,:mt,:ct,:dt,:sym,:act,:side,:vol,:pr,:st,:rc,:bc,:ol,:ll, now()) "
+                "ON CONFLICT (account_id, master_ticket, action) DO UPDATE SET "
+                " client_ticket = EXCLUDED.client_ticket, "
+                " deal_ticket = EXCLUDED.deal_ticket, "
+                " status = EXCLUDED.status, "
+                " retcode = EXCLUDED.retcode, "
+                " broker_comment = EXCLUDED.broker_comment, "
+                " price = EXCLUDED.price, "
+                " updated_at = now()"
             ),
             {
                 "aid": str(account_id), "pid": str(pool_id), "mid": str(master_id),
@@ -306,4 +314,44 @@ def insert_v2_order(
                 "bc": broker_comment, "ol": order_latency_ms, "ll": login_latency_ms,
             },
         )
+
+
+# ──────────────────────────────────────────────────────────────────
+# account_symbol_map
+# ──────────────────────────────────────────────────────────────────
+def get_symbol_map(account_id: UUID, raw_symbol: str) -> Optional[dict]:
+    with session_scope() as s:
+        row = s.execute(
+            text(
+                "SELECT broker_symbol, source FROM account_symbol_map "
+                "WHERE account_id = :aid AND raw_symbol = :raw"
+            ),
+            {"aid": str(account_id), "raw": raw_symbol},
+        ).fetchone()
+    if not row:
+        return None
+    return {"broker_symbol": row.broker_symbol, "source": row.source}
+
+
+def upsert_symbol_map(
+    account_id: UUID, raw_symbol: str, broker_symbol: str, source: str
+) -> None:
+    with session_scope() as s:
+        s.execute(
+            text(
+                "INSERT INTO account_symbol_map (account_id, raw_symbol, broker_symbol, source) "
+                "VALUES (:aid, :raw, :brk, :src) "
+                "ON CONFLICT (account_id, raw_symbol) DO UPDATE "
+                "SET broker_symbol = EXCLUDED.broker_symbol, "
+                "    source = EXCLUDED.source, "
+                "    last_seen_at = now()"
+            ),
+            {
+                "aid": str(account_id),
+                "raw": raw_symbol,
+                "brk": broker_symbol,
+                "src": source,
+            },
+        )
+
 

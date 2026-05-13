@@ -36,6 +36,7 @@ from uuid import UUID
 
 from ..config import get_v2_settings
 from ..utils.logger import get_logger
+from ..utils.symbol_discovery import SymbolDiscoveryService
 from ..pool.repo import insert_v2_order
 from .order_task import OrderAction, OrderSide, OrderTask
 from .safety_guard import can_execute_order
@@ -165,15 +166,20 @@ class OrderExecutor:
                 log, task, session_info,
             )
 
-        # 5) symbol_select + tick
-        if not mt5.symbol_select(task.symbol, True):
-            self._fail(f"SYMBOL_SELECT_FAILED:{task.symbol}", log, task, session_info)
-        sym = mt5.symbol_info(task.symbol)
+        # 5) symbol resolution + select + tick
+        broker_symbol = SymbolDiscoveryService.resolve(task.account_id, task.symbol)
+        
+        if not mt5.symbol_select(broker_symbol, True):
+            self._fail(f"SYMBOL_SELECT_FAILED:{broker_symbol}", log, task, session_info)
+        sym = mt5.symbol_info(broker_symbol)
         if sym is None:
-            self._fail(f"SYMBOL_INFO_NONE:{task.symbol}", log, task, session_info)
-        tick = mt5.symbol_info_tick(task.symbol)
+            self._fail(f"SYMBOL_INFO_NONE:{broker_symbol}", log, task, session_info)
+        tick = mt5.symbol_info_tick(broker_symbol)
         if tick is None or not tick.bid or not tick.ask:
-            self._fail(f"BAD_TICK:{task.symbol}", log, task, session_info)
+            self._fail(f"BAD_TICK:{broker_symbol}", log, task, session_info)
+
+        # Update task symbol to the resolved one for subsequent mt5 calls
+        task.symbol = broker_symbol
 
         if task.action == OrderAction.OPEN:
             return self._do_open(mt5, sym, tick, task, session_info, log)
@@ -301,6 +307,7 @@ class OrderExecutor:
             order_latency_ms=latency_ms,
             login_latency_ms=session_info.get("login_latency_ms", 0.0),
             deal_ticket=result.deal_ticket, order_ticket=result.order_ticket,
+            price=result.price,
         )
         if not ok:
             raise ExecutionError(f"RETCODE_{retcode}", comment)
@@ -326,6 +333,7 @@ class OrderExecutor:
         login_latency_ms: float,
         deal_ticket: Optional[int] = None,
         order_ticket: Optional[int] = None,
+        price: Optional[float] = None,
     ) -> None:
         log.info(
             "order_send result",
@@ -342,6 +350,7 @@ class OrderExecutor:
                 "master_id": str(self.master_id),
                 "deal_ticket": deal_ticket,
                 "order_ticket": order_ticket,
+                "price": price,
                 "circuit_open": self.cb.is_open(),
             },
         )
@@ -363,7 +372,7 @@ class OrderExecutor:
                 action=task.action.value if hasattr(task.action, 'value') else str(task.action),
                 side=task.side.value if task.side and hasattr(task.side, 'value') else (str(task.side) if task.side else None),
                 volume=float(task.volume) if task.volume else 0.0,
-                price=None, # will be updated by reconciler or history poll
+                price=price,
                 status=status,
                 retcode=retcode,
                 broker_comment=comment,

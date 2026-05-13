@@ -38,6 +38,8 @@ from . import repo
 _HEAVY_DIRS = ("Bases", "MQL5/Experts", "MQL5/Indicators",
                "MQL5/Scripts", "Templates", "Profiles")
 
+_TERMINAL_EXE = "terminal64.exe"
+
 
 def strategy_key_for(strategy_name: str) -> str:
     """Normalize strategy name to a folder-safe key."""
@@ -93,11 +95,19 @@ class AutoProvisioner:
         root.mkdir(parents=True, exist_ok=True)
         for sub in ("config", "MQL5", "Bases", "logs"):
             (root / sub).mkdir(parents=True, exist_ok=True)
+            
+        # Copy terminal64.exe from base path if it doesn't exist
+        base_path = self.settings.V2_MT5_BASE_PATH
+        if base_path:
+            source_exe = Path(base_path) / _TERMINAL_EXE
+            target_exe = root / _TERMINAL_EXE
+            if source_exe.exists() and not target_exe.exists():
+                shutil.copy2(source_exe, target_exe)
+                self.log.info("copied terminal64.exe", source=str(source_exe), target=str(target_exe))
+
         # Light footprint: drop heavy MT5 subdirs if MT5_BASE_PATH was copied.
         for d in _HEAVY_DIRS:
-            target = root / d
-            if target.exists() and target.is_dir():
-                shutil.rmtree(target, ignore_errors=True)
+...
         _write_common_ini(root / "config" / "common.ini")
 
     # ── public API ────────────────────────────────────────────────
