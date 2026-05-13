@@ -52,7 +52,7 @@ class PoolManager:
         with self._lock:
             if terminal_id not in self._session_managers:
                 # Should have been created by ensure_terminal
-                self.log.error("terminal not found for account registration", terminal_id=str(terminal_id))
+                self.log.error("terminal not found for account registration", extra={"terminal_id": str(terminal_id)})
                 return
             
             ctx = AccountContext(account_id=account_id, login=login, server=server)
