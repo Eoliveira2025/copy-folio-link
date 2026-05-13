@@ -43,6 +43,25 @@ const OperationsDashboard = () => {
         <h1 className="text-2xl font-bold">{t("operations.title")}</h1>
         <p className="text-muted-foreground text-sm">{t("operations.subtitle")}</p>
       </div>
+      
+      {/* Deploy Section */}
+      <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-full bg-primary/10">
+            <Download className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-sm">V2 Institutional Deploy Package</h3>
+            <p className="text-xs text-muted-foreground">Download the complete ZIP for Windows VPS installation</p>
+          </div>
+        </div>
+        <Button variant="default" size="sm" asChild className="gap-2">
+          <a href="/copytrade-v2-deploy.zip" download>
+            <Download className="w-4 h-4" />
+            Download ZIP
+          </a>
+        </Button>
+      </div>
 
       {/* Trading Metrics */}
       <div>
