@@ -57,7 +57,7 @@ class PooledTerminalProcess:
 
             exe_path = self.terminal_path / "terminal64.exe"
             if not exe_path.exists():
-                self.log.error("terminal64.exe not found", path=str(exe_path))
+                self.log.error("terminal64.exe not found", extra={"path": str(exe_path)})
                 return False
 
             try:
