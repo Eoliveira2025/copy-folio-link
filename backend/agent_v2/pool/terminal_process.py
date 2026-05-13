@@ -72,7 +72,7 @@ class PooledTerminalProcess:
                 self.start_time = time.time()
                 self._restarts_this_hour += 1
                 self.restart_count += 1
-                self.log.info("terminal process started", pid=self._process.pid)
+                self.log.info("terminal process started", extra={"pid": self._process.pid})
                 return True
             except Exception as e:
                 self.log.error("failed to start terminal process", exc_info=e)
