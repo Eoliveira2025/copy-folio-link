@@ -60,7 +60,7 @@ class TerminalAllocatorV2:
             terminal_id = self.pick_terminal(strategy_id, master_id)
             if not terminal_id:
                 self.log.error("no terminal available for allocation", 
-                               strategy_id=str(strategy_id))
+                               extra={"strategy_id": str(strategy_id)})
                 return None
 
             repo.insert_account_mapping(
