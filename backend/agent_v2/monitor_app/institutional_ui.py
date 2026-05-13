@@ -29,6 +29,7 @@ class InstitutionalMonitorApp:
 
         return {
             "vps_id": self.settings.V2_VPS_ID,
+            "executor_version": self.settings.V2_ROUTING_VERSION,
             "status": global_metrics["status"],
             "safe_mode": {
                 "active": global_metrics["status"] == "SAFE_MODE",
@@ -42,6 +43,8 @@ class InstitutionalMonitorApp:
             },
             "counts": {
                 "total_accounts": len(accounts),
+                "active_v2_accounts": sum(1 for a in accounts if a.get("executor_version") == "v2"),
+                "testing_accounts": sum(1 for a in accounts if a.get("executor_version") != "v2"),
                 "by_strategy": by_strategy,
                 "terminals": global_metrics["terminal_count"],
                 "terminals_recycled": perf.get("terminals_recycled", 0)
@@ -50,7 +53,9 @@ class InstitutionalMonitorApp:
                 "latency_avg_ms": perf.get("avg_latency_ms", 45),
                 "reconnects_hour": perf.get("reconnects_count", 0),
                 "orders_min": perf.get("orders_throughput", 0),
-                "throughput_history": perf.get("throughput_history", [])
+                "throughput_history": perf.get("throughput_history", []),
+                "slippage_avg_pts": perf.get("avg_slippage_pts", 0.0),
+                "stability_score": perf.get("stability_score", 100.0)
             },
             "accounts": accounts,
             "institutional_flags": {
