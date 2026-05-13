@@ -115,10 +115,10 @@ class AgentV2Settings(BaseSettings):
     V2_EXECUTION_DEDUP_ENABLED: bool = False
     V2_AUTO_RECOVERY_AFTER_REBOOT: bool = False
     V2_HEARTBEAT_INTERVAL_S: int = 5
-    V2_VPS_ID: str = "vps-01"
-
-    # ── Windows VPS Monitor ───────────────────────────────────────
-    WINDOWS_VPS_MONITOR_ENABLED: bool = False
+    V2_VPS_ID: str = "institutional-01"  # Unique ID for each VPS
+    V2_DISTRIBUTED_LOCK_TTL_S: int = 10
+    V2_SHADOW_MODE: bool = False        # If true, log but don't execute orders
+    V2_ROUTING_VERSION: str = "v2"      # This VPS only executes 'v2' accounts
 
 
     # ── Redis tuning ──────────────────────────────────────────────

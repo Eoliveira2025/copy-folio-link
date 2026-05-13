@@ -97,11 +97,12 @@ class V2Bootstrap:
         """Resolves clients flagged for V2 that should copy this strategy."""
         with session_scope() as s:
             rows = s.execute(text(
-                "SELECT a.id, a.login, a.account_type, f.state, a.balance "
+                "SELECT a.id, a.login, a.account_type, f.state, a.balance, a.executor_version "
                 "FROM mt5_accounts a "
                 "JOIN v2_account_flags f ON a.id = f.account_id "
-                "WHERE a.strategy_id = :sid AND f.enabled = true"
-            ), {"sid": str(strategy_id)}).fetchall()
+                "WHERE a.strategy_id = :sid AND f.enabled = true "
+                "AND a.executor_version = :ver"
+            ), {"sid": str(strategy_id), "ver": self.settings.V2_ROUTING_VERSION}).fetchall()
             
             return [
                 ClientAccount(
