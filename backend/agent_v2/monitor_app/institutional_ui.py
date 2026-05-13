@@ -8,12 +8,38 @@ from ..config import get_v2_settings
 class InstitutionalMonitorApp:
     """Enhances the local monitor with institutional metrics."""
 
-    def __init__(self, vps_monitor: VPSMonitorService, health_monitor):
+    def __init__(self, pool_manager, vps_monitor: VPSMonitorService, health_monitor):
+        self.pool = pool_manager
         self.vps_monitor = vps_monitor
         self.health = health_monitor
         self.settings = get_v2_settings()
 
+    def handle_action(self, action_type: str, terminal_id_str: str) -> Dict:
+        """Execute a quick action from the UI."""
+        from uuid import UUID
+        try:
+            tid = UUID(terminal_id_str)
+            if action_type == "reconnect":
+                success = self.pool.reconnect_account(tid)
+                return {"success": success, "message": "Reconnect triggered"}
+            elif action_type == "recycle":
+                success = self.pool.recycle_terminal(tid)
+                return {"success": success, "message": "Recycle triggered"}
+            elif action_type == "remove":
+                success = self.pool.remove_account(tid)
+                return {"success": success, "message": "Remove triggered (checked positions)"}
+            elif action_type == "force_remove":
+                success = self.pool.remove_account(tid, force=True)
+                return {"success": success, "message": "Force remove triggered"}
+            elif action_type == "safe_mode":
+                # Toggle safe mode (logic would be in pool/health_monitor)
+                return {"success": False, "message": "Not implemented yet"}
+            return {"success": False, "message": f"Unknown action: {action_type}"}
+        except Exception as e:
+            return {"success": False, "message": str(e)}
+
     def get_dashboard_data(self) -> Dict:
+
         """Aggregates all institutional data for the UI."""
         global_metrics = self.health.get_global_metrics()
         accounts = self.vps_monitor.get_accounts_status()
