@@ -52,7 +52,7 @@ class PooledTerminalProcess:
             max_restarts = getattr(self.settings, "MAX_RESTARTS_PER_HOUR", 10)
             if self._restarts_this_hour >= max_restarts:
                 self.log.error("max restarts per hour reached", 
-                               limit=max_restarts, count=self._restarts_this_hour)
+                               extra={"limit": max_restarts, "count": self._restarts_this_hour})
                 return False
 
             exe_path = self.terminal_path / "terminal64.exe"
