@@ -26,7 +26,9 @@ from sqlalchemy import text
 from .config import get_v2_settings
 from .db import session_scope
 from .distributor import DistributorV2, ClientAccount
-from .health.heartbeat import HealthMonitor
+from .pool.health_monitor import HealthMonitor
+from .pool.institutional_heartbeat_service import InstitutionalHeartbeatService
+from .pool.state_recovery_service import StateRecoveryService
 from .master_monitor import MasterMonitor
 from .pool.allocator import TerminalAllocator
 from .pool.repo import get_account_details, get_account_mapping, insert_account_mapping
@@ -76,6 +78,8 @@ class V2Bootstrap:
         self.monitors: List[MasterMonitor] = []
         self.master_sync: Optional[MasterSync] = None
         self.health: Optional[HealthMonitor] = None
+        self.heartbeat: Optional[InstitutionalHeartbeatService] = None
+        self.recovery: Optional[StateRecoveryService] = None
         self.stop_event = threading.Event()
 
     def _load_v2_masters(self) -> List[dict]:
@@ -162,14 +166,37 @@ class V2Bootstrap:
         self.master_sync = MasterSync(masters)
         self.master_sync.start()
 
-        # 7. Health
-        self.health = HealthMonitor(registry=self.registry)
+        # 7. Health & Institutional Monitoring
+        def _get_terminals():
+            return [w.pool for w in self.registry.all()]
+        def _get_sessions(tid):
+            w = self.registry.get(tid)
+            return [w.session] if w else []
+
+        self.health = HealthMonitor(
+            get_terminals=_get_terminals,
+            get_sessions=_get_sessions
+        )
         self.health.start()
+
+        # 8. Institutional Heartbeat
+        self.heartbeat = InstitutionalHeartbeatService(
+            vps_id=self.settings.V2_VPS_ID,
+            get_stats=self.health.get_global_metrics
+        )
+        self.heartbeat.start()
+
+        # 9. Recovery (optional after boot)
+        if self.settings.V2_AUTO_RECOVERY_AFTER_REBOOT:
+            self.recovery = StateRecoveryService(self.allocator, self.registry)
+            self.recovery.recover()
+
 
         self.log.info("V2 Bootstrap complete")
 
     def stop(self):
         self.log.info("V2 Bootstrap stopping")
+        if self.heartbeat: self.heartbeat.stop()
         if self.health: self.health.stop()
         if self.master_sync: self.master_sync.stop()
         for mon in self.monitors: mon.stop()
