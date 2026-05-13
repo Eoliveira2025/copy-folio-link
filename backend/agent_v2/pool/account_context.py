@@ -45,7 +45,7 @@ class AccountContext:
         self.last_login_attempt = time.time()
         self.failure_count += 1
         self.last_error = error
-        self.log.error("account login failure", error=error, failures=self.failure_count)
+        self.log.error("account login failure", extra={"error": error, "failures": self.failure_count})
 
     def should_retry_login(self) -> bool:
         """Backoff logic for retries."""
