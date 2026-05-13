@@ -13,6 +13,15 @@ from pydantic_settings import BaseSettings
 class AgentV2Settings(BaseSettings):
     # ── Mode ──────────────────────────────────────────────────────
     POOL_MODE: bool = True  # V2 is always pool-based
+    MT5_POOL_V2_ENABLED: bool = False  # Institutional Multi-Account V2
+
+    # ── Institutional Limits ──────────────────────────────────────
+    MAX_ACCOUNTS_PER_TERMINAL: int = 50
+    MAX_TERMINALS_PER_VPS: int = 20
+    MAX_CPU_USAGE_PCT: float = 80.0
+    MAX_RAM_USAGE_MB: int = 2048
+    MAX_RESTARTS_PER_HOUR: int = 10
+
 
     # ── Remote infra (Linux) — separate Redis DB from V1 ──────────
     DATABASE_URL_SYNC: str = "postgresql://postgres:postgres@91.98.20.163:5432/copytrade"
