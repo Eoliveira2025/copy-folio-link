@@ -93,7 +93,7 @@ class V2Bootstrap:
         """Resolves clients flagged for V2 that should copy this strategy."""
         with session_scope() as s:
             rows = s.execute(text(
-                "SELECT a.id, a.login, a.account_type, f.state "
+                "SELECT a.id, a.login, a.account_type, f.state, a.balance "
                 "FROM mt5_accounts a "
                 "JOIN v2_account_flags f ON a.id = f.account_id "
                 "WHERE a.strategy_id = :sid AND f.enabled = true"
@@ -104,7 +104,8 @@ class V2Bootstrap:
                     account_id=r.id,
                     login=int(r.login),
                     account_type=r.account_type,
-                    state=r.state
+                    state=r.state,
+                    balance=float(r.balance or 0.0)
                 )
                 for r in rows
             ]
