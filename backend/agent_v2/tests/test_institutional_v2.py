@@ -3,6 +3,13 @@
 import unittest
 from uuid import uuid4
 from unittest.mock import MagicMock
+import sys
+
+# Mock dependencies before importing our modules
+sys.modules['cryptography'] = MagicMock()
+sys.modules['cryptography.fernet'] = MagicMock()
+sys.modules['MetaTrader5'] = MagicMock()
+
 from backend.agent_v2.pool.strategy_router import StrategyRouter
 from backend.agent_v2.pool.terminal_process import PooledTerminalProcess
 from backend.agent_v2.pool.account_session import AccountSession
