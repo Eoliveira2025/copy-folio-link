@@ -107,7 +107,10 @@ class AutoProvisioner:
 
         # Light footprint: drop heavy MT5 subdirs if MT5_BASE_PATH was copied.
         for d in _HEAVY_DIRS:
-...
+            target = root / d
+            if target.exists() and target.is_dir():
+                shutil.rmtree(target)
+
         _write_common_ini(root / "config" / "common.ini")
 
     # ── public API ────────────────────────────────────────────────
