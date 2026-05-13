@@ -56,10 +56,12 @@ class DistributorV2:
         allocator: TerminalAllocator,
         worker_registry: PoolWorkerRegistry,
         client_resolver: ClientResolver,
+        symbol_mapper: Optional[SymbolMapper] = None,
     ):
         self.allocator = allocator
         self.workers = worker_registry
         self.resolve_clients = client_resolver
+        self.symbol_mapper = symbol_mapper or SymbolMapper(default_suffix="m")
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self.log = get_logger("distributor")
