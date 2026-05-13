@@ -176,6 +176,12 @@ class AccountSession:
                         extra={"action": "session_login_failed"},
                         exc_info=e,
                     )
+                    # Mark account as failed in DB
+                    try:
+                        from . import repo
+                        repo.mark_account_failed_credentials(account_id, str(e))
+                    except Exception as repo_err:
+                        log.error("failed to mark account status in repo", exc_info=repo_err)
                     raise
             yield {
                 "login_latency_ms": login_latency_ms,
