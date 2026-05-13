@@ -307,6 +307,7 @@ class OrderExecutor:
             order_latency_ms=latency_ms,
             login_latency_ms=session_info.get("login_latency_ms", 0.0),
             deal_ticket=result.deal_ticket, order_ticket=result.order_ticket,
+            price=result.price,
         )
         if not ok:
             raise ExecutionError(f"RETCODE_{retcode}", comment)
@@ -332,6 +333,7 @@ class OrderExecutor:
         login_latency_ms: float,
         deal_ticket: Optional[int] = None,
         order_ticket: Optional[int] = None,
+        price: Optional[float] = None,
     ) -> None:
         log.info(
             "order_send result",
@@ -348,6 +350,7 @@ class OrderExecutor:
                 "master_id": str(self.master_id),
                 "deal_ticket": deal_ticket,
                 "order_ticket": order_ticket,
+                "price": price,
                 "circuit_open": self.cb.is_open(),
             },
         )
@@ -369,7 +372,7 @@ class OrderExecutor:
                 action=task.action.value if hasattr(task.action, 'value') else str(task.action),
                 side=task.side.value if task.side and hasattr(task.side, 'value') else (str(task.side) if task.side else None),
                 volume=float(task.volume) if task.volume else 0.0,
-                price=None, # will be updated by reconciler or history poll
+                price=price,
                 status=status,
                 retcode=retcode,
                 broker_comment=comment,
