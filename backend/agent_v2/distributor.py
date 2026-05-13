@@ -32,6 +32,7 @@ from .redis_client import subscribe
 from .utils.logger import get_logger
 from .utils.trading import VolumeCalculator, SymbolMapper, get_master_stats
 from .wiring import PoolWorkerRegistry
+from .pool.distributed_lock import DistributedLock
 
 
 @dataclass
@@ -65,6 +66,8 @@ class DistributorV2:
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self.log = get_logger("distributor")
+        self.lock_service = DistributedLock()
+        self.settings = get_v2_settings()
 
     # ── lifecycle ─────────────────────────────────────────────────
     def start(self) -> None:
@@ -151,6 +154,13 @@ class DistributorV2:
                 skipped += 1
                 continue
 
+            # 1. Distributed Lock (Safety)
+            if not self.lock_service.acquire(c.account_id):
+                log.error("distributed lock failed; skipping to prevent double execution",
+                          extra={"account_id": str(c.account_id)})
+                skipped += 1
+                continue
+
             try:
                 assignment = self.allocator.assign(
                     account_id=c.account_id,
@@ -161,6 +171,7 @@ class DistributorV2:
                 log.error("allocator failed",
                           extra={"account_id": str(c.account_id),
                                  "action": "allocator_error"}, exc_info=e)
+                self.lock_service.release(c.account_id)
                 skipped += 1
                 continue
 
@@ -172,7 +183,15 @@ class DistributorV2:
                            "account_id": str(c.account_id),
                            "action": "no_worker_for_pool"},
                 )
+                self.lock_service.release(c.account_id)
                 skipped += 1
+                continue
+
+            # Shadow Mode Protection
+            if self.settings.V2_SHADOW_MODE:
+                log.info("SHADOW MODE: execution simulated", extra={"account_id": str(c.account_id)})
+                self.lock_service.release(c.account_id)
+                submitted += 1 # Count as submitted for telemetry
                 continue
 
             task = self._build_task(payload, c, assignment)
