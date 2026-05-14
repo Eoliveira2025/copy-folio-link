@@ -57,24 +57,38 @@ async def get_status():
 
 @app.post("/api/account/{account_id}/reconnect")
 async def reconnect(account_id: UUID):
-    # This would typically send a signal to the main executor or update Redis
-    logger.info(f"Reconnect requested for {account_id}")
-    return {"success": True, "message": "Reconnect command queued"}
+    return await send_command(account_id, "reconnect")
 
 @app.post("/api/account/{account_id}/recycle")
 async def recycle(account_id: UUID):
-    logger.info(f"Recycle requested for {account_id}")
-    return {"success": True, "message": "Recycle command queued"}
+    return await send_command(account_id, "recycle")
 
 @app.post("/api/account/{account_id}/safe_remove")
 async def safe_remove(account_id: UUID):
-    logger.info(f"Safe remove requested for {account_id}")
-    return {"success": True, "message": "Safe remove command queued"}
+    return await send_command(account_id, "safe_remove")
 
 @app.post("/api/account/{account_id}/force_remove")
 async def force_remove(account_id: UUID):
-    logger.info(f"Force remove requested for {account_id}")
-    return {"success": True, "message": "Force remove command queued"}
+    return await send_command(account_id, "force_remove")
+
+async def send_command(account_id: UUID, command: str):
+    try:
+        from ..redis_client import get_redis, k
+        import json
+        r = get_redis()
+        channel = k(f"commands:vps:{settings.V2_VPS_ID}")
+        payload = {
+            "command": command,
+            "account_id": str(account_id),
+            "vps_id": settings.V2_VPS_ID
+        }
+        r.publish(channel, json.dumps(payload))
+        logger.info(f"Command {command} published for {account_id}")
+        return {"success": True, "message": f"{command.capitalize()} command sent"}
+    except Exception as e:
+        logger.error(f"Failed to send command {command}", exc_info=e)
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
