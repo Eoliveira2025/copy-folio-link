@@ -56,9 +56,9 @@ const OperationsDashboard = () => {
           </div>
         </div>
         <Button variant="default" size="sm" asChild className="gap-2">
-          <a href="/copytrade-v2-deploy.zip" download>
+          <a href="/copytrade-v2-deploy-fixed.zip" download>
             <Download className="w-4 h-4" />
-            Download ZIP
+            Download ZIP (Fixed)
           </a>
         </Button>
       </div>
