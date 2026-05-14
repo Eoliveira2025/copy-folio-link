@@ -1,0 +1,51 @@
+COPYTRADE PRO V2 — INSTITUTIONAL WINDOWS VPS INSTALLATION
+======================================================
+
+Este guia descreve a instalação manual do executor V2 no Windows VPS.
+
+PRÉ-REQUISITOS:
+1. Windows Server 2019/2022 ou Windows 10/11.
+2. Python 3.12 (instalado e no PATH).
+3. MetaTrader 5 instalado (Exness recomendado).
+4. Acesso ao Redis/Postgres (Backend Linux).
+
+PASSO A PASSO:
+
+1. EXTRAÇÃO:
+   Extraia este pacote obrigatoriamente em:
+   C:\copytrade-v2
+
+2. CONFIGURAÇÃO:
+   - Vá para C:\copytrade-v2\backend\agent_v2
+   - Renomeie .env.production.example para .env
+   - Edite o .env e preencha:
+     * V2_DATABASE_URL_SYNC: IP do seu Postgres Linux.
+     * V2_REDIS_URL: IP do seu Redis Linux (DB 2 recomendado).
+     * V2_MT5_TERMINAL_PATH: Caminho real do seu terminal64.exe.
+
+3. INSTALAÇÃO AUTOMÁTICA:
+   Execute o script principal:
+   Botão direito em QUICK_START.ps1 -> Executar com PowerShell.
+   
+   OU manualmente via PowerShell:
+   cd C:\copytrade-v2
+   .\QUICK_START.ps1
+
+4. MONITORAMENTO:
+   - Dashboard: http://localhost:8000
+   - Health Check: .\scripts\health_check_v2.ps1
+   - Logs: C:\copytrade-v2\logs e C:\copytrade_v2_logs
+
+5. ESTRUTURA DE PASTAS:
+   - scripts/: Comandos de controle (start/stop).
+   - backend/agent_v2/: Núcleo do executor.
+   - monitor_app/: Servidor web do dashboard.
+   - logs/: Logs de execução.
+
+TROUBLESHOOTING:
+- "Erro de Conexão Redis": Verifique o IP e Firewall no Linux.
+- "MT5 não abre": Verifique o caminho no .env.
+- "Módulos faltando": Execute `pip install -r requirements.txt`.
+
+------------------------------------------------------
+CopyTrade Institutional V2 - 2026 Build
