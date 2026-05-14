@@ -89,6 +89,19 @@ class PooledTerminalProcess:
                 self.start_time = time.time()
                 self._restarts_this_hour += 1
                 self.restart_count += 1
+                
+                # Push state to Redis for the Monitor App
+                try:
+                    from ..redis_client import get_redis, k
+                    r = get_redis()
+                    r.hset(k(f"account:{self.account_id}:stats"), mapping={
+                        "pid": str(self._process.pid),
+                        "start_time": str(self.start_time),
+                        "status": "ACTIVE"
+                    })
+                except Exception:
+                    pass
+
                 self.log.info("terminal process started", extra={
                     "pid": self._process.pid,
                     "cwd": str(instance_dir)

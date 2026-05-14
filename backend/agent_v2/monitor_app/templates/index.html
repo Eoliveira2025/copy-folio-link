@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V2 Institutional Monitor - {{ vps_id }}</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #3b82f6;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --border: #334155;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            font-size: 14px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+        .vps-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .card-title {
+            color: var(--text-muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 5px;
+        }
+        .card-value {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th {
+            text-align: left;
+            color: var(--text-muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            padding: 10px;
+            border-bottom: 2px solid var(--border);
+        }
+        td {
+            padding: 12px 10px;
+            border-bottom: 1px solid var(--border);
+        }
+        .status-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .status-ACTIVE { background: #14532d; color: #4ade80; }
+        .status-EXIT_ONLY { background: #78350f; color: #fbbf24; }
+        .status-RECOVERY { background: #1e3a8a; color: #60a5fa; }
+        .status-DISCONNECTED { background: #450a0a; color: #f87171; }
+        
+        .actions {
+            display: flex;
+            gap: 5px;
+        }
+        button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        button:hover { background: var(--primary); }
+        .btn-danger:hover { background: var(--danger); }
+        
+        .progress-bar {
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1 style="margin:0; font-size: 1.5rem;">V2 Institutional Dashboard</h1>
+            <div style="color: var(--text-muted); font-size: 12px;">VPS: {{ vps_id }} | <span id="last-update">Syncing...</span></div>
+        </div>
+        <div class="actions">
+            <button onclick="fetchStatus()">Refresh</button>
+        </div>
+    </div>
+
+    <div class="vps-info" id="vps-stats">
+        <div class="card">
+            <div class="card-title">CPU Usage</div>
+            <div class="card-value" id="cpu-val">0%</div>
+            <div class="progress-bar"><div class="progress-fill" id="cpu-bar" style="width: 0%"></div></div>
+        </div>
+        <div class="card">
+            <div class="card-title">RAM Usage</div>
+            <div class="card-value" id="ram-val">0%</div>
+            <div class="progress-bar"><div class="progress-fill" id="ram-bar" style="width: 0%"></div></div>
+        </div>
+        <div class="card">
+            <div class="card-title">Terminals</div>
+            <div class="card-value" id="term-val">0</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Capacity</div>
+            <div class="card-value" id="cap-val">0/0</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title" style="margin-bottom: 15px;">Connected Accounts</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Login</th>
+                    <th>Strategy</th>
+                    <th>Balance</th>
+                    <th>Equity</th>
+                    <th>PnL</th>
+                    <th>Status</th>
+                    <th>PID</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="accounts-list">
+                <!-- Rows will be injected here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        async function api(path, method = 'GET') {
+            const res = await fetch(path, { method });
+            return res.json();
+        }
+
+        async function triggerAction(action, id) {
+            if (!confirm(`Are you sure you want to ${action} account ${id}?`)) return;
+            const res = await api(`/api/account/${id}/${action}`, 'POST');
+            alert(res.message);
+            fetchStatus();
+        }
+
+        async function fetchStatus() {
+            try {
+                const data = await api('/api/status');
+                document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+                
+                // Update VPS stats
+                const v = data.vps;
+                document.getElementById('cpu-val').textContent = `${v.cpu_usage}%`;
+                document.getElementById('cpu-bar').style.width = `${v.cpu_usage}%`;
+                document.getElementById('ram-val').textContent = `${v.ram_usage_pct}%`;
+                document.getElementById('ram-bar').style.width = `${v.ram_usage_pct}%`;
+                document.getElementById('term-val').textContent = v.terminal_count;
+                document.getElementById('cap-val').textContent = `${v.terminal_count}/${v.safe_capacity}`;
+
+                // Update Accounts
+                const tbody = document.getElementById('accounts-list');
+                tbody.innerHTML = '';
+                
+                if (data.accounts.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted)">No active accounts discovered on this VPS</td></tr>';
+                }
+
+                data.accounts.forEach(acc => {
+                    const row = document.createElement('tr');
+                    const pnl = (acc.equity - acc.balance).toFixed(2);
+                    const pnlClass = pnl >= 0 ? 'color: var(--success)' : 'color: var(--danger)';
+                    
+                    row.innerHTML = `
+                        <td><strong>${acc.login}</strong></td>
+                        <td>${acc.strategy || 'N/A'}</td>
+                        <td>${acc.balance.toFixed(2)}</td>
+                        <td>${acc.equity.toFixed(2)}</td>
+                        <td style="${pnlClass}">${pnl > 0 ? '+' : ''}${pnl}</td>
+                        <td><span class="status-badge status-${acc.status}">${acc.status}</span></td>
+                        <td><code>${acc.pid || '-'}</code></td>
+                        <td class="actions">
+                            <button onclick="triggerAction('reconnect', '${acc.id}')">Rec</button>
+                            <button onclick="triggerAction('recycle', '${acc.id}')">Cycle</button>
+                            <button class="btn-danger" onclick="triggerAction('safe_remove', '${acc.id}')">Off</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (e) {
+                console.error(e);
+                document.getElementById('last-update').textContent = 'Error syncing';
+            }
+        }
+
+        // Poll every 5 seconds
+        setInterval(fetchStatus, 5000);
+        fetchStatus();
+    </script>
+</body>
+</html>

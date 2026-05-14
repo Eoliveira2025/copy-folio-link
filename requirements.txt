@@ -12,4 +12,7 @@ pydantic-settings
 click
 pydantic[email]
 requests
-tabulate
+fastapi
+uvicorn
+jinja2
+websockets

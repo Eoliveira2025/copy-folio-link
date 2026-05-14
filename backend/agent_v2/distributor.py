@@ -89,23 +89,23 @@ class DistributorV2:
     # ── loop ──────────────────────────────────────────────────────
     def _run(self) -> None:
         try:
-            ps = subscribe(["events:master:*"])
+            from .redis_client import get_redis, k
+            r = get_redis()
+            vps_id = self.settings.V2_VPS_ID
+            
+            ps = r.pubsub(ignore_subscribe_messages=True)
+            # 1. Listen for master events
+            ps.psubscribe(k("events:master:*"))
+            # 2. Listen for direct commands (reconnect, etc)
+            ps.subscribe(k(f"commands:vps:{vps_id}"))
+            
+            self.log.info("distributor listening for events and commands", 
+                          extra={"vps_id": vps_id})
         except Exception as e:
             self.log.error("redis subscribe failed; distributor idle",
                            extra={"action": "redis_subscribe_failed"}, exc_info=e)
             while not self._stop.is_set():
                 self._stop.wait(1.0)
-            return
-
-        # PSUBSCRIBE is needed for wildcards
-        try:
-            from .redis_client import get_redis, k
-            ps.close()
-            ps = get_redis().pubsub(ignore_subscribe_messages=True)
-            ps.psubscribe(k("events:master:*"))
-        except Exception as e:
-            self.log.error("redis psubscribe failed",
-                           extra={"action": "redis_psubscribe_failed"}, exc_info=e)
             return
 
         for msg in ps.listen():
@@ -114,15 +114,66 @@ class DistributorV2:
             if not msg or msg.get("type") not in ("message", "pmessage"):
                 continue
             try:
+                channel = msg.get("channel", b"").decode()
                 data = msg.get("data")
                 if isinstance(data, (bytes, bytearray)):
                     data = data.decode("utf-8")
                 payload = json.loads(data)
-                self.handle_event(payload)
+                
+                if "events:master:" in channel:
+                    self.handle_event(payload)
+                elif "commands:vps:" in channel:
+                    self.handle_command(payload)
+                    
             except Exception as e:
-                self.log.error("event handling failed",
-                               extra={"action": "event_handling_failed"},
+                self.log.error("message handling failed",
+                               extra={"action": "message_handling_failed"},
                                exc_info=e)
+
+    def handle_command(self, payload: dict):
+        """Handle incoming commands from the Monitor UI."""
+        cmd = payload.get("command")
+        account_id_str = payload.get("account_id")
+        
+        self.log.info(f"Received command: {cmd}", extra={"payload": payload})
+        
+        if not cmd or not account_id_str:
+            return
+            
+        try:
+            from uuid import UUID
+            account_id = UUID(account_id_str)
+            
+            # Map account_id to pool_id via allocator
+            # (In V2 mapping is persistent while account is on VPS)
+            from .pool.repo import get_account_mapping
+            mapping = get_account_mapping(account_id)
+            if not mapping:
+                self.log.warning("Command failed: account not mapped on this VPS", extra=payload)
+                return
+                
+            worker = self.workers.get(mapping.pool_id)
+            if not worker:
+                self.log.warning("Command failed: no active worker for pool", extra=payload)
+                return
+            
+            # Execute command on worker
+            if cmd == "reconnect":
+                worker.pool.stop()
+                worker.pool.start()
+            elif cmd == "recycle":
+                worker.pool.recycle()
+            elif cmd == "safe_remove":
+                # Logic to stop worker and remove from registry
+                # For now just stop the terminal
+                worker.pool.stop()
+            elif cmd == "force_remove":
+                worker.pool.stop()
+                
+            self.log.info(f"Command executed: {cmd}", extra={"account_id": account_id_str})
+        except Exception as e:
+            self.log.error("command execution failed", exc_info=e)
+
 
     # ── core ──────────────────────────────────────────────────────
     def handle_event(self, payload: dict) -> dict:
