@@ -45,22 +45,30 @@ const OperationsDashboard = () => {
       </div>
       
       {/* Deploy Section */}
-      <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 flex items-center justify-between">
+      <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-full bg-primary/10">
             <Download className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-semibold text-sm">V2 Institutional Deploy Package</h3>
-            <p className="text-xs text-muted-foreground">Download the complete ZIP for Windows VPS installation</p>
+            <h3 className="font-semibold text-sm">V2 Institutional Build (Recommended)</h3>
+            <p className="text-xs text-muted-foreground">Complete professional package for Windows VPS deployment (Headless + Monitor Web)</p>
           </div>
         </div>
-        <Button variant="default" size="sm" asChild className="gap-2">
-          <a href="/copytrade-v2-deploy-fixed.zip" download>
-            <Download className="w-4 h-4" />
-            Download ZIP (Fixed)
-          </a>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="default" size="sm" asChild className="gap-2">
+            <a href="/copytrade-v2-institutional-build.zip" download>
+              <Download className="w-4 h-4" />
+              Download Institutional Build
+            </a>
+          </Button>
+          <Button variant="outline" size="sm" asChild className="gap-2">
+            <a href="/copytrade-v2-deploy-fixed.zip" download>
+              <Download className="w-4 h-4" />
+              Legacy Fix ZIP
+            </a>
+          </Button>
+        </div>
       </div>
 
       {/* Trading Metrics */}
