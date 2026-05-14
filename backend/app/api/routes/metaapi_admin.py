@@ -9,6 +9,16 @@ from app.core.config import get_settings
 router = APIRouter()
 settings = get_settings()
 
+@router.get("/health")
+async def get_metaapi_health():
+    """Health check for MetaApi integration."""
+    return {
+        "status": "ready",
+        "version": "v3-metaapi",
+        "metaapi_enabled": settings.METAAPI_ENABLED,
+        "copyfactory_enabled": settings.COPYFACTORY_ENABLED
+    }
+
 @router.get("/status")
 async def get_metaapi_status(
     admin=Depends(require_admin),
