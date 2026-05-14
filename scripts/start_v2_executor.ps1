@@ -3,7 +3,7 @@
     Starts the CopyTrade Pro V2 Institutional Executor.
 #>
 
-$V2_ROOT = "C:\copytrade_v2"
+$V2_ROOT = "C:\copytrade-v2"
 Set-Location $V2_ROOT
 
 Write-Host "--- Starting CopyTrade Pro V2 Institutional ---" -ForegroundColor Cyan

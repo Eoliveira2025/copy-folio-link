@@ -24,19 +24,19 @@ class AgentV2Settings(BaseSettings):
 
 
     # ── Remote infra (Linux) — separate Redis DB from V1 ──────────
-    DATABASE_URL_SYNC: str = "postgresql://postgres:postgres@91.98.20.163:5432/copytrade"
-    REDIS_URL: str = "redis://91.98.20.163:6379/2"  # DB /2 (V1 uses /0)
+    DATABASE_URL_SYNC: str = ""
+    REDIS_URL: str = ""
     REDIS_PREFIX: str = "copytrade_v2:"
 
     # ── Credentials ───────────────────────────────────────────────
-    MT5_CREDENTIAL_KEY: str = "change-me-32-byte-base64-key===="
+    MT5_CREDENTIAL_KEY: str = ""
 
     # ── MT5 Terminal binary ───────────────────────────────────────
     MT5_TERMINAL_PATH: str = r"C:\Program Files\MetaTrader 5\terminal64.exe"
     MT5_BASE_PATH: str = r"C:\Program Files\MetaTrader 5"
 
     # ── V2 isolated paths ─────────────────────────────────────────
-    V2_ROOT: str = r"C:\copytrade_v2"
+    V2_ROOT: str = r"C:\copytrade-v2"
     V2_MASTERS_DIR: str = r"C:\MT5_Masters_V2"
     V2_POOL_DIR: str = r"C:\MT5_Pool_V2"
     V2_LOGS_DIR: str = r"C:\copytrade_v2_logs"

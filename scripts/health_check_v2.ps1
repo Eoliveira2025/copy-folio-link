@@ -3,7 +3,7 @@
     Checks if V2 processes and connectivity are healthy.
 #>
 
-$V2_ROOT = "C:\copytrade_v2"
+$V2_ROOT = "C:\copytrade-v2"
 Set-Location $V2_ROOT
 
 Write-Host "--- V2 Institutional Health Check ---" -ForegroundColor Cyan

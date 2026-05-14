@@ -12,7 +12,7 @@ Este guia explica como instalar o **CopyTrade Pro V2** no seu novo Windows VPS i
 ## Passo a Passo
 
 ### 1. Extração
-1.  Baixe o arquivo `copytrade-v2-deploy.zip`.
+1.  Baixe o arquivo `copytrade-v2-deploy-fixed.zip`.
 2.  Extraia o conteúdo diretamente para a raiz do seu drive `C:`.
 3.  A estrutura final deve ser: `C:\copytrade-v2`.
 
