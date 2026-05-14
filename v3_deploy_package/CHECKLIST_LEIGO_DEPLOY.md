@@ -59,10 +59,21 @@ curl http://localhost:8000/api/v1/admin/metaapi/health
 1. Altere no `.env`: `METAAPI_ENABLED=true` e `COPYFACTORY_ENABLED=true`.
 2. Reinicie: `docker-compose restart backend`.
 3. Acesse o painel Admin no navegador: `/admin/metaapi`.
-4. Conecte uma conta Master Demo e uma Cliente Demo para testar a cópia.
+4. **Testar Conexão:** Clique no botão "Sync All" ou "Check Status" no painel.
+5. **Conectar Master Demo:**
+   - No painel V3, clique em "Add Master Account".
+   - Insira os dados da conta demo (Exness/IC Markets).
+   - Verifique se o status muda para `CONNECTED`.
+6. **Conectar Cliente Demo:**
+   - Adicione outra conta como "Subscriber".
+   - Vincule-a à estratégia do Master criado.
+7. **Testar Cópia:**
+   - Abra uma ordem manualmente na conta Master.
+   - Verifique em segundos se ela foi replicada na conta Cliente via painel.
 
 ---
 **Caso algo dê errado:**
 - Volte as flags no `.env` para `false`.
 - Reinicie o container: `docker-compose restart backend`.
 - A V1 continuará funcionando normalmente.
+
