@@ -56,9 +56,9 @@ docker-compose up -d --build
 Abra no seu navegador ou use o comando:
 
 ```bash
-curl http://localhost:8000/api/v1/metaapi/health
+curl http://localhost:8000/api/v1/admin/metaapi/health
 ```
-Deve retornar: `{"status": "ready", "version": "v3-metaapi"}`
+Deve retornar: `{"status": "ready", "version": "v3-metaapi", ...}`
 
 ## 6. Conectar Conta Master Demo
 1. Acesse o Painel Admin.
