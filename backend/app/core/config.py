@@ -71,6 +71,14 @@ class Settings(BaseSettings):
 
     # Frontend URL (for reset links)
     FRONTEND_URL: str = "http://localhost:5173"
+    
+    # MetaApi Settings
+    METAAPI_ENABLED: bool = False
+    COPYFACTORY_ENABLED: bool = False
+    METAAPI_TOKEN: str | None = None
+    METAAPI_REGION: str = "new-york"
+    METAAPI_ACCOUNT_REPLICA_COUNT: int = 1
+    METAAPI_DEFAULT_PLATFORM: str = "mt5"
 
     class Config:
         env_file = ".env"
