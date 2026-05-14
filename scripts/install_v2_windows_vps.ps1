@@ -5,7 +5,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$V2_ROOT = "C:\copytrade_v2"
+$V2_ROOT = "C:\copytrade-v2"
 $V2_LOGS = "C:\copytrade_v2_logs"
 $V2_POOL = "C:\MT5_Pool_V2"
 $V2_MASTERS = "C:\MT5_Masters_V2"
