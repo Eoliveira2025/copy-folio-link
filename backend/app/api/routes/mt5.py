@@ -12,7 +12,9 @@ from app.models.mt5_account import MT5Account, MT5Status
 from app.models.strategy import Strategy, MasterAccount, UserStrategy, StrategyLevel
 from app.schemas.mt5 import ConnectMT5Request, MT5AccountResponse
 from app.services import copy_engine
+from app.core.config import get_settings
 
+settings = get_settings()
 router = APIRouter()
 
 
@@ -87,6 +89,15 @@ async def connect_mt5(
     )
 
     return account
+
+
+@router.get("/v3/status")
+async def get_v3_status(user: User = Depends(get_current_user)):
+    """Check if MetaApi V3 is enabled for the user."""
+    return {
+        "v3_enabled": settings.METAAPI_ENABLED,
+        "copyfactory_enabled": settings.COPYFACTORY_ENABLED
+    }
 
 
 @router.get("/accounts", response_model=list[MT5AccountResponse])
