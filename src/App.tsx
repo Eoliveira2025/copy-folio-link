@@ -23,6 +23,7 @@ import AdminPanel from "./pages/admin/AdminPanel";
 import OperationsDashboard from "./pages/admin/OperationsDashboard";
 import AdminBilling from "./pages/admin/AdminBilling";
 import Provisioning from "./pages/admin/Provisioning";
+import MetaApiAdmin from "./pages/admin/MetaApiAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -90,6 +91,14 @@ const App = () => (
                 element={
                   <AdminRoute>
                     <Provisioning />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/metaapi"
+                element={
+                  <AdminRoute>
+                    <MetaApiAdmin />
                   </AdminRoute>
                 }
               />
