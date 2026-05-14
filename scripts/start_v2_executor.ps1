@@ -11,8 +11,13 @@ Set-Location $V2_ROOT
 
 Write-Host "--- CopyTrade Pro V2 Institutional Bootloader ---" -ForegroundColor Cyan
 
-if (!(Test-Path ".env")) {
-    Write-Error "Configuration file (.env) not found in $V2_ROOT"
+# Check for .env in current dir first, then in backend/agent_v2
+if (Test-Path "backend\agent_v2\.env") {
+    $ENV_FILE = "backend\agent_v2\.env"
+} elseif (Test-Path ".env") {
+    $ENV_FILE = ".env"
+} else {
+    Write-Error "Configuration file (.env) not found. Please create backend\agent_v2\.env"
     exit 1
 }
 
