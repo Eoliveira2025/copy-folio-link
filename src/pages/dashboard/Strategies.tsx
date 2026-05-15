@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useStrategies, useSelectStrategy, useRequestStrategy } from "@/hooks/use-api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
+import { MetaApiV3Strategies } from "@/components/MetaApiV3Strategies";
 
 const riskInfo: Record<string, { risk: string; expectedReturn: string }> = {
   low: { risk: "Low", expectedReturn: "5-10% / month" },
