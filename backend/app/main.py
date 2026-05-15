@@ -99,3 +99,21 @@ app.include_router(api_router, prefix=settings.API_PREFIX)
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "service": settings.APP_NAME}
+
+
+@app.get("/health/metaapi")
+async def metaapi_health():
+    """Public health check for MetaApi integration."""
+    return {
+        "status": "ok" if settings.METAAPI_ENABLED else "disabled",
+        "enabled": settings.METAAPI_ENABLED
+    }
+
+
+@app.get("/health/copyfactory")
+async def copyfactory_health():
+    """Public health check for CopyFactory integration."""
+    return {
+        "status": "ok" if settings.COPYFACTORY_ENABLED else "disabled",
+        "enabled": settings.COPYFACTORY_ENABLED
+    }
