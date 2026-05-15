@@ -67,6 +67,7 @@ const MetaApiAdmin = () => {
           <TabsTrigger value="accounts" className="gap-2"><Users className="h-4 w-4" /> Contas</TabsTrigger>
           <TabsTrigger value="subscriptions" className="gap-2"><CheckCircle2 className="h-4 w-4" /> Assinaturas</TabsTrigger>
           <TabsTrigger value="switches" className="gap-2"><ArrowLeftRight className="h-4 w-4" /> Switch Requests</TabsTrigger>
+          <TabsTrigger value="reconciliation" className="gap-2"><Scale className="h-4 w-4" /> Reconciliação</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
