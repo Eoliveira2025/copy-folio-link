@@ -1,68 +1,66 @@
-# CHECKLIST DEPLOY V3 METAAPI (HOMOLOGAÇÃO)
+# CHECKLIST DEPLOY V3 (SQLite - Homologação sem Docker)
 
-Este guia é para implantar a V3 do CopyTrade Pro (MetaApi) de forma isolada da V1.
+Este guia é para você configurar a V3 do CopyTrade Pro no seu VPS 2 usando SQLite local, sem depender de Postgres.
 
-## 1. Preparação (Upload)
-- [ ] Envie o arquivo `copytrade-v3-metaapi-deploy-full.zip` para o seu VPS 2.
-- [ ] Extraia o conteúdo em uma nova pasta, ex: `C:\copytrade_v3` ou `/opt/copytrade_v3`.
+## 1. Preparação dos Arquivos
+- Certifique-se de que os novos arquivos foram enviados para a pasta `backend/` no seu VPS 2.
+- Arquivos importantes:
+  - `backend/requirements.v3.txt` (agora inclui aiosqlite e alembic)
+  - `backend/app/core/database.py` (adaptado para SQLite)
+  - `backend/scripts/create_sqlite_v3.ps1`
+  - `backend/scripts/run_migrations_sqlite_v3.ps1`
 
-## 2. Configuração (.env)
-- [ ] Copie o `.env.example` para `.env`.
-- [ ] Edite o `.env` e configure:
-  - `POSTGRES_PASSWORD`: Escolha uma senha forte.
-  - `METAAPI_ENABLED=false` (Mantenha false até o primeiro boot).
-  - `COPYFACTORY_ENABLED=false` (Mantenha false até o primeiro boot).
-
-## 3. Comandos de Instalação/Deploy
-Abra o terminal na pasta do projeto e execute:
-
-```bash
-# Dar permissão de execução aos scripts (se estiver no Linux)
-chmod +x scripts/*.sh
-
-# 1. Subir os containers da V3 (API, Redis, Postgres)
-./scripts/deploy_v3.sh
-
-# 2. Rodar as migrações no banco de dados isolado da V3
-./scripts/run_migrations_v3.sh
+## 2. Instalação de Dependências
+Abra o PowerShell na pasta `backend` e rode:
+```powershell
+pip install -r requirements.v3.txt
 ```
 
-## 4. Verificação de Saúde (Health Check)
-Acesse no navegador do VPS ou via `curl`:
-- [ ] Principal: `http://localhost:8003/health` -> deve retornar `{"status": "ok"}`
-- [ ] MetaApi: `http://localhost:8003/health/metaapi` -> deve retornar `{"status": "disabled"}`
-- [ ] CopyFactory: `http://localhost:8003/health/copyfactory` -> deve retornar `{"status": "disabled"}`
+## 3. Configuração do Ambiente (.env)
+1. Renomeie (ou crie) o arquivo `.env` na pasta `backend` (baseado no `.env.v3.example`):
+   ```powershell
+   # No PowerShell dentro da pasta backend:
+   Copy-Item .env.v3.example .env -Force
+   ```
+2. Edite o `.env` e configure suas chaves:
+   - `METAAPI_TOKEN`: Seu token da MetaApi
+   - `METAAPI_ENABLED=true`
+   - `COPYFACTORY_ENABLED=true`
+   - `DATABASE_URL=sqlite+aiosqlite:///./copytrade_v3.db`
+   - `DATABASE_URL_SYNC=sqlite:///./copytrade_v3.db`
 
-## 5. Ativação da MetaApi (Feature Flag)
-Após confirmar que os containers estão UP:
-- [ ] Edite o `.env`.
-- [ ] Configure `METAAPI_TOKEN=seu_token_aqui`.
-- [ ] Altere `METAAPI_ENABLED=true`.
-- [ ] Altere `COPYFACTORY_ENABLED=true`.
-- [ ] Reinicie o container da API:
-  ```bash
-  docker-compose -f docker-compose.v3.yml restart ctv3-api
-  ```
+## 4. Inicialização do Banco de Dados (SQLite)
+Você tem duas opções (recomendamos a Opção A para primeiro teste rápido):
 
-## 6. Teste de Conexão MetaApi
-Execute o comando abaixo para testar se a API consegue falar com a MetaApi:
-```bash
-docker exec -it ctv3-api python -c "from app.services.metaapi.client import MetaApiClient; import asyncio; from app.core.config import get_settings; async def test(): client = MetaApiClient(get_settings().METAAPI_TOKEN); print(await client.health_check()); asyncio.run(test())"
+**Opção A: Criação Direta (Mais simples)**
+```powershell
+.\scripts\create_sqlite_v3.ps1
+```
+Isso criará o arquivo `copytrade_v3.db` com todas as tabelas necessárias.
+
+**Opção B: Via Migrations Alembic (Padrão de produção)**
+```powershell
+.\scripts\run_migrations_sqlite_v3.ps1
 ```
 
-## 7. Conectar Contas Demo
-(Use o Postman ou a documentação Swagger em `http://localhost:8003/docs`)
-
-1. **Master Demo**:
-   - Endpoint: `POST /api/v3/admin/metaapi/accounts`
-   - Payload: `{ "account_id": "...", "type": "master" }`
-2. **Cliente Demo**:
-   - Endpoint: `POST /api/v3/admin/metaapi/accounts`
-   - Payload: `{ "account_id": "...", "type": "slave" }`
-
-## 8. Como Voltar Atrás (Rollback)
-Se algo der errado e você quiser remover tudo da V3:
-```bash
-docker-compose -f docker-compose.v3.yml down -v
+## 5. Iniciando a API
+Ainda na pasta `backend`, inicie o servidor:
+```powershell
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload
 ```
-Isso não afetará a V1, pois os nomes dos containers e volumes são diferentes.
+*A porta 8003 é usada para não conflitar com a V1 se ela estiver rodando.*
+
+## 6. Testes de Health Check
+Abra o navegador ou use o `curl` no VPS:
+- Health Geral: `http://localhost:8003/health`
+- Health MetaApi: `http://localhost:8003/health/metaapi`
+- Health CopyFactory: `http://localhost:8003/health/copyfactory`
+
+## 7. Como voltar atrás (Rollback)
+Se algo der errado:
+1. Pare o processo do Python (Ctrl+C).
+2. Se quiser limpar tudo da V3, apague o arquivo `copytrade_v3.db`.
+3. A V1 continua intacta pois usa seu próprio banco de dados Postgres e suas próprias portas de serviço.
+
+---
+**IMPORTANTE:** O SQLite é recomendado apenas para testes de homologação no VPS 2. Para produção com alto volume, recomendamos voltar para o Postgres (basta alterar as URLs no `.env`).
