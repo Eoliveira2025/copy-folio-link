@@ -66,17 +66,15 @@ class CopyFactoryService:
             
         logger.info(f"Subscribing account {subscriber_account_id} to strategy {strategy_id}")
         
-        # Enhanced payload for SDK 12.0.0 and CopyFactory v2 compatibility
-        # Structure based on UpdatedSubscriber model
+        # Payload format for CopyFactory SDK 12.0.0 (using dict for subscriptions as requested)
         payload = {
             'name': f'Subscriber {subscriber_account_id}',
-            'subscriptions': [
-                {
-                    'strategyId': strategy_id,
+            'subscriptions': {
+                strategy_id: {
                     'multiplier': float(risk_ratio),
                     'enabled': True
                 }
-            ],
+            },
             'enabled': True
         }
         
