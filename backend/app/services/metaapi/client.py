@@ -161,3 +161,20 @@ class MetaApiClient:
         except Exception as e:
             logger.error(f"Error fetching positions for {account_id}: {e}")
             return []
+
+    async def close_position(self, account_id: str, position_id: str):
+        """Close a specific position."""
+        if not self.api:
+            raise Exception("MetaApi token not configured")
+        try:
+            account = await self.api.metatrader_account_api.get_account(account_id)
+            connection = account.get_rpc_connection()
+            await connection.connect()
+            await connection.wait_synchronized()
+            
+            # Close by position id
+            result = await connection.close_position(position_id)
+            return result
+        except Exception as e:
+            logger.error(f"Error closing position {position_id} on {account_id}: {e}")
+            raise e
