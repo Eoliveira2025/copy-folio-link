@@ -110,10 +110,15 @@ class MetaApiService:
             # Update DB cache
             account.connection_status = status.get("connectionStatus", "UNKNOWN")
             account.deployment_status = status.get("deploymentStatus", "UNKNOWN")
+            
+            # Map MetaApi status to our desired display status if needed
+            # (SDK status are usually DISCONNECTED, CONNECTING, CONNECTED, etc.)
+            
             await self.db.commit()
             return status
         except Exception as e:
-            return {"error": str(e)}
+            logger.error(f"Error fetching status for {account.metaapi_account_id}: {e}")
+            return {"error": str(e), "id": account.metaapi_account_id, "connectionStatus": "ERROR"}
 
     async def deploy_account(self, account_id: Any):
         stmt = select(MetaApiAccount).where(MetaApiAccount.id == account_id)
