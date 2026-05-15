@@ -65,8 +65,9 @@ class CopyFactoryService:
             
         logger.info(f"Subscribing account {subscriber_account_id} to strategy {strategy_id}")
         try:
-            # Note: The subscriber account must have 'SUBSCRIBER' role in MetaApi
-            await self.cf_api.configuration_api.update_subscriber_configuration(subscriber_account_id, {
+            # Using update_subscriber for SDK 12.0.0
+            await self.cf_api.configuration_api.update_subscriber(subscriber_account_id, {
+                'name': f'Subscriber {subscriber_account_id}',
                 'subscriptions': [{
                     'strategyId': strategy_id,
                     'multiplier': risk_ratio
