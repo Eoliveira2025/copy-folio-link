@@ -60,7 +60,11 @@ class MetaApiService:
             # 2. Deploy
             await self.client.deploy_account(db_account.metaapi_account_id)
             db_account.deployment_status = "DEPLOYING"
+            db_account.connection_status = "CONNECTING"
             await self.db.commit()
+            
+            # Start background task to wait for connection
+            asyncio.create_task(self._wait_and_update_status(db_account.id, db_account.metaapi_account_id))
             
             await self.log_event(db_account.id, "ACCOUNT_CREATED", f"Account {data['login']} created and deployment started")
             
@@ -68,7 +72,26 @@ class MetaApiService:
         except Exception as e:
             logger.error(f"Error creating MetaApi account: {e}")
             await self.log_event(db_account.id, "CREATION_ERROR", str(e))
+            # Don't delete the DB record, keep it for retry or visibility
             raise e
+
+    async def _wait_and_update_status(self, db_id: Any, ma_id: str):
+        """Background task to wait for connection and update DB."""
+        await asyncio.sleep(5) # Give some time for initial deploy
+        res = await self.client.wait_until_connected(ma_id, timeout=120)
+        
+        # New session for background task
+        from app.core.database import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
+            stmt = select(MetaApiAccount).where(MetaApiAccount.id == db_id)
+            result = await db.execute(stmt)
+            account = result.scalars().first()
+            if account:
+                status = await self.client.get_account(ma_id)
+                account.connection_status = status.get("connectionStatus", "UNKNOWN")
+                account.deployment_status = status.get("deploymentStatus", "UNKNOWN")
+                await db.commit()
+                logger.info(f"Background status update for {ma_id}: {account.connection_status}")
 
     async def list_accounts(self) -> List[MetaApiAccount]:
         stmt = select(MetaApiAccount).order_by(MetaApiAccount.created_at.desc())
@@ -87,10 +110,15 @@ class MetaApiService:
             # Update DB cache
             account.connection_status = status.get("connectionStatus", "UNKNOWN")
             account.deployment_status = status.get("deploymentStatus", "UNKNOWN")
+            
+            # Map MetaApi status to our desired display status if needed
+            # (SDK status are usually DISCONNECTED, CONNECTING, CONNECTED, etc.)
+            
             await self.db.commit()
             return status
         except Exception as e:
-            return {"error": str(e)}
+            logger.error(f"Error fetching status for {account.metaapi_account_id}: {e}")
+            return {"error": str(e), "id": account.metaapi_account_id, "connectionStatus": "ERROR"}
 
     async def deploy_account(self, account_id: Any):
         stmt = select(MetaApiAccount).where(MetaApiAccount.id == account_id)

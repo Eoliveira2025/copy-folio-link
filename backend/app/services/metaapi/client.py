@@ -23,8 +23,8 @@ class MetaApiClient:
         
         logger.info(f"Creating MetaApi account for {login} on {server}")
         try:
-            provisioning_api = self.api.provisioning_api
-            account = await provisioning_api.create_account({
+            account_api = self.api.metatrader_account_api
+            account = await account_api.create_account({
                 'name': name,
                 'type': 'cloud',
                 'login': login,
@@ -32,11 +32,14 @@ class MetaApiClient:
                 'server': server,
                 'platform': platform,
                 'magic': 123456, # Default magic
-                'region': settings.METAAPI_REGION
+                'region': settings.METAAPI_REGION,
+                'quoteStreamingIntervalInSeconds': 2.5
             })
             return {'id': account.id, 'status': 'CREATED'}
         except Exception as e:
             logger.error(f"MetaApi SDK Error (create_account): {e}")
+            if "Authentication failed" in str(e):
+                raise Exception(f"MetaApi Error: Invalid Credentials - {e}")
             raise e
 
     async def deploy_account(self, account_id: str):
@@ -46,12 +49,25 @@ class MetaApiClient:
         
         logger.info(f"Deploying MetaApi account {account_id}")
         try:
-            account = await self.api.provisioning_api.get_account(account_id)
+            account = await self.api.metatrader_account_api.get_account(account_id)
             await account.deploy()
             return {"status": "DEPLOYING"}
         except Exception as e:
             logger.error(f"MetaApi SDK Error (deploy_account): {e}")
             raise e
+
+    async def wait_until_connected(self, account_id: str, timeout: int = 60):
+        """Wait until account is connected."""
+        if not self.api:
+            return
+            
+        try:
+            account = await self.api.metatrader_account_api.get_account(account_id)
+            await account.wait_connected(timeout)
+            return {"status": "CONNECTED"}
+        except Exception as e:
+            logger.error(f"Timeout waiting for connection {account_id}: {e}")
+            return {"status": "TIMEOUT", "error": str(e)}
 
     async def undeploy_account(self, account_id: str):
         """Undeploy a MetaApi account to save resources."""
@@ -60,7 +76,7 @@ class MetaApiClient:
         
         logger.info(f"Undeploying MetaApi account {account_id}")
         try:
-            account = await self.api.provisioning_api.get_account(account_id)
+            account = await self.api.metatrader_account_api.get_account(account_id)
             await account.undeploy()
             return {"status": "UNDEPLOYED"}
         except Exception as e:
@@ -74,7 +90,7 @@ class MetaApiClient:
         
         logger.info(f"Removing MetaApi account {account_id}")
         try:
-            account = await self.api.provisioning_api.get_account(account_id)
+            account = await self.api.metatrader_account_api.get_account(account_id)
             await account.remove()
             return {"status": "REMOVED"}
         except Exception as e:
@@ -87,7 +103,7 @@ class MetaApiClient:
             return {"error": "MetaApi token not configured"}
             
         try:
-            account = await self.api.provisioning_api.get_account(account_id)
+            account = await self.api.metatrader_account_api.get_account(account_id)
             return {
                 "id": account.id, 
                 "connectionStatus": account.connection_status,
