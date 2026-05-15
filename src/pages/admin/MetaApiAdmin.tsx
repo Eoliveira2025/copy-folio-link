@@ -346,36 +346,56 @@ const MetaApiAdmin = () => {
         </TabsContent>
 
         <TabsContent value="reconciliation">
-          <div className="grid gap-4 md:grid-cols-4 mb-6">
+          <div className="grid gap-4 md:grid-cols-3 mb-6">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Orfãs Detectadas</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-warning" />
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Settings className="h-4 w-4" /> Configurações do Engine
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{reconEvents?.filter(e => e.status === 'ORPHAN_DETECTED').length || 0}</div>
+              <CardContent className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span>Fechar Auto:</span>
+                  <Badge variant={reconSettings?.auto_close_orphan_positions ? "default" : "secondary"} className="h-5 px-1.5 py-0">
+                    {reconSettings?.auto_close_orphan_positions ? "ON" : "OFF"}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span>Limite Perda:</span>
+                  <span className="font-mono">${reconSettings?.orphan_auto_close_loss_limit?.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span>Fechar Lucro:</span>
+                  <Badge variant={reconSettings?.orphan_auto_close_profit_enabled ? "default" : "secondary"} className="h-5 px-1.5 py-0">
+                    {reconSettings?.orphan_auto_close_profit_enabled ? "ON" : "OFF"}
+                  </Badge>
+                </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Aguardando Admin</CardTitle>
-                <AlertCircle className="h-4 w-4 text-destructive" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{reconEvents?.filter(e => e.status === 'WAITING_ADMIN_APPROVAL').length || 0}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Fechadas Auto</CardTitle>
-                <Zap className="h-4 w-4 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{reconEvents?.filter(e => e.status === 'AUTO_CLOSED').length || 0}</div>
-              </CardContent>
-            </Card>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xs font-medium">Orfãs</CardTitle>
+                  <AlertTriangle className="h-3 w-3 text-warning" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl font-bold">{reconEvents?.filter(e => e.status === 'ORPHAN_DETECTED').length || 0}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xs font-medium">Wait Admin</CardTitle>
+                  <AlertCircle className="h-3 w-3 text-destructive" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl font-bold">{reconEvents?.filter(e => e.status === 'WAITING_ADMIN_APPROVAL').length || 0}</div>
+                </CardContent>
+              </Card>
+            </div>
+
             <div className="flex flex-col gap-2 justify-center">
-              <Button onClick={() => runRecon.mutate()} disabled={runRecon.isPending} className="w-full">
+              <Button onClick={() => runRecon.mutate()} disabled={runRecon.isPending} className="w-full h-full">
                 <RefreshCcw className={`mr-2 h-4 w-4 ${runRecon.isPending ? 'animate-spin' : ''}`} />
                 Rodar Reconciliação
               </Button>
