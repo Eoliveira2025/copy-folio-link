@@ -171,7 +171,7 @@ class PositionReconciliationService:
                 logger.warning(f"High loss orphan {pos_id} on {sub_acc.login} needs admin approval (Profit: {profit})")
             else:
                 # If auto-close disabled but profit/loss within range
-                event.status = "ORPHAN_DETECTED"
+                event.status = "ORPHAN_POSITION_DETECTED"
                 event.reason = "Orphan detected, awaiting manual action (auto-close disabled)"
 
     async def detect_all_orphans(self):
