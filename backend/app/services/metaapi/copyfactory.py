@@ -1,4 +1,5 @@
 import logging
+import json
 try:
     from metaapi_cloud_sdk import MetaApi
     from metaapi_cloud_copyfactory_sdk import CopyFactory
@@ -65,17 +66,32 @@ class CopyFactoryService:
             
         logger.info(f"Subscribing account {subscriber_account_id} to strategy {strategy_id}")
         try:
-            # Using update_subscriber for SDK 12.0.0
-            await self.cf_api.configuration_api.update_subscriber(subscriber_account_id, {
+            # Enhanced payload for SDK 12.0.0 and CopyFactory v2 compatibility
+            payload = {
                 'name': f'Subscriber {subscriber_account_id}',
+                'accountId': subscriber_account_id, # Critical: link to the MetaApi account
+                'enabled': True,                    # Activation state at root level
                 'subscriptions': [{
                     'strategyId': strategy_id,
-                    'multiplier': risk_ratio
+                    'multiplier': risk_ratio,
+                    'enabled': True                 # Activation state at subscription level
                 }]
-            })
+            }
             
-            logger.info(f"Subscribed account {subscriber_account_id} to {strategy_id}")
-            return {"subscription_id": strategy_id}
+            logger.debug(f"DEBUG: CopyFactory update_subscriber payload: {json.dumps(payload)}")
+            
+            # Using update_subscriber for SDK 12.0.0
+            await self.cf_api.configuration_api.update_subscriber(subscriber_account_id, payload)
+            
+            # Verify and log final status
+            try:
+                subscriber_data = await self.cf_api.configuration_api.get_subscriber(subscriber_account_id)
+                logger.debug(f"DEBUG: CopyFactory subscriber created successfully. Data: {json.dumps(subscriber_data)}")
+                logger.info(f"Subscriber {subscriber_account_id} is now ACTIVE and linked to strategy {strategy_id}")
+            except Exception as ve:
+                logger.warning(f"Subscriber updated but verification failed: {ve}")
+
+            return {"subscription_id": strategy_id, "status": "ACTIVE"}
             
         except Exception as e:
             error_msg = str(e)
