@@ -7,6 +7,7 @@ import { useMT5Accounts, useSubscription, useStrategies, useUpgradeEligibility, 
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
 import { BillingAccessBanner } from "@/components/BillingAccessBanner";
+import { MetaApiV3ClientInfo } from "@/components/MetaApiV3ClientInfo";
 
 const DashboardHome = () => {
   const { t } = useTranslation();
