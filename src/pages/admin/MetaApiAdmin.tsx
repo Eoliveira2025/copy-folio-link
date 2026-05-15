@@ -303,7 +303,7 @@ const MetaApiAdmin = () => {
                       <TableCell>
                         <Badge variant={
                           req.status === 'SWITCHED' ? 'default' : 
-                          req.status === 'PENDING_WAIT_FLAT' ? 'warning' : 'secondary'
+                          req.status === 'PENDING_WAIT_FLAT' ? 'outline' : 'secondary'
                         }>
                           {req.status}
                         </Badge>
