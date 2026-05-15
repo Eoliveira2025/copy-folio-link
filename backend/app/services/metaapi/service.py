@@ -4,9 +4,10 @@ from typing import Optional, List, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.config import get_settings
-from app.models.metaapi import MetaApiAccount, MetaApiAccountType, MetaApiSubscription, MetaApiEvent
+from app.models.metaapi import MetaApiAccount, MetaApiAccountType, CopyFactorySubscription, MetaApiEvent
 from app.services.metaapi.client import MetaApiClient
 from app.services.metaapi.copyfactory import CopyFactoryService
+from app.services.metaapi.institutional import MetaApiAccountSyncService
 import json
 
 settings = get_settings()
@@ -17,6 +18,7 @@ class MetaApiService:
         self.db = db
         self.client = MetaApiClient()
         self.cf = CopyFactoryService()
+        self.sync_service = MetaApiAccountSyncService(db)
 
     async def log_event(self, account_id: Optional[Any], event_type: str, message: str, payload: Optional[Dict] = None):
         event = MetaApiEvent(
@@ -75,25 +77,22 @@ class MetaApiService:
         except Exception as e:
             logger.error(f"Error creating MetaApi account: {e}")
             await self.log_event(db_account.id, "CREATION_ERROR", str(e))
-            # Don't delete the DB record, keep it for retry or visibility
             raise e
 
     async def _wait_and_update_status(self, db_id: Any, ma_id: str):
         """Background task to wait for connection and update DB."""
-        await asyncio.sleep(5) # Give some time for initial deploy
+        await asyncio.sleep(5)
         res = await self.client.wait_until_connected(ma_id, timeout=120)
         
-        # New session for background task
         from app.core.database import AsyncSessionLocal
         async with AsyncSessionLocal() as db:
             stmt = select(MetaApiAccount).where(MetaApiAccount.id == db_id)
             result = await db.execute(stmt)
             account = result.scalars().first()
             if account:
-                status = await self.client.get_account(ma_id)
-                account.connection_status = status.get("connectionStatus", "UNKNOWN")
-                account.deployment_status = status.get("deploymentStatus", "UNKNOWN")
-                await db.commit()
+                # Use institutional sync service for a full refresh
+                sync_service = MetaApiAccountSyncService(db)
+                await sync_service.sync_account(account)
                 logger.info(f"Background status update for {ma_id}: {account.connection_status}")
 
     async def list_accounts(self) -> List[MetaApiAccount]:
@@ -109,16 +108,13 @@ class MetaApiService:
             return {"status": "NOT_FOUND"}
         
         try:
-            status = await self.client.get_account(account.metaapi_account_id)
-            # Update DB cache
-            account.connection_status = status.get("connectionStatus", "UNKNOWN")
-            account.deployment_status = status.get("deploymentStatus", "UNKNOWN")
-            
-            # Map MetaApi status to our desired display status if needed
-            # (SDK status are usually DISCONNECTED, CONNECTING, CONNECTED, etc.)
-            
-            await self.db.commit()
-            return status
+            await self.sync_service.sync_account(account)
+            return {
+                "id": account.metaapi_account_id,
+                "connectionStatus": account.connection_status,
+                "deploymentStatus": account.deployment_status,
+                "connected": account.connection_status == "CONNECTED"
+            }
         except Exception as e:
             logger.error(f"Error fetching status for {account.metaapi_account_id}: {e}")
             return {"error": str(e), "id": account.metaapi_account_id, "connectionStatus": "ERROR"}
@@ -146,57 +142,3 @@ class MetaApiService:
             await self.db.commit()
             return {"status": "REMOVED"}
         return {"error": "Account not found"}
-
-    async def create_cf_provider(self, master_id: Any):
-        stmt = select(MetaApiAccount).where(MetaApiAccount.id == master_id)
-        result = await self.db.execute(stmt)
-        account = result.scalars().first()
-        
-        if not account or account.account_type != MetaApiAccountType.MASTER:
-            raise Exception("Invalid master account")
-            
-        res = await self.cf.create_strategy_provider(account.name, account.metaapi_account_id)
-        account.copyfactory_strategy_id = res["strategy_id"]
-        await self.db.commit()
-        await self.log_event(account.id, "CF_PROVIDER_CREATED", f"Strategy provider created: {res['strategy_id']}")
-        return res
-
-    async def subscribe_client(self, client_id: Any, master_id: Any, risk_ratio: float):
-        stmt_c = select(MetaApiAccount).where(MetaApiAccount.id == client_id)
-        res_c = await self.db.execute(stmt_c)
-        client = res_c.scalars().first()
-        
-        stmt_m = select(MetaApiAccount).where(MetaApiAccount.id == master_id)
-        res_m = await self.db.execute(stmt_m)
-        master = res_m.scalars().first()
-        
-        if not client or not master or not master.copyfactory_strategy_id:
-            logger.error(f"Subscription failed: Client {client_id} or Master {master_id} strategy not ready")
-            raise Exception("Client or Master Strategy not ready")
-            
-        logger.info(f"Initiating CopyFactory subscription: Client {client.login} -> Master {master.login} (Strategy: {master.copyfactory_strategy_id})")
-        
-        try:
-            res = await self.cf.subscribe_account(client.metaapi_account_id, master.copyfactory_strategy_id, risk_ratio)
-            
-            sub = MetaApiSubscription(
-                client_account_id=client.id,
-                master_account_id=master.id,
-                copyfactory_subscription_id=res["subscription_id"],
-                risk_ratio=risk_ratio
-            )
-            self.db.add(sub)
-            await self.db.commit()
-            
-            await self.log_event(client.id, "CF_SUBSCRIBED", f"Successfully subscribed to master {master.login}", payload=res)
-            logger.info(f"Subscription record saved in DB for client {client.login}")
-            return res
-        except Exception as e:
-            logger.error(f"CopyFactory subscription failed for client {client.login}: {e}")
-            await self.log_event(client.id, "CF_SUBSCRIBE_ERROR", str(e))
-            raise e
-
-    async def list_subscriptions(self):
-        stmt = select(MetaApiSubscription).order_by(MetaApiSubscription.created_at.desc())
-        result = await self.db.execute(stmt)
-        return list(result.scalars().all())
