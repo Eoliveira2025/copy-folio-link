@@ -104,10 +104,20 @@ class MetaApiClient:
             
         try:
             account = await self.api.metatrader_account_api.get_account(account_id)
+            # Official SDK 29.1.1 properties:
+            # state: CREATED, DEPLOYING, DEPLOYED, etc.
+            # connection_status: CONNECTED, DISCONNECTED, DISCONNECTED_FROM_BROKER
+            state = getattr(account, 'state', 'UNKNOWN')
+            conn_status = getattr(account, 'connection_status', 'UNKNOWN')
+            
             return {
                 "id": account.id, 
-                "connectionStatus": account.connection_status,
-                "deploymentStatus": account.deployment_status
+                "connectionStatus": conn_status,
+                "deploymentStatus": state, # Map 'state' to 'deploymentStatus' for backward compatibility
+                "state": state,
+                "connection_status": conn_status,
+                "deployment_status": state,
+                "connected": conn_status == 'CONNECTED'
             }
         except Exception as e:
             logger.error(f"MetaApi SDK Error (get_account): {e}")
