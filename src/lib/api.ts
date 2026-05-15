@@ -106,6 +106,29 @@ class ApiClient {
     return response.json();
   }
 
+  // Generic methods
+  async get<T>(path: string): Promise<T> {
+    return this.request<T>(path, { method: "GET" });
+  }
+
+  async post<T>(path: string, body: any): Promise<T> {
+    return this.request<T>(path, {
+      method: "POST",
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  }
+
+  async put<T>(path: string, body: any): Promise<T> {
+    return this.request<T>(path, {
+      method: "PUT",
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  }
+
+  async delete<T>(path: string): Promise<T> {
+    return this.request<T>(path, { method: "DELETE" });
+  }
+
   private async tryRefresh(): Promise<boolean> {
     try {
       const res = await fetch(
