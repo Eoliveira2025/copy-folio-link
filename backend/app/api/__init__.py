@@ -1,7 +1,11 @@
 """API router aggregation."""
 
 from fastapi import APIRouter
-from app.api.routes import auth, mt5, strategies, billing, admin, legal, risk, operations, dead_letter, admin_provision, recoveries, bridge, bridge_admin, bridge_auditor_admin, metaapi_admin
+from app.api.routes import (
+    auth, mt5, strategies, billing, admin, legal, risk, operations, 
+    dead_letter, admin_provision, recoveries, bridge, bridge_admin, 
+    bridge_auditor_admin, metaapi_admin, metaapi_client
+)
 
 api_router = APIRouter()
 
