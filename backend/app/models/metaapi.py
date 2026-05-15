@@ -135,7 +135,7 @@ class PositionReconciliationEvent(Base):
     open_price: Mapped[float] = mapped_column(Float, nullable=False)
     current_price: Mapped[float] = mapped_column(Float, nullable=False)
     profit: Mapped[float] = mapped_column(Float, nullable=False)
-    status: Mapped[str] = mapped_column(String(50), nullable=False) # ORPHAN_DETECTED, AUTO_CLOSED, WAITING_ADMIN_APPROVAL, ADMIN_CLOSED, IGNORED, FAILED
+    status: Mapped[str] = mapped_column(String(50), nullable=False) # ORPHAN_POSITION_DETECTED, AUTO_CLOSED, WAITING_ADMIN_APPROVAL, ADMIN_CLOSED, IGNORED, FAILED
     reason: Mapped[str | None] = mapped_column(Text)
     snapshot_master_positions: Mapped[dict | None] = mapped_column(JSON)
     snapshot_subscriber_positions: Mapped[dict | None] = mapped_column(JSON)
