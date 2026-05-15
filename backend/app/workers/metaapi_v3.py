@@ -5,6 +5,7 @@ from app.core.database import AsyncSessionLocal
 from app.services.metaapi.institutional import (
     MetaApiAccountSyncService, StrategySwitchService, V3HealthMonitor
 )
+from app.services.metaapi.reconciliation import PositionReconciliationService
 
 settings = get_settings()
 logger = logging.getLogger("app.workers.metaapi_v3")
