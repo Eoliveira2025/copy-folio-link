@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from uuid import UUID
 from datetime import datetime
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Any
 from enum import Enum
 
 class MetaApiAccountType(str, Enum):
@@ -18,31 +18,91 @@ class MetaApiAccountCreate(BaseModel):
 
 class MetaApiAccountResponse(BaseModel):
     id: UUID
+    user_id: Optional[UUID] = None
     login: str
     server: str
     name: str
-    account_type: MetaApiAccountType
+    account_type: str
     metaapi_account_id: Optional[str] = None
     deployment_status: str
     connection_status: str
+    last_balance: float = 0.0
+    last_equity: float = 0.0
+    last_profit_loss: float = 0.0
+    last_positions_count: int = 0
+    last_sync_at: Optional[datetime] = None
     created_at: datetime
 
     class Config:
         from_attributes = True
 
-class MetaApiSubscriptionCreate(BaseModel):
+class CopyFactoryStrategyCreate(BaseModel):
+    strategy_code: str
+    display_name: str
+    master_account_id: Optional[UUID] = None
+    min_balance: float = 0.0
+    risk_multiplier_default: float = 1.0
+    copy_sl: bool = True
+    copy_tp: bool = True
+    open_small_trades: bool = True
+    do_not_scale: bool = False
+
+class CopyFactoryStrategyResponse(BaseModel):
+    id: UUID
+    strategy_code: str
+    display_name: str
+    master_account_id: Optional[UUID] = None
+    copyfactory_strategy_id: Optional[str] = None
+    min_balance: float
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class CopyFactorySubscriptionCreate(BaseModel):
     client_account_id: UUID
-    master_account_id: UUID
+    strategy_id: UUID
     risk_ratio: float = 1.0
 
-class MetaApiSubscriptionResponse(BaseModel):
+class CopyFactorySubscriptionResponse(BaseModel):
     id: UUID
+    user_id: UUID
     client_account_id: UUID
-    master_account_id: UUID
-    copyfactory_subscription_id: Optional[str] = None
-    risk_ratio: float
+    strategy_id: UUID
     status: str
+    risk_ratio: float
+    last_error: Optional[str] = None
     created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class StrategySwitchRequestCreate(BaseModel):
+    target_strategy_id: UUID
+
+class StrategySwitchRequestResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    current_strategy_id: Optional[UUID] = None
+    target_strategy_id: UUID
+    status: str
+    has_open_positions_at_request: bool
+    requested_by: str
+    created_at: datetime
+    switched_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class MetaApiAccountMetricResponse(BaseModel):
+    id: UUID
+    account_id: UUID
+    balance: float
+    equity: float
+    profit_loss: float
+    positions_count: int
+    captured_at: datetime
 
     class Config:
         from_attributes = True
@@ -55,4 +115,3 @@ class MetaApiStatusResponse(BaseModel):
     connection_status: Optional[str] = None
     deployment_status: Optional[str] = None
     connected: bool = False
-    quoteStreamingStatus: Optional[str] = None

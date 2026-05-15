@@ -123,3 +123,41 @@ class MetaApiClient:
         except Exception as e:
             logger.error(f"MetaApi SDK Error (get_account): {e}")
             return {"error": str(e)}
+
+    async def get_account_information(self, account_id: str):
+        """Get account metrics (balance, equity, margin, etc.)."""
+        if not self.api:
+            return None
+        try:
+            account = await self.api.metatrader_account_api.get_account(account_id)
+            if account.state != 'DEPLOYED' or account.connection_status != 'CONNECTED':
+                return None
+            
+            connection = account.get_rpc_connection()
+            await connection.connect()
+            await connection.wait_synchronized()
+            
+            account_info = await connection.get_account_information()
+            return account_info
+        except Exception as e:
+            logger.error(f"Error fetching account information for {account_id}: {e}")
+            return None
+
+    async def get_positions(self, account_id: str):
+        """Get open positions for an account."""
+        if not self.api:
+            return []
+        try:
+            account = await self.api.metatrader_account_api.get_account(account_id)
+            if account.state != 'DEPLOYED' or account.connection_status != 'CONNECTED':
+                return []
+            
+            connection = account.get_rpc_connection()
+            await connection.connect()
+            await connection.wait_synchronized()
+            
+            positions = await connection.get_positions()
+            return positions
+        except Exception as e:
+            logger.error(f"Error fetching positions for {account_id}: {e}")
+            return []

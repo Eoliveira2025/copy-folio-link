@@ -629,6 +629,79 @@ class ApiClient {
   async adminRejectStrategyRequest(requestId: string, note: string = "") {
     return this.request<{ message: string }>(`/admin/strategy-requests/${requestId}/reject?note=${encodeURIComponent(note)}`, { method: "POST" });
   }
+
+  // ── MetaApi V3 ───────────────────────────────────────
+  async adminListMetaApiAccounts() {
+    return this.request<any[]>("/admin/metaapi/accounts");
+  }
+
+  async adminSyncMetaApiAccount(id: string) {
+    return this.request<any>(`/admin/metaapi/accounts/${id}/sync`, { method: "POST" });
+  }
+
+  async adminListMetaApiStrategies() {
+    return this.request<any[]>("/admin/metaapi/strategies");
+  }
+
+  async adminCreateMetaApiStrategy(data: any) {
+    return this.request<any>("/admin/metaapi/strategies", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminUpdateMetaApiStrategy(id: string, data: any) {
+    return this.request<any>(`/admin/metaapi/strategies/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminCreateMetaApiProvider(strategyId: string) {
+    return this.request<any>(`/admin/metaapi/strategies/${strategyId}/create-provider`, { method: "POST" });
+  }
+
+  async adminListMetaApiSubscriptions() {
+    return this.request<any[]>("/admin/metaapi/subscriptions");
+  }
+
+  async adminCreateMetaApiSubscription(data: any) {
+    return this.request<any>("/admin/metaapi/subscriptions", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminListMetaApiSwitchRequests() {
+    return this.request<any[]>("/admin/metaapi/switch-requests");
+  }
+
+  async adminForceMetaApiSwitch(requestId: string) {
+    return this.request<any>(`/admin/metaapi/switch-requests/${requestId}/force`, { method: "POST" });
+  }
+
+  async adminSyncAllMetaApi() {
+    return this.request<any>("/admin/metaapi/sync-all", { method: "POST" });
+  }
+
+  async adminGetMetaApiHealth() {
+    return this.request<any>("/admin/metaapi/health");
+  }
+
+  async clientGetMyMetaApiStatus() {
+    return this.request<any>("/metaapi/my-account/status");
+  }
+
+  async clientRequestStrategySwitch(targetStrategyId: string) {
+    return this.request<any>("/metaapi/my-strategy/request-switch", {
+      method: "POST",
+      body: JSON.stringify({ target_strategy_id: targetStrategyId }),
+    });
+  }
+
+  async clientGetSwitchStatus() {
+    return this.request<any[]>("/metaapi/my-strategy/switch-status");
+  }
 }
 
 // ── Error class ───────────────────────────────────────

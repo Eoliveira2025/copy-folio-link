@@ -7,6 +7,7 @@ import { useMT5Accounts, useSubscription, useStrategies, useUpgradeEligibility, 
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
 import { BillingAccessBanner } from "@/components/BillingAccessBanner";
+import { MetaApiV3ClientInfo } from "@/components/MetaApiV3ClientInfo";
 
 const DashboardHome = () => {
   const { t } = useTranslation();
@@ -99,6 +100,8 @@ const DashboardHome = () => {
           <p className="text-sm text-warning">{t("dashboard.upgradePending")}</p>
         </motion.div>
       )}
+
+      <MetaApiV3ClientInfo />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard

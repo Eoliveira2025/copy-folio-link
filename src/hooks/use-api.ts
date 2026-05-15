@@ -676,3 +676,95 @@ export function useAdminSetMasterAccount() {
     onError: (err: Error) => toast.error(err.message),
   });
 }
+// ── MetaApi V3 ───────────────────────────────────────
+export function useAdminMetaApiAccounts() {
+  return useQuery({
+    queryKey: ["admin-metaapi-accounts"],
+    queryFn: () => api.adminListMetaApiAccounts(),
+  });
+}
+
+export function useAdminSyncMetaApiAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.adminSyncMetaApiAccount(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-metaapi-accounts"] });
+      toast.success("Account synced");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminMetaApiStrategies() {
+  return useQuery({
+    queryKey: ["admin-metaapi-strategies"],
+    queryFn: () => api.adminListMetaApiStrategies(),
+  });
+}
+
+export function useAdminCreateMetaApiProvider() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (strategyId: string) => api.adminCreateMetaApiProvider(strategyId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-metaapi-strategies"] });
+      toast.success("Provider created successfully");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminMetaApiSubscriptions() {
+  return useQuery({
+    queryKey: ["admin-metaapi-subscriptions"],
+    queryFn: () => api.adminListMetaApiSubscriptions(),
+  });
+}
+
+export function useAdminMetaApiSwitchRequests() {
+  return useQuery({
+    queryKey: ["admin-metaapi-switch-requests"],
+    queryFn: () => api.adminListMetaApiSwitchRequests(),
+  });
+}
+
+export function useAdminForceMetaApiSwitch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (requestId: string) => api.adminForceMetaApiSwitch(requestId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-metaapi-switch-requests"] });
+      qc.invalidateQueries({ queryKey: ["admin-metaapi-subscriptions"] });
+      toast.success("Switch forced successfully");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useClientMyMetaApiStatus() {
+  return useQuery({
+    queryKey: ["my-metaapi-status"],
+    queryFn: () => api.clientGetMyMetaApiStatus(),
+    refetchInterval: 30000,
+  });
+}
+
+export function useClientRequestSwitch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (targetStrategyId: string) => api.clientRequestStrategySwitch(targetStrategyId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-switch-status"] });
+      toast.success("Switch request submitted");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useClientSwitchStatus() {
+  return useQuery({
+    queryKey: ["my-switch-status"],
+    queryFn: () => api.clientGetSwitchStatus(),
+  });
+}

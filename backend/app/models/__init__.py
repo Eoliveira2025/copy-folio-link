@@ -14,7 +14,15 @@ from app.models.copy_recovery import TradeCopyRecovery
 from app.models.bridge import BridgeSignal, BridgeExecutionOrder
 from app.models.bridge_audit import BridgeAudit
 
-from app.models.metaapi import MetaApiAccount, MetaApiSubscription, MetaApiEvent
+from app.models.metaapi import (
+    MetaApiAccount, 
+    MetaApiSubscription, 
+    MetaApiEvent, 
+    CopyFactoryStrategy, 
+    CopyFactorySubscription, 
+    StrategySwitchRequest, 
+    MetaApiAccountMetric
+)
 
 __all__ = [
     "User",
@@ -40,4 +48,8 @@ __all__ = [
     "MetaApiAccount",
     "MetaApiSubscription",
     "MetaApiEvent",
+    "CopyFactoryStrategy",
+    "CopyFactorySubscription",
+    "StrategySwitchRequest",
+    "MetaApiAccountMetric",
 ]
