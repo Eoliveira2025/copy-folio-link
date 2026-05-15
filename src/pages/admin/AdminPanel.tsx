@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import {
   Search, RefreshCw, Users, BarChart3, Server, Shield, CreditCard,
   FileText, Package, Plus, Pencil, Trash2, ArrowUpDown, AlertTriangle,
   ArrowUpCircle, Check, X, Scale, Power, Eye, Settings, Crosshair, Send, Radio,
+  Cloud, Activity, PowerOff, Unlink, Network
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,6 +36,7 @@ import { RiskProtectionTab } from "@/components/admin/RiskProtectionTab";
 import { StrategiesTab } from "@/components/admin/StrategiesTab";
 import { StrategyRequestsTab } from "@/components/admin/StrategyRequestsTab";
 import { BridgeTab } from "@/components/admin/BridgeTab";
+import MetaApiAdminTab from "@/components/admin/MetaApiAdminTab";
 
 const statusStyle: Record<string, string> = {
   active: "bg-success/15 text-success border-success/30 hover:bg-success/15",
@@ -214,6 +216,7 @@ const AdminPanel = () => {
           <TabsTrigger value="legal" className="gap-2"><Scale className="w-4 h-4" /> {t("admin.legal")}</TabsTrigger>
           <TabsTrigger value="servers" className="gap-2"><Server className="w-4 h-4" /> {t("admin.servers")}</TabsTrigger>
           <TabsTrigger value="bridge" className="gap-2"><Radio className="w-4 h-4" /> Bridge</TabsTrigger>
+          <TabsTrigger value="metaapi" className="gap-2"><Cloud className="w-4 h-4" /> MetaApi V3</TabsTrigger>
           <TabsTrigger value="settings" className="gap-2"><Settings className="w-4 h-4" /> {t("settings.title")}</TabsTrigger>
         </TabsList>
 
@@ -583,6 +586,10 @@ const AdminPanel = () => {
               </Button>
             </div>
           </motion.div>
+        </TabsContent>
+
+        <TabsContent value="metaapi">
+          <MetaApiAdminTab />
         </TabsContent>
       </Tabs>
     </div>
