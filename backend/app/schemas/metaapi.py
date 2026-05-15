@@ -51,4 +51,8 @@ class MetaApiStatusResponse(BaseModel):
     id: str
     connectionStatus: str
     deploymentStatus: str
+    state: Optional[str] = None
+    connection_status: Optional[str] = None
+    deployment_status: Optional[str] = None
+    connected: bool = False
     quoteStreamingStatus: Optional[str] = None
