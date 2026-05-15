@@ -138,7 +138,7 @@ class PositionReconciliationService:
             open_price=orphan.get("openPrice", 0.0),
             current_price=orphan.get("currentPrice", 0.0),
             profit=profit,
-            status="ORPHAN_DETECTED",
+            status="ORPHAN_POSITION_DETECTED",
             snapshot_master_positions=master_snapshot,
             snapshot_subscriber_positions=sub_snapshot
         )
