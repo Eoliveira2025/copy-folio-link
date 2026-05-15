@@ -13,6 +13,7 @@ import {
   Search, RefreshCw, Users, BarChart3, Server, Shield, CreditCard,
   FileText, Package, Plus, Pencil, Trash2, ArrowUpDown, AlertTriangle,
   ArrowUpCircle, Check, X, Scale, Power, Eye, Settings, Crosshair, Send, Radio,
+  Cloud, Activity, PowerOff, Unlink, Network
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,6 +36,7 @@ import { RiskProtectionTab } from "@/components/admin/RiskProtectionTab";
 import { StrategiesTab } from "@/components/admin/StrategiesTab";
 import { StrategyRequestsTab } from "@/components/admin/StrategyRequestsTab";
 import { BridgeTab } from "@/components/admin/BridgeTab";
+import MetaApiAdminTab from "@/components/admin/MetaApiAdminTab";
 
 const statusStyle: Record<string, string> = {
   active: "bg-success/15 text-success border-success/30 hover:bg-success/15",
@@ -584,6 +586,10 @@ const AdminPanel = () => {
               </Button>
             </div>
           </motion.div>
+        </TabsContent>
+
+        <TabsContent value="metaapi">
+          <MetaApiAdminTab />
         </TabsContent>
       </Tabs>
     </div>
