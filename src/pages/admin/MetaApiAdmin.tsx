@@ -37,6 +37,13 @@ const MetaApiAdmin = () => {
   const syncAccount = useAdminSyncMetaApiAccount();
   const createProvider = useAdminCreateMetaApiProvider();
   const forceSwitch = useAdminForceMetaApiSwitch();
+  
+  const { data: reconEvents } = useAdminReconciliationEvents();
+  const { data: reconSettings } = useAdminReconciliationSettings();
+  const approveClose = useAdminApproveCloseOrphan();
+  const ignoreOrphan = useAdminIgnoreOrphan();
+  const runRecon = useAdminRunReconciliation();
+  const updateReconSettings = useAdminUpdateReconciliationSettings();
 
   const handleSyncAll = async () => {
     try {
