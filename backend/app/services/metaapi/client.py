@@ -31,9 +31,10 @@ class MetaApiClient:
                 'password': password,
                 'server': server,
                 'platform': platform,
-                'magic': 123456, # Default magic
+                'magic': 123456, 
                 'region': settings.METAAPI_REGION,
-                'quoteStreamingIntervalInSeconds': 2.5
+                'quoteStreamingIntervalInSeconds': 2.5,
+                'copyFactoryRoles': roles or ['PROVIDER', 'SUBSCRIBER'] # Default to both for flexibility
             })
             return {'id': account.id, 'status': 'CREATED'}
         except Exception as e:
