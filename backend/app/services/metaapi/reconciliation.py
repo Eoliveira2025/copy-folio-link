@@ -113,7 +113,7 @@ class PositionReconciliationService:
         # Check if already exists in events to avoid duplicates
         stmt = select(PositionReconciliationEvent).where(
             and_(PositionReconciliationEvent.position_id == pos_id, 
-                 PositionReconciliationEvent.status.in_(["ORPHAN_DETECTED", "WAITING_ADMIN_APPROVAL"]))
+                 PositionReconciliationEvent.status.in_(["ORPHAN_POSITION_DETECTED", "WAITING_ADMIN_APPROVAL"]))
         )
         existing_res = await self.db.execute(stmt)
         existing = existing_res.scalars().first()
