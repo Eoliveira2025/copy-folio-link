@@ -337,6 +337,127 @@ const MetaApiAdmin = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="reconciliation">
+          <div className="grid gap-4 md:grid-cols-4 mb-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Orfãs Detectadas</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-warning" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{reconEvents?.filter(e => e.status === 'ORPHAN_DETECTED').length || 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Aguardando Admin</CardTitle>
+                <AlertCircle className="h-4 w-4 text-destructive" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{reconEvents?.filter(e => e.status === 'WAITING_ADMIN_APPROVAL').length || 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Fechadas Auto</CardTitle>
+                <Zap className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{reconEvents?.filter(e => e.status === 'AUTO_CLOSED').length || 0}</div>
+              </CardContent>
+            </Card>
+            <div className="flex flex-col gap-2 justify-center">
+              <Button onClick={() => runRecon.mutate()} disabled={runRecon.isPending} className="w-full">
+                <RefreshCcw className={`mr-2 h-4 w-4 ${runRecon.isPending ? 'animate-spin' : ''}`} />
+                Rodar Reconciliação
+              </Button>
+            </div>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Eventos de Reconciliação</CardTitle>
+              <CardDescription>Detecção e ação sobre posições divergentes na V3</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Conta Cliente</TableHead>
+                    <TableHead>Símbolo</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Volume</TableHead>
+                    <TableHead>P/L</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Ação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {reconEvents?.map((event) => (
+                    <TableRow key={event.id}>
+                      <TableCell className="text-xs">{format(new Date(event.created_at), 'dd/MM HH:mm')}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{accounts?.find(a => a.id === event.subscriber_account_id)?.login || 'Unknown'}</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">{event.subscriber_account_id.substring(0, 8)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-bold">{event.symbol}</TableCell>
+                      <TableCell>
+                        <Badge variant={event.side === 'BUY' ? 'default' : 'destructive'}>{event.side}</Badge>
+                      </TableCell>
+                      <TableCell>{event.volume}</TableCell>
+                      <TableCell className={event.profit >= 0 ? 'text-success' : 'text-destructive'}>
+                        ${event.profit.toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          event.status === 'AUTO_CLOSED' ? 'outline' : 
+                          event.status === 'WAITING_ADMIN_APPROVAL' ? 'destructive' : 
+                          event.status === 'ADMIN_CLOSED' ? 'default' : 'secondary'
+                        }>
+                          {event.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {(event.status === 'ORPHAN_DETECTED' || event.status === 'WAITING_ADMIN_APPROVAL') && (
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="destructive" 
+                              size="sm" 
+                              onClick={() => approveClose.mutate(event.id)}
+                              disabled={approveClose.isPending}
+                            >
+                              Fechar
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => ignoreOrphan.mutate(event.id)}
+                              disabled={ignoreOrphan.isPending}
+                            >
+                              Ignorar
+                            </Button>
+                          </div>
+                        )}
+                        {event.action_taken && <span className="text-xs text-muted-foreground">{event.action_taken}</span>}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {reconEvents?.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        Nenhum evento de divergência detectado.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
     </div>
   );
