@@ -768,3 +768,62 @@ export function useClientSwitchStatus() {
     queryFn: () => api.clientGetSwitchStatus(),
   });
 }
+// ── MetaApi Reconciliation ────────────────────────────
+export function useAdminReconciliationSettings() {
+  return useQuery({
+    queryKey: ["admin-metaapi-reconciliation-settings"],
+    queryFn: () => api.adminGetReconciliationSettings(),
+  });
+}
+
+export function useAdminUpdateReconciliationSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: any) => api.adminUpdateReconciliationSettings(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-metaapi-reconciliation-settings"] });
+      toast.success("Reconciliation settings updated");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminReconciliationEvents(status?: string) {
+  return useQuery({
+    queryKey: ["admin-metaapi-reconciliation-events", status],
+    queryFn: () => api.adminListReconciliationEvents(status),
+    refetchInterval: 30000,
+  });
+}
+
+export function useAdminApproveCloseOrphan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (eventId: string) => api.adminApproveCloseOrphan(eventId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-metaapi-reconciliation-events"] });
+      toast.success("Position close approved");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminIgnoreOrphan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (eventId: string) => api.adminIgnoreOrphan(eventId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-metaapi-reconciliation-events"] });
+      toast.success("Orphan position ignored");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+export function useAdminRunReconciliation() {
+  return useMutation({
+    mutationFn: () => api.adminRunReconciliation(),
+    onSuccess: () => toast.success("Reconciliation process started"),
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
