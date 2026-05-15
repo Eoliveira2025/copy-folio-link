@@ -46,12 +46,15 @@ class MetaApiService:
             await self.db.flush()
 
         try:
-            # 1. Create in MetaApi
+            # 1. Create in MetaApi with appropriate roles
+            roles = ['PROVIDER'] if data.get("type") == MetaApiAccountType.MASTER else ['SUBSCRIBER']
+            
             ma_account = await self.client.create_account(
                 name=data["name"],
                 login=data["login"],
                 server=data["server"],
-                password=data["password"]
+                password=data["password"],
+                roles=roles
             )
             
             db_account.metaapi_account_id = ma_account["id"]
