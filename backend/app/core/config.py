@@ -79,6 +79,10 @@ class Settings(BaseSettings):
     METAAPI_REGION: str = "new-york"
     METAAPI_ACCOUNT_REPLICA_COUNT: int = 1
     METAAPI_DEFAULT_PLATFORM: str = "mt5"
+    
+    # V3 Features
+    V3_COPY_ENABLED: bool = False
+    V3_ADMIN_ENABLED: bool = False
 
     class Config:
         env_file = ".env"
