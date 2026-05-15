@@ -16,6 +16,7 @@ def create_deploy_zip():
         "backend/app/services/metaapi/copyfactory.py",
         "backend/app/api/routes/metaapi_admin.py",
         "backend/app/main.py",
+        "backend/V3_UPDATE_WINDOWS_VPS2.md",
         ".env.v3.example",
     ]
     
