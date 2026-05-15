@@ -73,6 +73,11 @@ async def _ensure_default_admin():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await _ensure_default_admin()
+    
+    # Start MetaApi V3 workers
+    from app.workers.metaapi_v3 import start_metaapi_v3_workers
+    await start_metaapi_v3_workers()
+    
     yield
 
 
