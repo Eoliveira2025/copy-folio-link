@@ -171,20 +171,30 @@ class MetaApiService:
         master = res_m.scalars().first()
         
         if not client or not master or not master.copyfactory_strategy_id:
+            logger.error(f"Subscription failed: Client {client_id} or Master {master_id} strategy not ready")
             raise Exception("Client or Master Strategy not ready")
             
-        res = await self.cf.subscribe_account(client.metaapi_account_id, master.copyfactory_strategy_id, risk_ratio)
+        logger.info(f"Initiating CopyFactory subscription: Client {client.login} -> Master {master.login} (Strategy: {master.copyfactory_strategy_id})")
         
-        sub = MetaApiSubscription(
-            client_account_id=client.id,
-            master_account_id=master.id,
-            copyfactory_subscription_id=res["subscription_id"],
-            risk_ratio=risk_ratio
-        )
-        self.db.add(sub)
-        await self.db.commit()
-        await self.log_event(client.id, "CF_SUBSCRIBED", f"Subscribed to master {master.login}")
-        return res
+        try:
+            res = await self.cf.subscribe_account(client.metaapi_account_id, master.copyfactory_strategy_id, risk_ratio)
+            
+            sub = MetaApiSubscription(
+                client_account_id=client.id,
+                master_account_id=master.id,
+                copyfactory_subscription_id=res["subscription_id"],
+                risk_ratio=risk_ratio
+            )
+            self.db.add(sub)
+            await self.db.commit()
+            
+            await self.log_event(client.id, "CF_SUBSCRIBED", f"Successfully subscribed to master {master.login}", payload=res)
+            logger.info(f"Subscription record saved in DB for client {client.login}")
+            return res
+        except Exception as e:
+            logger.error(f"CopyFactory subscription failed for client {client.login}: {e}")
+            await self.log_event(client.id, "CF_SUBSCRIBE_ERROR", str(e))
+            raise e
 
     async def list_subscriptions(self):
         stmt = select(MetaApiSubscription).order_by(MetaApiSubscription.created_at.desc())
