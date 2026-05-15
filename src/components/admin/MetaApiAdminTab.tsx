@@ -42,7 +42,11 @@ const MetaApiAdminTab = () => {
     type: "CLIENT" as "MASTER" | "CLIENT"
   });
 
-  const { data: status } = useQuery({
+  const { data: status } = useQuery<{
+    enabled: boolean;
+    copyfactory_enabled: boolean;
+    region: string;
+  }>({
     queryKey: ["metaapi-status"],
     queryFn: () => api.get("/admin/metaapi/status"),
   });
