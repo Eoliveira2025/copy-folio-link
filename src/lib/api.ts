@@ -702,6 +702,41 @@ class ApiClient {
   async clientGetSwitchStatus() {
     return this.request<any[]>("/metaapi/my-strategy/switch-status");
   }
+
+  // ── MetaApi Reconciliation ────────────────────────────
+  async adminGetReconciliationSettings() {
+    return this.request<any>("/admin/metaapi/reconciliation/settings");
+  }
+
+  async adminUpdateReconciliationSettings(data: any) {
+    return this.request<any>("/admin/metaapi/reconciliation/settings", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminListReconciliationEvents(status?: string) {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+    return this.request<any[]>(`/admin/metaapi/reconciliation/events${qs}`);
+  }
+
+  async adminApproveCloseOrphan(eventId: string) {
+    return this.request<any>(`/admin/metaapi/reconciliation/events/${eventId}/approve-close`, {
+      method: "POST",
+    });
+  }
+
+  async adminIgnoreOrphan(eventId: string) {
+    return this.request<any>(`/admin/metaapi/reconciliation/events/${eventId}/ignore`, {
+      method: "POST",
+    });
+  }
+
+  async adminRunReconciliation() {
+    return this.request<any>("/admin/metaapi/reconciliation/run", {
+      method: "POST",
+    });
+  }
 }
 
 // ── Error class ───────────────────────────────────────

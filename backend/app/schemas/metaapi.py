@@ -115,3 +115,40 @@ class MetaApiStatusResponse(BaseModel):
     connection_status: Optional[str] = None
     deployment_status: Optional[str] = None
     connected: bool = False
+
+class ReconciliationSettingsBase(BaseModel):
+    auto_close_orphan_positions: bool = True
+    orphan_auto_close_loss_limit: float = -2.00
+    orphan_auto_close_profit_enabled: bool = True
+    lot_tolerance: float = 0.01
+    strict_symbol_match: bool = True
+    price_tolerance_points: int = 50
+
+class ReconciliationSettingsResponse(ReconciliationSettingsBase):
+    id: UUID
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class PositionReconciliationEventResponse(BaseModel):
+    id: UUID
+    account_id: UUID
+    user_id: Optional[UUID] = None
+    master_account_id: Optional[UUID] = None
+    subscriber_account_id: Optional[UUID] = None
+    symbol: str
+    position_id: str
+    side: str
+    volume: float
+    open_price: float
+    current_price: float
+    profit: float
+    status: str
+    reason: Optional[str] = None
+    action_taken: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True

@@ -5,6 +5,7 @@ from app.core.database import AsyncSessionLocal
 from app.services.metaapi.institutional import (
     MetaApiAccountSyncService, StrategySwitchService, V3HealthMonitor
 )
+from app.services.metaapi.reconciliation import PositionReconciliationService
 
 settings = get_settings()
 logger = logging.getLogger("app.workers.metaapi_v3")
@@ -53,6 +54,20 @@ async def health_check_worker():
         
         await asyncio.sleep(60) # Run every 60s
 
+async def reconciliation_worker():
+    """Periodically run position reconciliation."""
+    while True:
+        if settings.V3_COPY_ENABLED:
+            logger.info("Starting periodic position reconciliation...")
+            try:
+                async with AsyncSessionLocal() as db:
+                    service = PositionReconciliationService(db)
+                    await service.detect_all_orphans()
+            except Exception as e:
+                logger.error(f"Error in reconciliation_worker: {e}")
+        
+        await asyncio.sleep(60) # Run every 60s
+
 async def start_metaapi_v3_workers():
     """Start all V3 background workers."""
     if not settings.V3_COPY_ENABLED:
@@ -63,3 +78,4 @@ async def start_metaapi_v3_workers():
     asyncio.create_task(sync_accounts_worker())
     asyncio.create_task(process_switches_worker())
     asyncio.create_task(health_check_worker())
+    asyncio.create_task(reconciliation_worker())
