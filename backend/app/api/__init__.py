@@ -23,4 +23,5 @@ api_router.include_router(recoveries.router, prefix="/admin", tags=["Copy Recove
 api_router.include_router(bridge.router, prefix="/bridge", tags=["Bridge"])
 api_router.include_router(bridge_admin.router, prefix="/admin", tags=["Bridge Admin"])
 api_router.include_router(bridge_auditor_admin.router, prefix="/admin", tags=["Bridge Auditor"])
-api_router.include_router(metaapi_admin.router, prefix="/admin/metaapi", tags=["MetaApi V3"])
+api_router.include_router(metaapi_admin.router, prefix="/admin/metaapi", tags=["MetaApi V3 Admin"])
+api_router.include_router(metaapi_client.router, prefix="/metaapi", tags=["MetaApi V3 Client"])
