@@ -379,16 +379,55 @@ const MetaApiAdmin = () => {
                   <CardTitle className="text-xs font-medium">Orfãs</CardTitle>
                   <AlertTriangle className="h-3 w-3 text-warning" />
                 </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold">{reconEvents?.filter(e => e.status === 'ORPHAN_POSITION_DETECTED').length || 0}</div>
-              </CardContent>
-            </Card>
-            <Card>
-...
+                <CardContent>
+                  <div className="text-xl font-bold">{reconEvents?.filter(e => e.status === 'ORPHAN_POSITION_DETECTED').length || 0}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xs font-medium">Wait Admin</CardTitle>
+                  <AlertCircle className="h-3 w-3 text-destructive" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl font-bold">{reconEvents?.filter(e => e.status === 'WAITING_ADMIN_APPROVAL').length || 0}</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="flex flex-col gap-2 justify-center">
+              <Button onClick={() => runRecon.mutate()} disabled={runRecon.isPending} className="w-full h-full">
+                <RefreshCcw className={`mr-2 h-4 w-4 ${runRecon.isPending ? 'animate-spin' : ''}`} />
+                Rodar Reconciliação
+              </Button>
+            </div>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Eventos de Reconciliação</CardTitle>
+              <CardDescription>Detecção e ação sobre posições divergentes na V3</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Conta Cliente</TableHead>
+                    <TableHead>Símbolo</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Volume</TableHead>
+                    <TableHead>P/L</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Ação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {reconEvents?.map((event) => (
                     <TableRow key={event.id}>
                       <TableCell className="text-xs">{format(new Date(event.created_at), 'dd/MM HH:mm')}</TableCell>
                       <TableCell>
-...
+                        <div className="flex flex-col">
+                          <span className="font-medium">{accounts?.find(a => a.id === event.subscriber_account_id)?.login || 'Unknown'}</span>
                           <span className="text-[10px] text-muted-foreground font-mono">{event.subscriber_account_id.substring(0, 8)}</span>
                         </div>
                       </TableCell>
