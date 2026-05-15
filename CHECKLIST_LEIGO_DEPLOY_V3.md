@@ -20,8 +20,11 @@ Abra o terminal na pasta do projeto e execute:
 # Dar permissão de execução aos scripts (se estiver no Linux)
 chmod +x scripts/*.sh
 
-# Subir os containers da V3
+# 1. Subir os containers da V3 (API, Redis, Postgres)
 ./scripts/deploy_v3.sh
+
+# 2. Rodar as migrações no banco de dados isolado da V3
+./scripts/run_migrations_v3.sh
 ```
 
 ## 4. Verificação de Saúde (Health Check)
