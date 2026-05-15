@@ -172,6 +172,10 @@ const Strategies = () => {
           );
         })}
       </div>
+
+      <div className="pt-6 border-t">
+        <MetaApiV3Strategies />
+      </div>
     </div>
   );
 };
