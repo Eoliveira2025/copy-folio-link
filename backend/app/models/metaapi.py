@@ -106,3 +106,40 @@ class MetaApiEvent(Base):
     message: Mapped[str] = mapped_column(Text, nullable=False)
     payload: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+class MetaApiReconciliationSettings(Base):
+    __tablename__ = "metaapi_reconciliation_settings"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    auto_close_orphan_positions: Mapped[bool] = mapped_column(Boolean, default=True)
+    orphan_auto_close_loss_limit: Mapped[float] = mapped_column(Float, default=-2.00)
+    orphan_auto_close_profit_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    lot_tolerance: Mapped[float] = mapped_column(Float, default=0.01)
+    strict_symbol_match: Mapped[bool] = mapped_column(Boolean, default=True)
+    price_tolerance_points: Mapped[int] = mapped_column(Integer, default=50)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+class PositionReconciliationEvent(Base):
+    __tablename__ = "position_reconciliation_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    account_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("metaapi_accounts.id", ondelete="CASCADE"), index=True, nullable=False)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    master_account_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("metaapi_accounts.id", ondelete="SET NULL"))
+    subscriber_account_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("metaapi_accounts.id", ondelete="SET NULL"))
+    symbol: Mapped[str] = mapped_column(String(50), nullable=False)
+    position_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    side: Mapped[str] = mapped_column(String(10), nullable=False) # BUY/SELL
+    volume: Mapped[float] = mapped_column(Float, nullable=False)
+    open_price: Mapped[float] = mapped_column(Float, nullable=False)
+    current_price: Mapped[float] = mapped_column(Float, nullable=False)
+    profit: Mapped[float] = mapped_column(Float, nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False) # ORPHAN_DETECTED, AUTO_CLOSED, WAITING_ADMIN_APPROVAL, ADMIN_CLOSED, IGNORED, FAILED
+    reason: Mapped[str | None] = mapped_column(Text)
+    snapshot_master_positions: Mapped[dict | None] = mapped_column(JSON)
+    snapshot_subscriber_positions: Mapped[dict | None] = mapped_column(JSON)
+    action_taken: Mapped[str | None] = mapped_column(String(100))
+    approved_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
