@@ -6,7 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { 
   AlertCircle, CheckCircle2, Cloud, RefreshCcw, 
-  Settings, Users, Layers, ArrowLeftRight, Activity 
+  Settings, Users, Layers, ArrowLeftRight, Activity,
+  ShieldCheck, AlertTriangle, Scale, Zap
 } from "lucide-react";
 import { 
   useAdminMetaApiAccounts, 
@@ -15,7 +16,13 @@ import {
   useAdminMetaApiSwitchRequests,
   useAdminSyncMetaApiAccount,
   useAdminCreateMetaApiProvider,
-  useAdminForceMetaApiSwitch
+  useAdminForceMetaApiSwitch,
+  useAdminReconciliationEvents,
+  useAdminApproveCloseOrphan,
+  useAdminIgnoreOrphan,
+  useAdminRunReconciliation,
+  useAdminReconciliationSettings,
+  useAdminUpdateReconciliationSettings
 } from "@/hooks/use-api";
 import { format } from "date-fns";
 import { toast } from "sonner";
