@@ -48,4 +48,8 @@ __all__ = [
     "MetaApiAccount",
     "MetaApiSubscription",
     "MetaApiEvent",
+    "CopyFactoryStrategy",
+    "CopyFactorySubscription",
+    "StrategySwitchRequest",
+    "MetaApiAccountMetric",
 ]
