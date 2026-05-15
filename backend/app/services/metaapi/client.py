@@ -16,7 +16,7 @@ class MetaApiClient:
             logger.error("METAAPI_TOKEN not configured!")
         self.api = MetaApi(self.token) if self.token else None
         
-    async def create_account(self, name: str, login: str, server: str, password: str, platform: str = "mt5"):
+    async def create_account(self, name: str, login: str, server: str, password: str, platform: str = "mt5", roles: List[str] = None):
         """Create a new MetaApi account."""
         if not self.api:
             raise Exception("MetaApi token not configured")
