@@ -65,38 +65,57 @@ class CopyFactoryService:
             raise Exception("MetaApi token not configured")
             
         logger.info(f"Subscribing account {subscriber_account_id} to strategy {strategy_id}")
-        try:
-            # Enhanced payload for SDK 12.0.0 and CopyFactory v2 compatibility
-            payload = {
-                'name': f'Subscriber {subscriber_account_id}',
-                'accountId': subscriber_account_id, # Critical: link to the MetaApi account
-                'enabled': True,                    # Activation state at root level
-                'subscriptions': [{
+        
+        # Enhanced payload for SDK 12.0.0 and CopyFactory v2 compatibility
+        # Structure based on UpdatedSubscriber model
+        payload = {
+            'name': f'Subscriber {subscriber_account_id}',
+            'subscriptions': [
+                {
                     'strategyId': strategy_id,
-                    'multiplier': risk_ratio,
-                    'enabled': True                 # Activation state at subscription level
-                }]
-            }
-            
-            logger.debug(f"DEBUG: CopyFactory update_subscriber payload: {json.dumps(payload)}")
-            
+                    'multiplier': float(risk_ratio),
+                    'enabled': True
+                }
+            ],
+            'enabled': True
+        }
+        
+        # Log payload as requested for diagnosis
+        payload_json = json.dumps(payload, indent=2)
+        logger.info(f"COPYFACTORY_DEBUG: Sending update_subscriber for {subscriber_account_id}")
+        logger.info(f"COPYFACTORY_DEBUG: Payload:\n{payload_json}")
+        
+        try:
             # Using update_subscriber for SDK 12.0.0
+            # configuration_api.update_subscriber(id, subscriber_data)
             await self.cf_api.configuration_api.update_subscriber(subscriber_account_id, payload)
             
             # Verify and log final status
             try:
                 subscriber_data = await self.cf_api.configuration_api.get_subscriber(subscriber_account_id)
-                logger.debug(f"DEBUG: CopyFactory subscriber created successfully. Data: {json.dumps(subscriber_data)}")
+                logger.info(f"COPYFACTORY_DEBUG: Subscriber updated successfully. Current data: {json.dumps(subscriber_data)}")
                 logger.info(f"Subscriber {subscriber_account_id} is now ACTIVE and linked to strategy {strategy_id}")
             except Exception as ve:
-                logger.warning(f"Subscriber updated but verification failed: {ve}")
+                logger.warning(f"Subscriber updated but verification check failed: {ve}")
 
             return {"subscription_id": strategy_id, "status": "ACTIVE"}
             
         except Exception as e:
+            # Capture and log error details from SDK exception if available
+            error_details = getattr(e, 'details', None)
             error_msg = str(e)
-            logger.error(f"CopyFactory SDK Error (subscribe): {error_msg}")
+            
+            logger.error(f"COPYFACTORY_ERROR: Validation/SDK Error: {error_msg}")
+            if error_details:
+                logger.error(f"COPYFACTORY_ERROR_DETAILS: {json.dumps(error_details, indent=2)}")
+            
             # Specific error for missing SUBSCRIBER role
             if "SUBSCRIBER" in error_msg:
                 raise Exception(f"MetaApi Error: Account {subscriber_account_id} must have 'SUBSCRIBER' role enabled.")
-            raise Exception(f"CopyFactory Error: {error_msg}")
+            
+            # Include details in the exception returned to API if possible
+            final_error = f"CopyFactory Error: {error_msg}"
+            if error_details:
+                final_error += f" | Details: {json.dumps(error_details)}"
+            
+            raise Exception(final_error)
