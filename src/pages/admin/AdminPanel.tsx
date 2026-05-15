@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -214,6 +214,7 @@ const AdminPanel = () => {
           <TabsTrigger value="legal" className="gap-2"><Scale className="w-4 h-4" /> {t("admin.legal")}</TabsTrigger>
           <TabsTrigger value="servers" className="gap-2"><Server className="w-4 h-4" /> {t("admin.servers")}</TabsTrigger>
           <TabsTrigger value="bridge" className="gap-2"><Radio className="w-4 h-4" /> Bridge</TabsTrigger>
+          <TabsTrigger value="metaapi" className="gap-2"><Cloud className="w-4 h-4" /> MetaApi V3</TabsTrigger>
           <TabsTrigger value="settings" className="gap-2"><Settings className="w-4 h-4" /> {t("settings.title")}</TabsTrigger>
         </TabsList>
 
