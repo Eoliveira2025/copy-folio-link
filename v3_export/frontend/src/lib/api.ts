@@ -1,0 +1,1176 @@
+/**
+ * API client for CopyTrade Pro backend.
+ * Handles JWT token management and request/response formatting.
+ */
+
+const resolveApiBase = () => {
+  const configuredBase = import.meta.env.VITE_API_URL?.trim();
+
+  if (configuredBase) {
+    return configuredBase.replace(/\/$/, "");
+  }
+
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/api/v1`;
+  }
+
+  return "/api/v1";
+};
+
+const API_BASE = resolveApiBase();
+
+class ApiClient {
+  private accessToken: string | null = null;
+  private refreshToken: string | null = null;
+
+  constructor() {
+    this.accessToken = localStorage.getItem("access_token");
+    this.refreshToken = localStorage.getItem("refresh_token");
+  }
+
+  setTokens(access: string, refresh: string) {
+    this.accessToken = access;
+    this.refreshToken = refresh;
+    localStorage.setItem("access_token", access);
+    localStorage.setItem("refresh_token", refresh);
+  }
+
+  clearTokens() {
+    this.accessToken = null;
+    this.refreshToken = null;
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+  }
+
+  getAccessToken() {
+    return this.accessToken;
+  }
+
+  isAuthenticated() {
+    return !!this.accessToken;
+  }
+
+  private async request<T>(
+    path: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(options.headers as Record<string, string>),
+    };
+
+    if (this.accessToken) {
+      headers["Authorization"] = `Bearer ${this.accessToken}`;
+    }
+
+    let response: Response;
+
+    try {
+      response = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers,
+      });
+    } catch {
+      throw new ApiError(0, "Não foi possível conectar à API");
+    }
+
+    if (response.status === 401 && this.refreshToken) {
+      const refreshed = await this.tryRefresh();
+      if (refreshed) {
+        headers["Authorization"] = `Bearer ${this.accessToken}`;
+        let retryResponse: Response;
+        try {
+          retryResponse = await fetch(`${API_BASE}${path}`, {
+            ...options,
+            headers,
+          });
+        } catch {
+          throw new ApiError(0, "Não foi possível conectar à API");
+        }
+        if (!retryResponse.ok) {
+          throw new ApiError(retryResponse.status, await retryResponse.text());
+        }
+        return retryResponse.json();
+      }
+      this.clearTokens();
+      window.location.href = "/login";
+      throw new ApiError(401, "Session expired");
+    }
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      throw new ApiError(response.status, errorBody.detail || "Request failed");
+    }
+
+    if (response.status === 204) return undefined as T;
+    return response.json();
+  }
+
+  // Generic methods
+  async get<T>(path: string): Promise<T> {
+    return this.request<T>(path, { method: "GET" });
+  }
+
+  async post<T>(path: string, body: any): Promise<T> {
+    return this.request<T>(path, {
+      method: "POST",
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  }
+
+  async put<T>(path: string, body: any): Promise<T> {
+    return this.request<T>(path, {
+      method: "PUT",
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  }
+
+  async delete<T>(path: string): Promise<T> {
+    return this.request<T>(path, { method: "DELETE" });
+  }
+
+  private async tryRefresh(): Promise<boolean> {
+    try {
+      const res = await fetch(
+        `${API_BASE}/auth/refresh?refresh_token=${this.refreshToken}`,
+        { method: "POST" }
+      );
+      if (!res.ok) return false;
+      const data = await res.json();
+      this.setTokens(data.access_token, data.refresh_token);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // ── Auth ──────────────────────────────────────────────
+  async login(email: string, password: string) {
+    const data = await this.request<{
+      access_token: string;
+      refresh_token: string;
+    }>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+    this.setTokens(data.access_token, data.refresh_token);
+    return data;
+  }
+
+  async register(
+    email: string,
+    password: string,
+    confirmPassword: string,
+    fullName?: string,
+    cpfCnpj?: string
+  ) {
+    const data = await this.request<{
+      access_token: string;
+      refresh_token: string;
+    }>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({
+        email,
+        password,
+        confirm_password: confirmPassword,
+        full_name: fullName || undefined,
+        cpf_cnpj: cpfCnpj || undefined,
+      }),
+    });
+    this.setTokens(data.access_token, data.refresh_token);
+    return data;
+  }
+
+  async forgotPassword(email: string) {
+    return this.request<{ message: string }>("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    return this.request<{ message: string }>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token, new_password: newPassword }),
+    });
+  }
+
+  async changePassword(currentPassword: string, newPassword: string) {
+    return this.request<{ message: string }>("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
+    });
+  }
+
+  async getMe() {
+    return this.request<UserProfile>("/auth/me");
+  }
+
+  // ── MT5 Accounts ─────────────────────────────────────
+  async connectMT5(login: number, password: string, server: string) {
+    return this.request<MT5Account>("/mt5/connect", {
+      method: "POST",
+      body: JSON.stringify({ login, password, server }),
+    });
+  }
+
+  async listMT5Accounts() {
+    return this.request<MT5Account[]>("/mt5/accounts");
+  }
+
+  async disconnectMT5(accountId: string) {
+    return this.request<void>(`/mt5/accounts/${accountId}`, {
+      method: "DELETE",
+    });
+  }
+
+  // ── Strategies ────────────────────────────────────────
+  async listStrategies() {
+    return this.request<Strategy[]>("/strategies/");
+  }
+
+  async selectStrategy(strategyId: string) {
+    return this.request<{ message: string }>("/strategies/select", {
+      method: "POST",
+      body: JSON.stringify({ strategy_id: strategyId }),
+    });
+  }
+
+  async requestStrategy(strategyId: string) {
+    return this.request<{ message: string }>("/strategies/request", {
+      method: "POST",
+      body: JSON.stringify({ strategy_id: strategyId }),
+    });
+  }
+
+  // ── Billing ───────────────────────────────────────────
+  async listPlans() {
+    return this.request<PlanPublic[]>("/billing/plans");
+  }
+
+  async getSubscription() {
+    return this.request<Subscription>("/billing/subscription");
+  }
+
+  async listInvoices() {
+    return this.request<Invoice[]>("/billing/invoices");
+  }
+
+  async checkUpgradeEligibility() {
+    return this.request<UpgradeEligibility>("/billing/upgrade-check");
+  }
+
+  async requestUpgrade(targetPlanId: string) {
+    return this.request<{ message: string; request_id: string }>("/billing/upgrade-request", {
+      method: "POST",
+      body: JSON.stringify({ target_plan_id: targetPlanId }),
+    });
+  }
+
+  async myUpgradeRequests() {
+    return this.request<UpgradeRequestItem[]>("/billing/upgrade-requests");
+  }
+
+  async checkout(data: { plan_id: string; billing_type: string; gateway: string }) {
+    return this.request<CheckoutResult>("/billing/checkout", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async checkoutStatus(invoiceId: string) {
+    return this.request<{ status: string }>(`/billing/checkout/${invoiceId}/status`);
+  }
+
+  // ── Admin Billing ─────────────────────────────────────
+  async adminBillingStats() {
+    return this.request<BillingStats>("/billing/admin/stats");
+  }
+
+  async adminCancelSubscription(subscriptionId: string, reason?: string) {
+    return this.request<{ message: string }>(`/billing/admin/subscriptions/${subscriptionId}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  async adminRefundInvoice(data: { invoice_id: string; amount?: number; reason?: string }) {
+    return this.request<{ message: string }>("/billing/admin/refund", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminMarkInvoicePaid(invoiceId: string, note?: string) {
+    return this.request<{ message: string }>(`/billing/admin/invoices/${invoiceId}/mark-paid`, {
+      method: "POST",
+      body: JSON.stringify({ note }),
+    });
+  }
+
+  async adminCancelInvoice(invoiceId: string, note?: string) {
+    return this.request<{ message: string }>(`/billing/admin/invoices/${invoiceId}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ note }),
+    });
+  }
+
+  async adminExtendInvoiceDueDate(invoiceId: string, newDueDate: string, note?: string) {
+    return this.request<{ message: string }>(`/billing/admin/invoices/${invoiceId}/extend-due-date`, {
+      method: "POST",
+      body: JSON.stringify({ new_due_date: newDueDate, note }),
+    });
+  }
+
+  async adminAddInvoiceNote(invoiceId: string, note: string) {
+    return this.request<{ message: string }>(`/billing/admin/invoices/${invoiceId}/note`, {
+      method: "POST",
+      body: JSON.stringify({ note }),
+    });
+  }
+
+  // ── Admin ─────────────────────────────────────────────
+  async adminSearchUsers(query: string = "") {
+    return this.request<AdminUser[]>(`/admin/users?q=${encodeURIComponent(query)}`);
+  }
+
+  async adminUnlockStrategy(userId: string, strategyId: string) {
+    return this.request<{ message: string }>(
+      `/admin/users/${userId}/unlock-strategy/${strategyId}`,
+      { method: "POST" }
+    );
+  }
+
+  async adminResetPassword(userId: string, newPassword: string) {
+    return this.request<{ message: string }>(
+      `/admin/users/${userId}/reset-password?new_password=${encodeURIComponent(newPassword)}`,
+      { method: "POST" }
+    );
+  }
+
+  async adminUnblockUser(userId: string) {
+    return this.request<{ message: string }>(
+      `/admin/users/${userId}/unblock`,
+      { method: "POST" }
+    );
+  }
+
+  async adminDisconnectMT5(userId: string, accountId: string) {
+    return this.request<{ message: string }>(
+      `/admin/users/${userId}/disconnect-mt5/${accountId}`,
+      { method: "POST" }
+    );
+  }
+
+  async adminCheckPayments() {
+    return this.request<{ message: string }>("/admin/check-payments", {
+      method: "POST",
+    });
+  }
+
+  async adminGetUserInvoices(userId: string) {
+    return this.request<Invoice[]>(`/admin/users/${userId}/invoices`);
+  }
+
+  async adminGetDashboard() {
+    return this.request<AdminDashboard>("/admin/dashboard");
+  }
+
+  // ── Admin Plans ───────────────────────────────────────
+  async adminListPlans() {
+    return this.request<AdminPlan[]>("/admin/plans");
+  }
+
+  async adminCreatePlan(data: CreatePlanData) {
+    return this.request<AdminPlan>("/admin/plans", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminUpdatePlan(planId: string, data: Partial<CreatePlanData>) {
+    return this.request<AdminPlan>(`/admin/plans/${planId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminDeletePlan(planId: string) {
+    return this.request<{ message: string }>(`/admin/plans/${planId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async adminChangeUserPlan(userId: string, planId: string) {
+    return this.request<{ message: string }>(
+      `/admin/users/${userId}/change-plan`,
+      { method: "POST", body: JSON.stringify({ plan_id: planId }) }
+    );
+  }
+
+  // ── Admin Subscriptions & Invoices ────────────────────
+  async adminListSubscriptions(status?: string, accessStatus?: string) {
+    const params = new URLSearchParams();
+    if (status) params.set("status", status);
+    if (accessStatus) params.set("access_status", accessStatus);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return this.request<AdminSubscription[]>(`/admin/subscriptions${qs}`);
+  }
+
+  async adminToggleOverride(subscriptionId: string) {
+    return this.request<{ message: string; manual_override: boolean; access_status: string }>(
+      `/billing/admin/subscriptions/${subscriptionId}/override`,
+      { method: "POST" }
+    );
+  }
+
+  async adminListInvoices(status?: string) {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+    return this.request<AdminInvoice[]>(`/admin/invoices${qs}`);
+  }
+
+  // ── Admin Upgrade Requests ────────────────────────────
+  async adminListUpgradeRequests(status?: string) {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+    return this.request<UpgradeRequestItem[]>(`/admin/upgrade-requests${qs}`);
+  }
+
+  async adminHandleUpgradeRequest(requestId: string, action: "approve" | "reject", note?: string) {
+    return this.request<{ message: string }>(`/admin/upgrade-requests/${requestId}`, {
+      method: "POST",
+      body: JSON.stringify({ action, note }),
+    });
+  }
+
+  // ── Legal / Terms ────────────────────────────────────
+  async getActiveTerms(lang?: string) {
+    const langParam = lang || localStorage.getItem("i18n_language") || "en";
+    return this.request<TermsPublic>(`/legal/terms?lang=${langParam}`);
+  }
+
+  async acceptTerms(termsId: string) {
+    return this.request<{ message: string; acceptance_id: string }>("/legal/terms/accept", {
+      method: "POST",
+      body: JSON.stringify({ terms_id: termsId }),
+    });
+  }
+
+  async checkTermsAcceptance() {
+    return this.request<TermsCheckResult>("/legal/terms/check");
+  }
+
+  // ── Admin Terms ──────────────────────────────────────
+  async adminListTerms() {
+    return this.request<AdminTermsItem[]>("/admin/terms");
+  }
+
+  async adminCreateTerms(data: CreateTermsData) {
+    return this.request<{ message: string; id: string }>("/admin/terms", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminUpdateTerms(termsId: string, data: UpdateTermsData) {
+    return this.request<{ message: string }>(`/admin/terms/${termsId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminActivateTerms(termsId: string) {
+    return this.request<{ message: string }>(`/admin/terms/${termsId}/activate`, {
+      method: "POST",
+    });
+  }
+
+  async adminGetTermsContent(termsId: string) {
+    return this.request<AdminTermsDetail>(`/admin/terms/${termsId}/content`);
+  }
+
+  // ── Public Settings (no auth) ─────────────────────────
+  async getPublicSettings() {
+    return this.request<PublicSettings>("/admin/settings/public");
+  }
+
+  async adminUpdatePublicSettings(data: { affiliate_broker_link: string | null }) {
+    return this.request<PublicSettings>("/admin/settings/public", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // ── Admin Operations ─────────────────────────────────
+  async adminGetOperations() {
+    return this.request<OperationsDashboard>("/admin/operations");
+  }
+
+  // ── Admin Dead Letter Queue ────────────────────────
+  async adminGetDeadLetterTrades(status?: string) {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+    return this.request<DeadLetterTrade[]>(`/admin/dead-letter${qs}`);
+  }
+
+  async adminRetryDeadLetter(tradeId: string) {
+    return this.request<{ message: string }>(`/admin/dead-letter/${tradeId}/retry`, { method: "POST" });
+  }
+
+  async adminResolveDeadLetter(tradeId: string, note: string = "") {
+    return this.request<{ message: string }>(`/admin/dead-letter/${tradeId}/resolve?note=${encodeURIComponent(note)}`, { method: "POST" });
+  }
+
+  // ── Admin Copy Recoveries ───────────────────────────
+  async adminGetRecoveries(filters: { status?: string; recovery_type?: string; limit?: number } = {}) {
+    const params = new URLSearchParams();
+    if (filters.status) params.set("status", filters.status);
+    if (filters.recovery_type) params.set("recovery_type", filters.recovery_type);
+    if (filters.limit) params.set("limit", String(filters.limit));
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return this.request<CopyRecovery[]>(`/admin/operations/recoveries${qs}`);
+  }
+
+  async adminGetRecoveriesSummary() {
+    return this.request<RecoverySummary>("/admin/operations/recoveries/summary");
+  }
+
+  // ── Admin Risk Protection ───────────────────────────
+  async adminGetRiskSettings() {
+    return this.request<RiskSettings>("/admin/risk/settings");
+  }
+
+  async adminUpdateRiskSettings(data: RiskSettingsUpdate) {
+    return this.request<RiskSettings>("/admin/risk/settings", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminGetRiskStatus() {
+    return this.request<RiskStatus>("/admin/risk/status");
+  }
+
+  async adminGetRiskIncidents() {
+    return this.request<RiskIncident[]>("/admin/risk/incidents");
+  }
+
+  // ── Admin Provisioning ─────────────────────────────
+  async adminGetPendingAccounts() {
+    return this.request<PendingProvisionAccount[]>("/admin/provision/pending");
+  }
+
+  async adminCompleteProvision(accountId: string) {
+    return this.request<{ message: string }>(`/admin/provision/complete/${accountId}`, {
+      method: "POST",
+    });
+  }
+
+  async adminRevealProvisionPassword(accountId: string) {
+    return this.request<{ password: string }>(`/admin/provision/reveal/${accountId}`);
+  }
+
+  async adminResetEmergency() {
+    return this.request<{ message: string }>("/admin/risk/reset-emergency", {
+      method: "POST",
+    });
+  }
+
+  // ── Admin Strategies ─────────────────────────────────
+  async adminListStrategies() {
+    return this.request<AdminStrategy[]>("/admin/strategies");
+  }
+
+  async adminCreateStrategy(data: CreateStrategyData) {
+    return this.request<AdminStrategy>("/admin/strategies", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminUpdateStrategy(strategyId: string, data: Partial<CreateStrategyData>) {
+    return this.request<AdminStrategy>(`/admin/strategies/${strategyId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminDeleteStrategy(strategyId: string) {
+    return this.request<{ message: string }>(`/admin/strategies/${strategyId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async adminSetMasterAccount(strategyId: string, data: CreateMasterAccountData) {
+    return this.request<AdminMasterAccount>(`/admin/strategies/${strategyId}/master-account`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminUpdateMasterAccount(strategyId: string, data: Partial<CreateMasterAccountData>) {
+    return this.request<AdminMasterAccount>(`/admin/strategies/${strategyId}/master-account`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // ── Admin Strategy Requests ──────────────────────────
+  async adminListStrategyRequests(status?: string) {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+    return this.request<StrategyRequestItem[]>(`/admin/strategy-requests${qs}`);
+  }
+
+  async adminApproveStrategyRequest(requestId: string) {
+    return this.request<{ message: string }>(`/admin/strategy-requests/${requestId}/approve`, { method: "POST" });
+  }
+
+  async adminRejectStrategyRequest(requestId: string, note: string = "") {
+    return this.request<{ message: string }>(`/admin/strategy-requests/${requestId}/reject?note=${encodeURIComponent(note)}`, { method: "POST" });
+  }
+
+  // ── MetaApi V3 ───────────────────────────────────────
+  async adminListMetaApiAccounts() {
+    return this.request<any[]>("/admin/metaapi/accounts");
+  }
+
+  async adminSyncMetaApiAccount(id: string) {
+    return this.request<any>(`/admin/metaapi/accounts/${id}/sync`, { method: "POST" });
+  }
+
+  async adminListMetaApiStrategies() {
+    return this.request<any[]>("/admin/metaapi/strategies");
+  }
+
+  async adminCreateMetaApiStrategy(data: any) {
+    return this.request<any>("/admin/metaapi/strategies", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminUpdateMetaApiStrategy(id: string, data: any) {
+    return this.request<any>(`/admin/metaapi/strategies/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminCreateMetaApiProvider(strategyId: string) {
+    return this.request<any>(`/admin/metaapi/strategies/${strategyId}/create-provider`, { method: "POST" });
+  }
+
+  async adminListMetaApiSubscriptions() {
+    return this.request<any[]>("/admin/metaapi/subscriptions");
+  }
+
+  async adminCreateMetaApiSubscription(data: any) {
+    return this.request<any>("/admin/metaapi/subscriptions", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminListMetaApiSwitchRequests() {
+    return this.request<any[]>("/admin/metaapi/switch-requests");
+  }
+
+  async adminForceMetaApiSwitch(requestId: string) {
+    return this.request<any>(`/admin/metaapi/switch-requests/${requestId}/force`, { method: "POST" });
+  }
+
+  async adminSyncAllMetaApi() {
+    return this.request<any>("/admin/metaapi/sync-all", { method: "POST" });
+  }
+
+  async adminGetMetaApiHealth() {
+    return this.request<any>("/admin/metaapi/health");
+  }
+
+  async clientGetMyMetaApiStatus() {
+    return this.request<any>("/metaapi/my-account/status");
+  }
+
+  async clientRequestStrategySwitch(targetStrategyId: string) {
+    return this.request<any>("/metaapi/my-strategy/request-switch", {
+      method: "POST",
+      body: JSON.stringify({ target_strategy_id: targetStrategyId }),
+    });
+  }
+
+  async clientGetSwitchStatus() {
+    return this.request<any[]>("/metaapi/my-strategy/switch-status");
+  }
+
+  // ── MetaApi Reconciliation ────────────────────────────
+  async adminGetReconciliationSettings() {
+    return this.request<any>("/admin/metaapi/reconciliation/settings");
+  }
+
+  async adminUpdateReconciliationSettings(data: any) {
+    return this.request<any>("/admin/metaapi/reconciliation/settings", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminListReconciliationEvents(status?: string) {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+    return this.request<any[]>(`/admin/metaapi/reconciliation/events${qs}`);
+  }
+
+  async adminApproveCloseOrphan(eventId: string) {
+    return this.request<any>(`/admin/metaapi/reconciliation/events/${eventId}/approve-close`, {
+      method: "POST",
+    });
+  }
+
+  async adminIgnoreOrphan(eventId: string) {
+    return this.request<any>(`/admin/metaapi/reconciliation/events/${eventId}/ignore`, {
+      method: "POST",
+    });
+  }
+
+  async adminRunReconciliation() {
+    return this.request<any>("/admin/metaapi/reconciliation/run", {
+      method: "POST",
+    });
+  }
+}
+
+// ── Error class ───────────────────────────────────────
+export class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+// ── Types ─────────────────────────────────────────────
+export interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  is_active: boolean;
+  created_at: string;
+  role: string;
+}
+
+export interface MT5Account {
+  id: string;
+  login: number;
+  server: string;
+  status: string;
+  balance: number | null;
+  equity: number | null;
+  last_connected_at: string | null;
+}
+
+export interface Strategy {
+  id: string;
+  level: string;
+  name: string;
+  description: string | null;
+  risk_multiplier: number;
+  requires_unlock: boolean;
+  min_capital: number;
+  is_available: boolean;
+  user_status: "available" | "active" | "request" | "insufficient" | "locked" | "pending";
+}
+
+export interface PlanPublic {
+  id: string;
+  name: string;
+  price: number;
+  currency: string;
+  allowed_strategies: string[];
+  trial_days: number;
+  max_accounts: number;
+}
+
+export interface CheckoutResult {
+  invoice_id: string;
+  gateway_id: string;
+  checkout_url: string | null;
+  pix_qr_code: string | null;
+  pix_copy_paste: string | null;
+  boleto_url: string | null;
+  status: string;
+}
+
+export interface BillingStats {
+  total_revenue: number;
+  active_subscriptions: number;
+  trial_subscriptions: number;
+  blocked_subscriptions: number;
+  pending_invoices: number;
+  overdue_invoices: number;
+  paid_invoices_this_month: number;
+}
+
+export interface Subscription {
+  id: string;
+  status: string;
+  access_status: string;
+  plan_name: string | null;
+  plan_price: number | null;
+  plan_currency?: string | null;
+  trial_start: string;
+  trial_end: string | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  next_billing_date?: string | null;
+  auto_renew: boolean;
+  manual_override: boolean;
+  blocked_at: string | null;
+}
+
+export interface Invoice {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  issue_date: string;
+  due_date: string;
+  paid_at: string | null;
+  provider: string | null;
+  manual_payment?: boolean;
+  original_due_date?: string | null;
+}
+
+export interface UpgradeEligibility {
+  eligible: boolean;
+  has_pending_request?: boolean;
+  reason?: string;
+  current_plan?: { id: string; name: string; price: number } | null;
+  next_plan?: { id: string; name: string; price: number } | null;
+  mt5_balance?: number;
+  min_balance_required?: number;
+}
+
+export interface UpgradeRequestItem {
+  id: string;
+  user_id: string;
+  user_email?: string;
+  current_plan_name: string | null;
+  target_plan_name: string | null;
+  target_plan_price: number | null;
+  mt5_balance: number;
+  status: string;
+  admin_note: string | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  is_active: boolean;
+  mt5_accounts: { id: string; login: number; server: string; status: string }[];
+  subscription_status: string | null;
+  plan_name: string | null;
+  active_strategy: string | null;
+}
+
+export interface AdminDashboard {
+  total_users: number;
+  active_accounts: number;
+  trial_accounts: number;
+  blocked_accounts: number;
+  total_revenue: number;
+  pending_invoices: number;
+  overdue_invoices: number;
+}
+
+export interface AdminPlan {
+  id: string;
+  name: string;
+  price: number;
+  currency: string;
+  allowed_strategies: string[];
+  trial_days: number;
+  max_accounts: number;
+  active: boolean;
+}
+
+export interface CreatePlanData {
+  name: string;
+  price: number;
+  currency: string;
+  allowed_strategies: string[];
+  trial_days: number;
+  max_accounts: number;
+  active: boolean;
+}
+
+export interface AdminSubscription {
+  id: string;
+  user_email: string;
+  user_id: string;
+  plan_name: string | null;
+  plan_price?: number | null;
+  status: string;
+  access_status: string;
+  manual_override: boolean;
+  blocked_at: string | null;
+  trial_start: string | null;
+  trial_end: string | null;
+  current_period_start?: string | null;
+  current_period_end?: string | null;
+  next_billing_date?: string | null;
+  auto_renew?: boolean;
+  created_at: string;
+}
+
+export interface AdminInvoice {
+  id: string;
+  subscription_id: string;
+  user_id?: string | null;
+  user_email: string | null;
+  plan_name: string | null;
+  amount: number;
+  currency: string;
+  status: string;
+  issue_date: string;
+  due_date: string;
+  paid_at: string | null;
+  provider: string | null;
+  external_id: string | null;
+  admin_notes?: string | null;
+  manual_payment?: boolean;
+  manual_payment_by?: string | null;
+  original_due_date?: string | null;
+}
+
+// ── Terms Types ───────────────────────────────────────
+export interface TermsPublic {
+  id: string;
+  title: string;
+  content: string;
+  version: number;
+  company_name: string;
+  updated_at: string;
+}
+
+export interface TermsCheckResult {
+  needs_acceptance: boolean;
+  terms_id?: string;
+  version?: number;
+  title?: string;
+}
+
+export interface AdminTermsItem {
+  id: string;
+  title: string;
+  version: number;
+  company_name: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  acceptance_count: number;
+}
+
+export interface AdminTermsDetail {
+  id: string;
+  title: string;
+  content: string;
+  version: number;
+  company_name: string;
+  is_active: boolean;
+}
+
+export interface CreateTermsData {
+  title: string;
+  content: string;
+  version: number;
+  company_name: string;
+}
+
+export interface UpdateTermsData {
+  title?: string;
+  content?: string;
+  company_name?: string;
+}
+
+// ── Risk Protection Types ────────────────────────────
+export interface RiskSettings {
+  global_max_drawdown_percent: number;
+  protection_enabled: boolean;
+  updated_at: string;
+}
+
+export interface RiskSettingsUpdate {
+  global_max_drawdown_percent?: number;
+  protection_enabled?: boolean;
+}
+
+export interface RiskStatus {
+  total_balance: number;
+  total_equity: number;
+  current_drawdown_percent: number;
+  protection_enabled: boolean;
+  max_drawdown_percent: number;
+  emergency_active: boolean;
+  account_count: number;
+}
+
+export interface RiskIncident {
+  id: string;
+  incident_type: string;
+  drawdown_percent: number;
+  total_balance: number;
+  total_equity: number;
+  created_at: string;
+}
+
+// ── Public Settings Types ──────────────────────────────
+export interface PublicSettings {
+  affiliate_broker_link: string | null;
+}
+
+// ── Operations Types ──────────────────────────────────
+export interface OperationsDashboard {
+  connected_mt5_accounts: number;
+  total_mt5_accounts: number;
+  master_accounts: number;
+  copied_trades_today: number;
+  failed_trades_today: number;
+  avg_latency_ms: number;
+  dlq_pending: number;
+  total_balance: number;
+  total_equity: number;
+  global_drawdown_percent: number;
+  protection_enabled: boolean;
+  emergency_active: boolean;
+  active_subscriptions: number;
+  trial_subscriptions: number;
+  overdue_invoices: number;
+  services: Record<string, string>;
+}
+
+export interface DeadLetterTrade {
+  id: string;
+  order_id: string;
+  symbol: string;
+  action: string;
+  direction: string;
+  volume: number;
+  master_ticket: number;
+  client_mt5_id: string;
+  error_message: string;
+  attempt_count: number;
+  status: string;
+  resolution_note: string | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+// ── Copy Recovery Types ───────────────────────────────
+export interface CopyRecovery {
+  id: string;
+  order_id: string;
+  symbol: string;
+  action: string;            // open / close / modify
+  direction: string;         // BUY / SELL
+  volume: number;
+  master_ticket: number;
+  client_ticket: number | null;
+  recovery_type: "open_recovery" | "close_recovery";
+  attempt_number: number;
+  max_attempts: number;
+  decision: string;          // retry_allowed / retry_rejected / retry_executed / retry_fatal / informational
+  reason_code: string | null;
+  status: string;            // failed_retryable / retried_success / retried_rejected / close_retrying / close_retry_success / close_retry_failed / no_position_to_close
+  original_price: number | null;
+  current_price: number | null;
+  price_delta_points: number | null;
+  mt5_retcode: number | null;
+  mt5_retcode_comment: string | null;
+  error_message: string | null;
+  decided_at: string;
+  executed_at: string | null;
+  mt5_account_id: string;
+  user_id: string | null;
+  user_email: string | null;
+  account_login: number | null;
+  account_server: string | null;
+}
+
+export interface RecoverySummary {
+  reprocessing: number;
+  retried_success: number;
+  retried_rejected: number;
+  close_retrying: number;
+  close_retry_success: number;
+  close_retry_failed: number;
+  no_position: number;
+  last_24h: number;
+}
+
+// ── Admin Strategy Types ──────────────────────────────
+export interface AdminMasterAccount {
+  id: string;
+  account_name: string;
+  login: number;
+  server: string;
+  balance: number;
+}
+
+export interface AdminStrategy {
+  id: string;
+  level: string;
+  name: string;
+  description: string | null;
+  risk_multiplier: number;
+  requires_unlock: boolean;
+  min_capital: number;
+  master_account: AdminMasterAccount | null;
+}
+
+export interface CreateStrategyData {
+  level: string;
+  name: string;
+  description?: string | null;
+  risk_multiplier: number;
+  requires_unlock: boolean;
+  min_capital: number;
+}
+
+export interface CreateMasterAccountData {
+  account_name: string;
+  login: number;
+  server: string;
+  password: string;
+}
+
+// ── Provisioning Types ────────────────────────────────
+export interface PendingProvisionAccount {
+  id: string;
+  user_email: string;
+  login: number;
+  password: string;
+  server: string;
+  status: string;
+  created_at: string;
+}
+
+// ── Strategy Request Types ────────────────────────────
+export interface StrategyRequestItem {
+  id: string;
+  user_id: string;
+  user_email: string;
+  mt5_logins: number[];
+  current_strategy: string | null;
+  target_strategy: string | null;
+  target_strategy_id: string;
+  target_level: string | null;
+  mt5_balance: number;
+  status: string;
+  admin_note: string | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+// Singleton
+export const api = new ApiClient();

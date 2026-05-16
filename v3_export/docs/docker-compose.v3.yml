@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  ctv3-postgres:
+    image: postgres:15-alpine
+    container_name: ctv3-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_v3_pwd}
+      POSTGRES_DB: copytrade_v3
+    ports:
+      - "5433:5432"
+    volumes:
+      - ctv3_postgres_data:/var/lib/postgresql/data
+    networks:
+      - ctv3-network
+
+  ctv3-redis:
+    image: redis:7-alpine
+    container_name: ctv3-redis
+    restart: always
+    ports:
+      - "6380:6379"
+    volumes:
+      - ctv3_redis_data:/data
+    networks:
+      - ctv3-network
+
+  ctv3-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.v3
+    container_name: ctv3-api
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres_v3_pwd}@ctv3-postgres:5432/copytrade_v3
+      - REDIS_URL=redis://ctv3-redis:6379/0
+      - METAAPI_ENABLED=false
+      - COPYFACTORY_ENABLED=false
+      - APP_NAME=CopyTrade-V3-MetaApi
+      - API_PREFIX=/api/v3
+    ports:
+      - "8003:8003"
+    depends_on:
+      - ctv3-postgres
+      - ctv3-redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - ctv3-network
+
+networks:
+  ctv3-network:
+    driver: bridge
+
+volumes:
+  ctv3_postgres_data:
+  ctv3_redis_data:
