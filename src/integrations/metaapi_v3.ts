@@ -53,4 +53,26 @@ export const metaapiV3Api = {
     );
     return response.data;
   },
+
+  // Monitoramento Admin
+  getHealth: async () => {
+    const response = await axios.get(`${API_URL}/metaapi/admin/health`, {
+      headers: getAuthHeader(),
+    });
+    return response.data;
+  },
+
+  getMonitorEvents: async (severity?: string) => {
+    const response = await axios.get(`${API_URL}/metaapi/admin/events${severity ? `?severity=${severity}` : ''}`, {
+      headers: getAuthHeader(),
+    });
+    return response.data;
+  },
+
+  triggerMonitorScan: async () => {
+    const response = await axios.post(`${API_URL}/metaapi/admin/monitor/scan`, {}, {
+      headers: getAuthHeader(),
+    });
+    return response.data;
+  },
 };
