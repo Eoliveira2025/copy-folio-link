@@ -700,10 +700,6 @@ class ApiClient {
     return this.request<any>("/admin/metaapi/sync-all", { method: "POST" });
   }
 
-  async adminGetMetaApiHealth() {
-    return this.request<any>("/admin/metaapi/health");
-  }
-
   async clientGetMyMetaApiStatus() {
     return this.request<any>("/metaapi/my-account/status");
   }
