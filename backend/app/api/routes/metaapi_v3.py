@@ -11,8 +11,9 @@ from app.core.database import get_db
 from app.api.deps import get_current_user, require_admin
 from app.models.user import User
 from app.models.metaapi import (
-    MetaApiAccount, CopyFactoryStrategy, CopyFactorySubscription
+    MetaApiAccount, CopyFactoryStrategy, CopyFactorySubscription, MetaApiMonitorEvent
 )
+from app.services.metaapi.institutional import V3HealthMonitor
 from app.schemas.metaapi import (
     MetaApiAccountResponse, CopyFactorySubscriptionResponse
 )
