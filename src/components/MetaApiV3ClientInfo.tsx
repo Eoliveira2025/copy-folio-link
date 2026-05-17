@@ -1,19 +1,37 @@
-import { useClientMyMetaApiStatus, useClientSwitchStatus } from "@/hooks/use-api";
+import { useQuery } from "@tanstack/react-query";
+import { metaapiV3Api } from "@/integrations/metaapi_v3";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Activity, ArrowUpCircle, AlertCircle } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Activity, ShieldCheck, TrendingUp, AlertCircle, ArrowUpCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import { useClientSwitchStatus } from "@/hooks/use-api";
 
 export const MetaApiV3ClientInfo = () => {
-  const { data: status, isLoading } = useClientMyMetaApiStatus();
-  const { data: switches } = useClientSwitchStatus();
+  const { data: account, isLoading: loadingAccount } = useQuery({
+    queryKey: ["metaapi-v3-account"],
+    queryFn: metaapiV3Api.getMyAccount,
+    retry: 1,
+  });
 
+  const { data: subscription, isLoading: loadingSub } = useQuery({
+    queryKey: ["metaapi-v3-subscription"],
+    queryFn: metaapiV3Api.getMySubscription,
+    retry: 1,
+  });
+
+  const { data: switches } = useClientSwitchStatus();
   const pendingSwitch = switches?.find(s => s.status === 'PENDING_WAIT_FLAT');
 
-  if (isLoading || !status) return null;
+  if (loadingAccount || loadingSub) {
+    return <Skeleton className="h-40 w-full mb-6" />;
+  }
+
+  // Se não tem conta V3, não mostra nada (mantém fallback V1)
+  if (!account) return null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 mb-6">
       {pendingSwitch && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -28,52 +46,72 @@ export const MetaApiV3ClientInfo = () => {
         </motion.div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="card-glass border-none">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cloud Account Status</CardTitle>
-            <Activity className={`w-4 h-4 ${status.connection_status === 'CONNECTED' ? 'text-success animate-pulse' : 'text-muted-foreground'}`} />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <div className="text-2xl font-bold">{status.connection_status}</div>
-              <Badge variant={status.connection_status === 'CONNECTED' ? 'default' : 'destructive'}>
-                {status.deployment_status}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-primary" />
+              Conta Cloud (V3)
+            </CardTitle>
+            <div className="flex gap-2">
+              <Badge variant="outline">{account.deployment_status}</Badge>
+              <Badge 
+                variant={account.connection_status === "CONNECTED" ? "default" : "destructive"}
+                className={account.connection_status === "CONNECTED" ? "bg-success hover:bg-success" : ""}
+              >
+                {account.connection_status}
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Login: {status.login}</p>
-          </CardContent>
-        </Card>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Login / Servidor</p>
+              <p className="font-mono font-medium">{account.login}</p>
+              <p className="text-xs text-muted-foreground">{account.server}</p>
+            </div>
+            
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Saldo / Equity</p>
+              <p className="font-mono font-medium text-lg">
+                ${account.last_balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Equity: ${account.last_equity?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </p>
+            </div>
 
-        <Card className="card-glass border-none">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">MetaApi Real-time Stats</CardTitle>
-            <Activity className="w-4 h-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-             <div className="grid grid-cols-2 gap-2">
-               <div>
-                 <span className="text-xs text-muted-foreground block">Balance</span>
-                 <span className="font-bold">${status.last_balance.toFixed(2)}</span>
-               </div>
-               <div>
-                 <span className="text-xs text-muted-foreground block">Equity</span>
-                 <span className="font-bold">${status.last_equity.toFixed(2)}</span>
-               </div>
-               <div>
-                 <span className="text-xs text-muted-foreground block">Profit/Loss</span>
-                 <span className={`font-bold ${status.last_profit_loss >= 0 ? 'text-success' : 'text-destructive'}`}>
-                   ${status.last_profit_loss.toFixed(2)}
-                 </span>
-               </div>
-               <div>
-                 <span className="text-xs text-muted-foreground block">Positions</span>
-                 <span className="font-bold">{status.last_positions_count}</span>
-               </div>
-             </div>
-          </CardContent>
-        </Card>
-      </div>
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Estratégia Ativa</p>
+              {subscription ? (
+                <>
+                  <p className="font-medium text-primary flex items-center gap-1">
+                    <TrendingUp className="w-4 h-4" />
+                    {subscription.display_name}
+                  </p>
+                  <Badge variant="outline" className="text-[10px] h-5">
+                    {subscription.copyfactory_strategy_id}
+                  </Badge>
+                </>
+              ) : (
+                <div className="flex items-center gap-2 text-warning">
+                  <AlertCircle className="w-4 h-4" />
+                  <p className="text-sm font-medium">Aguardando Provisionamento</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {subscription?.status === "ACTIVE" && account.connection_status === "CONNECTED" && (
+            <div className="mt-4 pt-4 border-t border-primary/10 flex items-center gap-2 text-xs text-success">
+              <Activity className="w-3 h-3 animate-pulse" />
+              Copiando operações em tempo real via CopyFactory
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
+

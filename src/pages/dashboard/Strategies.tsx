@@ -176,6 +176,7 @@ const Strategies = () => {
       <div className="pt-6 border-t">
         <MetaApiV3Strategies />
       </div>
+
     </div>
   );
 };
