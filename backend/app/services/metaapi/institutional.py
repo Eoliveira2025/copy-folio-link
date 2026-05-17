@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.models.metaapi import (
     MetaApiAccount, CopyFactoryStrategy, CopyFactorySubscription, 
-    StrategySwitchRequest, MetaApiAccountMetric, MetaApiEvent
+    StrategySwitchRequest, MetaApiAccountMetric, MetaApiEvent,
+    MetaApiMonitorEvent
 )
 from app.services.metaapi.client import MetaApiClient
 from app.services.metaapi.copyfactory import CopyFactoryService
