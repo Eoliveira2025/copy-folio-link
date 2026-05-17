@@ -6,6 +6,7 @@ from app.services.metaapi.institutional import (
     MetaApiAccountSyncService, StrategySwitchService, V3HealthMonitor
 )
 from app.services.metaapi.reconciliation import PositionReconciliationService
+from app.workers.metaapi_v3_monitor import start_monitor_worker
 
 settings = get_settings()
 logger = logging.getLogger("app.workers.metaapi_v3")
