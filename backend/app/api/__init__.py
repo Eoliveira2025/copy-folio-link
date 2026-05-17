@@ -4,7 +4,8 @@ from fastapi import APIRouter
 from app.api.routes import (
     auth, mt5, strategies, billing, admin, legal, risk, operations, 
     dead_letter, admin_provision, recoveries, bridge, bridge_admin, 
-    bridge_auditor_admin, metaapi_admin, metaapi_client, metaapi_reconciliation
+    bridge_auditor_admin, metaapi_admin, metaapi_client, metaapi_reconciliation,
+    metaapi_v3
 )
 
 api_router = APIRouter()
@@ -26,3 +27,4 @@ api_router.include_router(bridge_auditor_admin.router, prefix="/admin", tags=["B
 api_router.include_router(metaapi_admin.router, prefix="/admin/metaapi", tags=["MetaApi V3 Admin"])
 api_router.include_router(metaapi_reconciliation.router, prefix="/admin/metaapi/reconciliation", tags=["MetaApi V3 Reconciliation"])
 api_router.include_router(metaapi_client.router, prefix="/metaapi", tags=["MetaApi V3 Client"])
+api_router.include_router(metaapi_v3.router, prefix="/metaapi", tags=["MetaApi V3 Institutional"])
