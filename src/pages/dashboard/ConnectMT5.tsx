@@ -219,7 +219,6 @@ const ConnectMT5 = () => {
           </form>
         </motion.div>
       )}
-        </div>
       </div>
     </div>
   );
