@@ -6,6 +6,7 @@ from app.services.metaapi.institutional import (
     MetaApiAccountSyncService, StrategySwitchService, V3HealthMonitor
 )
 from app.services.metaapi.reconciliation import PositionReconciliationService
+from app.workers.metaapi_v3_monitor import start_monitor_worker
 
 settings = get_settings()
 logger = logging.getLogger("app.workers.metaapi_v3")
@@ -79,3 +80,4 @@ async def start_metaapi_v3_workers():
     asyncio.create_task(process_switches_worker())
     asyncio.create_task(health_check_worker())
     asyncio.create_task(reconciliation_worker())
+    asyncio.create_task(start_monitor_worker())

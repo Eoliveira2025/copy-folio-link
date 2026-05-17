@@ -827,3 +827,33 @@ export function useAdminRunReconciliation() {
     onError: (err: Error) => toast.error(err.message),
   });
 }
+
+// ── MetaApi Monitoring ────────────────────────────────
+export function useAdminMetaApiHealth() {
+  return useQuery({
+    queryKey: ["admin-metaapi-health"],
+    queryFn: () => api.adminGetMetaApiHealth(),
+    refetchInterval: 60000,
+  });
+}
+
+export function useAdminMetaApiMonitorEvents(severity?: string) {
+  return useQuery({
+    queryKey: ["admin-metaapi-monitor-events", severity],
+    queryFn: () => api.adminListMetaApiMonitorEvents(severity),
+    refetchInterval: 30000,
+  });
+}
+
+export function useAdminTriggerMonitorScan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.adminTriggerMetaApiMonitorScan(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-metaapi-health"] });
+      qc.invalidateQueries({ queryKey: ["admin-metaapi-monitor-events"] });
+      toast.success("Monitor scan triggered");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}

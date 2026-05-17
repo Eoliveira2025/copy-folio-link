@@ -11,8 +11,9 @@ from app.core.database import get_db
 from app.api.deps import get_current_user, require_admin
 from app.models.user import User
 from app.models.metaapi import (
-    MetaApiAccount, CopyFactoryStrategy, CopyFactorySubscription
+    MetaApiAccount, CopyFactoryStrategy, CopyFactorySubscription, MetaApiMonitorEvent
 )
+from app.services.metaapi.institutional import V3HealthMonitor
 from app.schemas.metaapi import (
     MetaApiAccountResponse, CopyFactorySubscriptionResponse
 )
@@ -254,3 +255,42 @@ async def admin_mark_provisioned(
         
     await db.commit()
     return {"status": "SUCCESS", "message": f"Conta {login} provisionada com estratégia {strategy_code}"}
+
+@router.get("/admin/health")
+async def get_v3_health(
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Detailed health check for V3 components.
+    """
+    monitor = V3HealthMonitor(db)
+    return await monitor.check_health()
+
+@router.get("/admin/events")
+async def get_v3_monitor_events(
+    severity: Optional[str] = None,
+    limit: int = 50,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get recent monitoring events.
+    """
+    stmt = select(MetaApiMonitorEvent).order_by(MetaApiMonitorEvent.created_at.desc()).limit(limit)
+    if severity:
+        stmt = stmt.where(MetaApiMonitorEvent.severity == severity)
+    
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+@router.post("/admin/monitor/scan")
+async def trigger_monitor_scan(
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Trigger a full monitor scan manually.
+    """
+    monitor = V3HealthMonitor(db)
+    return await monitor.run_full_scan()

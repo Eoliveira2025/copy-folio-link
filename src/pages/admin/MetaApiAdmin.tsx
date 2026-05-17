@@ -22,7 +22,10 @@ import {
   useAdminIgnoreOrphan,
   useAdminRunReconciliation,
   useAdminReconciliationSettings,
-  useAdminUpdateReconciliationSettings
+  useAdminUpdateReconciliationSettings,
+  useAdminMetaApiHealth,
+  useAdminMetaApiMonitorEvents,
+  useAdminTriggerMonitorScan
 } from "@/hooks/use-api";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -44,6 +47,10 @@ const MetaApiAdmin = () => {
   const ignoreOrphan = useAdminIgnoreOrphan();
   const runRecon = useAdminRunReconciliation();
   const updateReconSettings = useAdminUpdateReconciliationSettings();
+  
+  const { data: health, isLoading: loadingHealth } = useAdminMetaApiHealth();
+  const { data: monitorEvents, isLoading: loadingEvents } = useAdminMetaApiMonitorEvents();
+  const triggerScan = useAdminTriggerMonitorScan();
 
   const handleSyncAll = async () => {
     try {
@@ -61,10 +68,16 @@ const MetaApiAdmin = () => {
           <h2 className="text-3xl font-bold tracking-tight">MetaApi V3 Management</h2>
           <p className="text-muted-foreground">Institutional copy-trade administration</p>
         </div>
-        <Button onClick={handleSyncAll} className="flex items-center gap-2">
-          <RefreshCcw className="h-4 w-4" />
-          Sync All
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => triggerScan.mutate()} disabled={triggerScan.isPending} className="flex items-center gap-2">
+            <ShieldCheck className={`h-4 w-4 ${triggerScan.isPending ? 'animate-pulse' : ''}`} />
+            Scan Health
+          </Button>
+          <Button onClick={handleSyncAll} className="flex items-center gap-2">
+            <RefreshCcw className="h-4 w-4" />
+            Sync All
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
@@ -75,6 +88,7 @@ const MetaApiAdmin = () => {
           <TabsTrigger value="subscriptions" className="gap-2"><CheckCircle2 className="h-4 w-4" /> Assinaturas</TabsTrigger>
           <TabsTrigger value="switches" className="gap-2"><ArrowLeftRight className="h-4 w-4" /> Switch Requests</TabsTrigger>
           <TabsTrigger value="reconciliation" className="gap-2"><Scale className="h-4 w-4" /> Reconciliação</TabsTrigger>
+          <TabsTrigger value="monitoring" className="gap-2"><Activity className="h-4 w-4" /> Monitoramento</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -124,13 +138,41 @@ const MetaApiAdmin = () => {
             </CardHeader>
             <CardContent>
                <div className="space-y-4">
-                 <div className="flex items-center gap-4 p-4 border rounded-lg bg-success/5">
-                   <CheckCircle2 className="h-5 w-5 text-success" />
+                 <div className={`flex items-center gap-4 p-4 border rounded-lg ${health?.status === 'OK' ? 'bg-success/5 border-success/20' : 'bg-warning/5 border-warning/20'}`}>
+                   {health?.status === 'OK' ? (
+                     <CheckCircle2 className="h-5 w-5 text-success" />
+                   ) : (
+                     <AlertTriangle className="h-5 w-5 text-warning" />
+                   )}
                    <div>
-                     <p className="font-medium text-success">MetaApi Cloud Status: Online</p>
-                     <p className="text-xs text-muted-foreground">All connections stable</p>
+                     <p className={`font-medium ${health?.status === 'OK' ? 'text-success' : 'text-warning'}`}>
+                       V3 System Status: {health?.status || 'Unknown'}
+                     </p>
+                     <p className="text-xs text-muted-foreground">
+                       {health?.timestamp ? `Last updated: ${format(new Date(health.timestamp), 'HH:mm:ss')}` : 'Checking...'}
+                     </p>
                    </div>
                  </div>
+                 {health?.stats && (
+                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                     <div className="p-3 border rounded-md text-center">
+                       <p className="text-xs text-muted-foreground mb-1">Total</p>
+                       <p className="text-lg font-bold">{health.stats.total_accounts}</p>
+                     </div>
+                     <div className="p-3 border rounded-md text-center">
+                       <p className="text-xs text-muted-foreground mb-1">Online</p>
+                       <p className="text-lg font-bold text-success">{health.stats.connected}</p>
+                     </div>
+                     <div className="p-3 border rounded-md text-center">
+                       <p className="text-xs text-muted-foreground mb-1">Deployed</p>
+                       <p className="text-lg font-bold text-primary">{health.stats.deployed}</p>
+                     </div>
+                     <div className="p-3 border rounded-md text-center">
+                       <p className="text-xs text-muted-foreground mb-1">Equity Zero</p>
+                       <p className="text-lg font-bold text-destructive">{health.stats.equity_zero}</p>
+                     </div>
+                   </div>
+                 )}
                </div>
             </CardContent>
           </Card>
@@ -477,6 +519,55 @@ const MetaApiAdmin = () => {
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         Nenhum evento de divergência detectado.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="monitoring">
+          <Card>
+            <CardHeader>
+              <CardTitle>Eventos de Monitoramento</CardTitle>
+              <CardDescription>Alertas e eventos operacionais da V3</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Severidade</TableHead>
+                    <TableHead>Evento</TableHead>
+                    <TableHead>Mensagem</TableHead>
+                    <TableHead>Conta</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {monitorEvents?.map((event) => (
+                    <TableRow key={event.id}>
+                      <TableCell className="text-xs">{format(new Date(event.created_at), 'dd/MM HH:mm:ss')}</TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          event.severity === 'CRITICAL' ? 'destructive' : 
+                          event.severity === 'WARNING' ? 'outline' : 'secondary'
+                        }>
+                          {event.severity}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-medium text-xs font-mono">{event.event_type}</TableCell>
+                      <TableCell className="text-sm">{event.message}</TableCell>
+                      <TableCell className="text-xs font-mono">
+                        {accounts?.find(a => a.id === event.metaapi_account_id)?.login || 'Global'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {monitorEvents?.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        Nenhum evento de monitoramento registrado.
                       </TableCell>
                     </TableRow>
                   )}

@@ -143,3 +143,14 @@ class PositionReconciliationEvent(Base):
     approved_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+class MetaApiMonitorEvent(Base):
+    __tablename__ = "metaapi_monitor_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    metaapi_account_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("metaapi_accounts.id", ondelete="CASCADE"), index=True)
+    severity: Mapped[str] = mapped_column(String(20), nullable=False) # INFO, WARNING, CRITICAL
+    event_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
