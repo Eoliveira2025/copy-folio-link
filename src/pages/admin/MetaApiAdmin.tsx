@@ -44,6 +44,10 @@ const MetaApiAdmin = () => {
   const ignoreOrphan = useAdminIgnoreOrphan();
   const runRecon = useAdminRunReconciliation();
   const updateReconSettings = useAdminUpdateReconciliationSettings();
+  
+  const { data: health, isLoading: loadingHealth } = useAdminMetaApiHealth();
+  const { data: monitorEvents, isLoading: loadingEvents } = useAdminMetaApiMonitorEvents();
+  const triggerScan = useAdminTriggerMonitorScan();
 
   const handleSyncAll = async () => {
     try {
