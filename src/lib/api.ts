@@ -445,6 +445,22 @@ class ApiClient {
     });
   }
 
+  // ── MetaApi Monitoring ────────────────────────────────
+  async adminGetMetaApiHealth() {
+    return this.request<any>("/metaapi/admin/health");
+  }
+
+  async adminListMetaApiMonitorEvents(severity?: string) {
+    const qs = severity ? `?severity=${encodeURIComponent(severity)}` : "";
+    return this.request<any[]>(`/metaapi/admin/events${qs}`);
+  }
+
+  async adminTriggerMetaApiMonitorScan() {
+    return this.request<any>("/metaapi/admin/monitor/scan", {
+      method: "POST",
+    });
+  }
+
   // ── Legal / Terms ────────────────────────────────────
   async getActiveTerms(lang?: string) {
     const langParam = lang || localStorage.getItem("i18n_language") || "en";
