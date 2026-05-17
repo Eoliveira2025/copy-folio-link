@@ -281,31 +281,113 @@ class V3HealthMonitor:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.client = MetaApiClient()
+        self.cf = CopyFactoryService()
+
+    async def log_event(self, account_id: Optional[Any], severity: str, event_type: str, message: str, user_id: Optional[Any] = None):
+        """Log a monitor event."""
+        event = MetaApiMonitorEvent(
+            metaapi_account_id=account_id,
+            user_id=user_id,
+            severity=severity,
+            event_type=event_type,
+            message=message
+        )
+        self.db.add(event)
+        await self.db.commit()
+        logger.info(f"Monitor Event [{severity}]: {message}")
 
     async def check_health(self):
-        """Health check for V3 components."""
-        if not settings.V3_ADMIN_ENABLED:
+        """Detailed health check for V3 components."""
+        if not settings.V3_COPY_ENABLED:
             return {"status": "DISABLED"}
             
-        # Check masters
-        stmt = select(CopyFactoryStrategy).where(CopyFactoryStrategy.is_active == True)
-        strategies = (await self.db.execute(stmt)).scalars().all()
+        # Get all MetaApi accounts
+        stmt = select(MetaApiAccount)
+        res = await self.db.execute(stmt)
+        accounts = res.scalars().all()
         
-        issues = []
-        for strategy in strategies:
-            if not strategy.master_account_id:
-                issues.append(f"Strategy {strategy.strategy_code} has no master account")
-                continue
-                
-            stmt_m = select(MetaApiAccount).where(MetaApiAccount.id == strategy.master_account_id)
-            master = (await self.db.execute(stmt_m)).scalars().first()
+        stats = {
+            "total_accounts": len(accounts),
+            "connected": 0,
+            "disconnected": 0,
+            "deployed": 0,
+            "undeployed": 0,
+            "equity_zero": 0,
+            "issues": []
+        }
+        
+        for acc in accounts:
+            if acc.connection_status == "CONNECTED":
+                stats["connected"] += 1
+            else:
+                stats["disconnected"] += 1
+                if acc.deployment_status == "DEPLOYED":
+                    await self.log_event(acc.id, "WARNING", "ACCOUNT_DISCONNECTED", f"Account {acc.login} is DEPLOYED but DISCONNECTED", acc.user_id)
             
-            if not master or master.connection_status != "CONNECTED":
-                issues.append(f"Master account for {strategy.strategy_code} is {master.connection_status if master else 'MISSING'}")
+            if acc.deployment_status == "DEPLOYED":
+                stats["deployed"] += 1
+            else:
+                stats["undeployed"] += 1
+            
+            if acc.last_equity == 0 and acc.connection_status == "CONNECTED":
+                stats["equity_zero"] += 1
+                await self.log_event(acc.id, "CRITICAL", "EQUITY_ZERO", f"Account {acc.login} has ZERO equity", acc.user_id)
+
+        # Check CopyFactory Subscriptions
+        stmt_sub = select(CopyFactorySubscription)
+        res_sub = await self.db.execute(stmt_sub)
+        subscriptions = res_sub.scalars().all()
+        
+        for sub in subscriptions:
+            # Check if strategy exists and is active
+            stmt_st = select(CopyFactoryStrategy).where(CopyFactoryStrategy.id == sub.strategy_id)
+            strategy = (await self.db.execute(stmt_st)).scalars().first()
+            
+            if not strategy or not strategy.is_active:
+                await self.log_event(sub.client_account_id, "CRITICAL", "MISSING_STRATEGY", f"Subscription for user {sub.user_id} has missing or inactive strategy", sub.user_id)
+            
+            # Here we could call CF API to verify status if needed, but it's expensive in a loop
+            # We'll rely on the worker to do that periodically
 
         return {
-            "status": "OK" if not issues else "WARNING",
-            "issues": issues,
-            "strategies_count": len(strategies),
+            "status": "OK" if not stats["issues"] else "WARNING",
+            "stats": stats,
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
+
+    async def run_full_scan(self):
+        """Run a full scan of all accounts and verify with MetaApi/CopyFactory directly."""
+        logger.info("Starting full MetaApi V3 monitor scan...")
+        
+        # 1. Sync all accounts (uses MetaApiAccountSyncService)
+        # 2. Verify subscribers in CopyFactory
+        stmt_sub = select(CopyFactorySubscription).where(CopyFactorySubscription.status == "ACTIVE")
+        res_sub = await self.db.execute(stmt_sub)
+        subscriptions = res_sub.scalars().all()
+        
+        for sub in subscriptions:
+            try:
+                stmt_acc = select(MetaApiAccount).where(MetaApiAccount.id == sub.client_account_id)
+                acc = (await self.db.execute(stmt_acc)).scalars().first()
+                
+                if not acc or not acc.metaapi_account_id:
+                    continue
+                
+                # Check CF status
+                try:
+                    cf_sub = await self.cf.cf_api.configuration_api.get_subscriber(acc.metaapi_account_id)
+                    
+                    # If subscription is cancelled in CF but ACTIVE in DB
+                    is_enabled_in_cf = cf_sub.get('enabled', False)
+                    if not is_enabled_in_cf and sub.status == "ACTIVE":
+                        sub.status = "PAUSED" # Or ERROR
+                        await self.log_event(acc.id, "CRITICAL", "SUBSCRIPTION_MISMATCH", f"Subscription for {acc.login} is enabled in DB but DISABLED in CopyFactory", sub.user_id)
+                except Exception as cf_e:
+                    if "not found" in str(cf_e).lower():
+                        await self.log_event(acc.id, "CRITICAL", "SUBSCRIBER_NOT_FOUND", f"Subscriber for {acc.login} not found in CopyFactory API", sub.user_id)
+            except Exception as e:
+                logger.error(f"Error scanning subscription {sub.id}: {e}")
+        
+        await self.db.commit()
+        return await self.check_health()
+
