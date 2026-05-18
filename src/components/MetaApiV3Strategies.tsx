@@ -47,8 +47,16 @@ export const MetaApiV3Strategies = () => {
           Estratégias Cloud (CopyFactory V3)
         </h2>
         <p className="text-muted-foreground text-sm">
-          Disponíveis para sua conta cloud com base no seu saldo atual (${account.last_equity?.toFixed(2)}).
+          Disponíveis para sua conta cloud com base no seu saldo (Balance) atual (${account.last_balance?.toFixed(2)}).
         </p>
+        <div className="flex gap-2 mt-1">
+          <Badge variant="outline" className="text-[10px] font-normal py-0">
+            Balance: ${account.last_balance?.toFixed(2)} (Elegibilidade)
+          </Badge>
+          <Badge variant="outline" className="text-[10px] font-normal py-0 opacity-70">
+            Equity: ${account.last_equity?.toFixed(2)} (Operacional)
+          </Badge>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
