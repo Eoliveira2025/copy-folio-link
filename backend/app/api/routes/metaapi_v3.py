@@ -121,7 +121,7 @@ async def get_allowed_strategies(
     ).order_by(MetaApiAccount.updated_at.desc())
     account = (await db.execute(stmt)).scalars().first()
     
-    equity = account.last_equity if account else 0.0
+    balance = account.last_balance if account else 0.0
     
     # Busca todas as estratégias ativas
     stmt = select(CopyFactoryStrategy).where(CopyFactoryStrategy.is_active == True)
@@ -129,7 +129,7 @@ async def get_allowed_strategies(
     
     allowed_list = []
     for s in strategies:
-        allowed = equity >= s.min_balance
+        allowed = balance >= s.min_balance
         allowed_list.append({
             "strategy_code": s.strategy_code,
             "display_name": s.display_name,
