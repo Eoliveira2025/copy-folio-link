@@ -83,6 +83,7 @@ async def get_my_v3_subscription(
             CopyFactorySubscription.risk_ratio,
             MetaApiAccount.login,
             MetaApiAccount.server,
+            MetaApiAccount.last_balance,
             MetaApiAccount.last_equity,
             CopyFactoryStrategy.strategy_code,
             CopyFactoryStrategy.display_name,
