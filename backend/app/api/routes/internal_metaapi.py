@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, Path
-from typing import List, Dict, Any
+from fastapi import APIRouter, HTTPException, Path, Body, Query
+from typing import List, Dict, Any, Optional
 import logging
+import asyncio
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -37,8 +38,6 @@ async def get_internal_positions(
     api = get_sdk_client()
     try:
         account = await api.metatrader_api.get_account(account_id)
-        # Wait for account to be deployed/synchronized if needed
-        # In a real scenario, the service should keep these accounts synchronized
         connection = await account.get_streaming_connection()
         if not connection.terminal_state.connected:
             await connection.connect()
@@ -99,5 +98,51 @@ async def get_internal_account_info(account_id: str = Path(...)):
             
         account_info = connection.terminal_state.account_information
         return account_info
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/accounts")
+async def create_internal_account(payload: Dict[str, Any] = Body(...)):
+    """INTERNAL: Create account in MetaApi."""
+    api = get_sdk_client()
+    try:
+        account = await api.metatrader_api.create_account(payload)
+        return {"id": account.id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/accounts/{account_id}/deploy")
+async def deploy_internal_account(account_id: str = Path(...)):
+    """INTERNAL: Deploy account."""
+    api = get_sdk_client()
+    try:
+        account = await api.metatrader_api.get_account(account_id)
+        await account.deploy()
+        return {"status": "DEPLOYING"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/accounts/{account_id}")
+async def remove_internal_account(account_id: str = Path(...)):
+    """INTERNAL: Remove account."""
+    api = get_sdk_client()
+    try:
+        account = await api.metatrader_api.get_account(account_id)
+        await account.remove()
+        return {"status": "REMOVED"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/accounts/{account_id}/wait-connected")
+async def wait_internal_connected(
+    account_id: str = Path(...),
+    timeout: int = Query(60)
+):
+    """INTERNAL: Wait until account is connected."""
+    api = get_sdk_client()
+    try:
+        account = await api.metatrader_api.get_account(account_id)
+        await account.wait_connected(timeout)
+        return {"status": "CONNECTED"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
