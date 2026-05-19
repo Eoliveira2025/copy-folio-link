@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional
 from sqlalchemy import select, update, and_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,7 +43,7 @@ class PositionReconciliationService:
         return recon_settings
 
     async def sync_positions(self, master_account_id: UUID, subscriber_account_id: UUID):
-        """Compare positions between master and subscriber and detect orphans."""
+        """[RECON] Compare positions between master and subscriber and detect orphans."""
         recon_settings = await self.get_settings()
         
         # 1. Fetch accounts
@@ -51,15 +51,15 @@ class PositionReconciliationService:
         sub_acc = await self.db.get(MetaApiAccount, subscriber_account_id)
         
         if not master_acc or not sub_acc:
-            logger.error(f"Account not found for reconciliation: Master={master_account_id}, Sub={subscriber_account_id}")
+            logger.error(f"[RECON] Account not found for reconciliation: Master={master_account_id}, Sub={subscriber_account_id}")
             return
             
         if not master_acc.metaapi_account_id or not sub_acc.metaapi_account_id:
-            logger.warning(f"Accounts not ready for reconciliation: Master={master_acc.login}, Sub={sub_acc.login}")
+            logger.warning(f"[RECON] Accounts not ready for reconciliation: Master={master_acc.login}, Sub={sub_acc.login}")
             return
 
         try:
-            # 2. Fetch positions from MetaApi
+            # 2. Fetch positions from MetaApi Service (Isolated)
             master_positions = await self.client.get_positions(master_acc.metaapi_account_id)
             sub_positions = await self.client.get_positions(sub_acc.metaapi_account_id)
             
@@ -80,9 +80,10 @@ class PositionReconciliationService:
                 await self._process_orphan(orphan, master_acc, sub_acc, recon_settings, master_positions, sub_positions)
                 
             await self.db.commit()
-            logger.info(f"Reconciliation completed for {sub_acc.login}. Orphans detected: {len(orphans)}")
+            if orphans:
+                logger.info(f"[RECON] Reconciliation completed for {sub_acc.login}. Orphans detected: {len(orphans)}")
         except Exception as e:
-            logger.error(f"Error in sync_positions for sub {sub_acc.login}: {e}")
+            logger.error(f"[RECON] Error in sync_positions for sub {sub_acc.login}: {e}")
             await self.db.rollback()
 
     def _is_match(self, sub_pos: Dict, master_pos: Dict, recon_settings: MetaApiReconciliationSettings) -> bool:
@@ -96,11 +97,6 @@ class PositionReconciliationService:
         if sub_pos.get("type") != master_pos.get("type"):
             return False
             
-        # Optional: volume match with tolerance
-        # volume_diff = abs(sub_pos.get("volume", 0) - master_pos.get("volume", 0))
-        # if volume_diff > recon_settings.lot_tolerance:
-        #     return False
-
         return True
 
     async def _process_orphan(self, orphan: Dict, master_acc: MetaApiAccount, sub_acc: MetaApiAccount, 
@@ -109,7 +105,20 @@ class PositionReconciliationService:
         
         pos_id = orphan.get("id")
         profit = orphan.get("profit", 0.0)
+        symbol = orphan.get("symbol", "UNKNOWN")
         
+        # Parse position time to calculate age
+        pos_time_str = orphan.get("time")
+        age_minutes = 0
+        if pos_time_str:
+            try:
+                # MetaApi usually returns '2023-10-27T10:00:00.000Z'
+                pos_time = datetime.fromisoformat(pos_time_str.replace('Z', '+00:00'))
+                age_delta = datetime.now(timezone.utc) - pos_time
+                age_minutes = age_delta.total_seconds() / 60
+            except Exception as e:
+                logger.warning(f"[RECON] Error parsing position time {pos_time_str}: {e}")
+
         # Check if already exists in events to avoid duplicates
         stmt = select(PositionReconciliationEvent).where(
             and_(PositionReconciliationEvent.position_id == pos_id, 
@@ -125,13 +134,15 @@ class PositionReconciliationService:
             existing.updated_at = datetime.now(timezone.utc)
             return
 
+        logger.warning(f"[ORPHAN DETECTED] Account: {sub_acc.login}, Symbol: {symbol}, ID: {pos_id}, Profit: {profit}, Age: {age_minutes:.1f}min")
+
         # Create new event
         event = PositionReconciliationEvent(
             account_id=sub_acc.id,
             user_id=sub_acc.user_id,
             master_account_id=master_acc.id,
             subscriber_account_id=sub_acc.id,
-            symbol=orphan.get("symbol", "UNKNOWN"),
+            symbol=symbol,
             position_id=pos_id,
             side=orphan.get("type", "BUY"),
             volume=orphan.get("volume", 0.0),
@@ -146,36 +157,45 @@ class PositionReconciliationService:
         
         # Apply Auto-close rules
         should_auto_close = False
+        close_reason = ""
+        
         if recon_settings.auto_close_orphan_positions:
-            if profit >= 0 and recon_settings.orphan_auto_close_profit_enabled:
+            # 1. Age Rule
+            if age_minutes > recon_settings.max_minutes_orphan:
                 should_auto_close = True
-                event.reason = "Auto-close: Profit >= 0"
+                close_reason = f"Auto-close: Age ({age_minutes:.1f}min) > Limit ({recon_settings.max_minutes_orphan}min)"
+            
+            # 2. Profit Rule (if enabled)
+            elif profit >= 0 and recon_settings.orphan_auto_close_profit_enabled:
+                should_auto_close = True
+                close_reason = "Auto-close: Profit >= 0"
+            
+            # 3. Loss Rule
             elif profit < 0 and profit >= recon_settings.orphan_auto_close_loss_limit:
                 should_auto_close = True
-                event.reason = f"Auto-close: Loss ({profit}) within limit ({recon_settings.orphan_auto_close_loss_limit})"
+                close_reason = f"Auto-close: Loss ({profit}) within limit ({recon_settings.orphan_auto_close_loss_limit})"
         
         if should_auto_close:
             try:
                 await self.client.close_position(sub_acc.metaapi_account_id, pos_id)
                 event.status = "AUTO_CLOSED"
                 event.action_taken = "CLOSED_BY_SYSTEM"
-                logger.info(f"Orphan position {pos_id} auto-closed for {sub_acc.login} (Profit: {profit})")
+                event.reason = close_reason
+                logger.info(f"[AUTO CLOSE SUCCESS] Position {pos_id} for {sub_acc.login}. Reason: {close_reason}")
             except Exception as e:
-                logger.error(f"Failed to auto-close orphan position {pos_id} for {sub_acc.login}: {e}")
+                logger.error(f"[AUTO CLOSE FAILED] Position {pos_id} for {sub_acc.login}: {e}")
                 event.status = "FAILED"
                 event.reason = f"Auto-close failed: {str(e)}"
         else:
             if profit < recon_settings.orphan_auto_close_loss_limit:
                 event.status = "WAITING_ADMIN_APPROVAL"
                 event.reason = f"High loss orphan detected: {profit} < {recon_settings.orphan_auto_close_loss_limit}"
-                logger.warning(f"High loss orphan {pos_id} on {sub_acc.login} needs admin approval (Profit: {profit})")
             else:
-                # If auto-close disabled but profit/loss within range
                 event.status = "ORPHAN_POSITION_DETECTED"
-                event.reason = "Orphan detected, awaiting manual action (auto-close disabled)"
+                event.reason = "Awaiting manual action or age limit (auto-close conditions not met)"
 
     async def detect_all_orphans(self):
-        """Worker task to run reconciliation for all active subscriptions."""
+        """[RECON] Worker task to run reconciliation for all active subscriptions."""
         if not settings.V3_COPY_ENABLED:
             return
 
@@ -194,7 +214,7 @@ class PositionReconciliationService:
 
     async def approve_close_orphan(self, event_id: UUID, admin_id: UUID):
         event = await self.db.get(PositionReconciliationEvent, event_id)
-        if not event or event.status not in ["WAITING_ADMIN_APPROVAL", "ORPHAN_DETECTED"]:
+        if not event or event.status not in ["WAITING_ADMIN_APPROVAL", "ORPHAN_POSITION_DETECTED"]:
             raise Exception("Invalid event or status")
             
         sub_acc = await self.db.get(MetaApiAccount, event.subscriber_account_id)
@@ -208,11 +228,13 @@ class PositionReconciliationService:
             event.approved_by = admin_id
             event.updated_at = datetime.now(timezone.utc)
             await self.db.commit()
+            logger.info(f"[ADMIN CLOSE SUCCESS] Position {event.position_id} for {sub_acc.login}")
             return event
         except Exception as e:
             event.status = "FAILED"
             event.reason = str(e)
             await self.db.commit()
+            logger.error(f"[ADMIN CLOSE FAILED] Position {event.position_id} for {sub_acc.login}: {e}")
             raise e
 
     async def ignore_orphan(self, event_id: UUID, admin_id: UUID):
