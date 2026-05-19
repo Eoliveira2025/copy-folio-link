@@ -11,7 +11,7 @@ from app.models.metaapi import (
     MetaApiAccount, CopyFactoryStrategy, CopyFactorySubscription, 
     PositionReconciliationEvent, MetaApiReconciliationSettings
 )
-from app.services.metaapi.client import MetaApiClient
+from app.services.metaapi.http_client import HttpMetaApiClient
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
