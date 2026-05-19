@@ -1,5 +1,5 @@
 import logging
-from app.services.metaapi.client import MetaApiClient
+from app.services.metaapi.http_client import HttpMetaApiClient
 
 logger = logging.getLogger(__name__)
 
@@ -7,7 +7,7 @@ class ProvisioningService:
     """Orchestrates account onboarding and MetaApi deployment."""
     
     def __init__(self):
-        self.meta_client = MetaApiClient()
+        self.meta_client = HttpMetaApiClient()
 
     async def onboard_account(self, user_id, account_data: dict):
         """Full flow: Validate -> Create in MetaApi -> Deploy -> Wait for connection."""

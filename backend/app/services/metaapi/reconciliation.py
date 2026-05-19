@@ -11,7 +11,7 @@ from app.models.metaapi import (
     MetaApiAccount, CopyFactoryStrategy, CopyFactorySubscription, 
     PositionReconciliationEvent, MetaApiReconciliationSettings
 )
-from app.services.metaapi.client import MetaApiClient
+from app.services.metaapi.http_client import HttpMetaApiClient
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class PositionReconciliationService:
     def __init__(self, db: AsyncSession):
         self.db = db
-        self.client = MetaApiClient()
+        self.client = HttpMetaApiClient()
 
     async def get_settings(self) -> MetaApiReconciliationSettings:
         stmt = select(MetaApiReconciliationSettings)

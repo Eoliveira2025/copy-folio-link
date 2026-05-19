@@ -12,7 +12,7 @@ from app.models.metaapi import (
     StrategySwitchRequest, MetaApiAccountMetric, MetaApiEvent,
     MetaApiMonitorEvent
 )
-from app.services.metaapi.client import MetaApiClient
+from app.services.metaapi.http_client import HttpMetaApiClient
 from app.services.metaapi.copyfactory import CopyFactoryService
 
 settings = get_settings()
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class MetaApiAccountSyncService:
     def __init__(self, db: AsyncSession):
         self.db = db
-        self.client = MetaApiClient()
+        self.client = HttpMetaApiClient()
 
     async def sync_account(self, account: MetaApiAccount):
         """Sync status, metrics and positions for a MetaApi account."""
@@ -280,7 +280,7 @@ class StrategySwitchService:
 class V3HealthMonitor:
     def __init__(self, db: AsyncSession):
         self.db = db
-        self.client = MetaApiClient()
+        self.client = HttpMetaApiClient()
         self.cf = CopyFactoryService()
 
     async def log_event(self, account_id: Optional[Any], severity: str, event_type: str, message: str, user_id: Optional[Any] = None):

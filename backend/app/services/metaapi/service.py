@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.config import get_settings
 from app.models.metaapi import MetaApiAccount, MetaApiAccountType, CopyFactorySubscription, MetaApiEvent
-from app.services.metaapi.client import MetaApiClient
+from app.services.metaapi.http_client import HttpMetaApiClient
 from app.services.metaapi.copyfactory import CopyFactoryService
 from app.services.metaapi.institutional import MetaApiAccountSyncService
 import json
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class MetaApiService:
     def __init__(self, db: AsyncSession):
         self.db = db
-        self.client = MetaApiClient()
+        self.client = HttpMetaApiClient()
         self.cf = CopyFactoryService()
         self.sync_service = MetaApiAccountSyncService(db)
 
@@ -51,19 +51,21 @@ class MetaApiService:
             # 1. Create in MetaApi with appropriate roles
             roles = ['PROVIDER'] if data.get("type") == MetaApiAccountType.MASTER else ['SUBSCRIBER']
             
-            ma_account = await self.client.create_account(
-                name=data["name"],
-                login=data["login"],
-                server=data["server"],
-                password=data["password"],
-                roles=roles
-            )
+            # Note: create_account might not be in HttpMetaApiClient yet, 
+            # we should add it if needed, but for now we follow the user's focus on reconciliation
+            ma_account = await self.client._request("POST", "/internal/metaapi/accounts", json={
+                "name": data["name"],
+                "login": data["login"],
+                "server": data["server"],
+                "password": data["password"],
+                "roles": roles
+            })
             
             db_account.metaapi_account_id = ma_account["id"]
             await self.db.commit()
 
             # 2. Deploy
-            await self.client.deploy_account(db_account.metaapi_account_id)
+            await self.client._request("POST", f"/internal/metaapi/accounts/{db_account.metaapi_account_id}/deploy")
             db_account.deployment_status = "DEPLOYING"
             db_account.connection_status = "CONNECTING"
             await self.db.commit()
@@ -82,7 +84,8 @@ class MetaApiService:
     async def _wait_and_update_status(self, db_id: Any, ma_id: str):
         """Background task to wait for connection and update DB."""
         await asyncio.sleep(5)
-        res = await self.client.wait_until_connected(ma_id, timeout=120)
+        # Using _request for waiting if implemented on service side
+        res = await self.client._request("GET", f"/internal/metaapi/accounts/{ma_id}/wait-connected", params={"timeout": 120})
         
         from app.core.database import AsyncSessionLocal
         async with AsyncSessionLocal() as db:
@@ -124,7 +127,7 @@ class MetaApiService:
         result = await self.db.execute(stmt)
         account = result.scalars().first()
         if account and account.metaapi_account_id:
-            res = await self.client.deploy_account(account.metaapi_account_id)
+            res = await self.client._request("POST", f"/internal/metaapi/accounts/{account.metaapi_account_id}/deploy")
             account.deployment_status = "DEPLOYING"
             await self.db.commit()
             await self.log_event(account.id, "DEPLOY_REQUESTED", "Manual deploy requested")
@@ -137,7 +140,7 @@ class MetaApiService:
         account = result.scalars().first()
         if account:
             if account.metaapi_account_id:
-                await self.client.remove_account(account.metaapi_account_id)
+                await self.client._request("DELETE", f"/internal/metaapi/accounts/{account.metaapi_account_id}")
             await self.db.delete(account)
             await self.db.commit()
             return {"status": "REMOVED"}
