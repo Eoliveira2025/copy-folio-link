@@ -120,6 +120,7 @@ class ReconciliationSettingsBase(BaseModel):
     auto_close_orphan_positions: bool = True
     orphan_auto_close_loss_limit: float = -2.00
     orphan_auto_close_profit_enabled: bool = True
+    max_minutes_orphan: int = 60
     lot_tolerance: float = 0.01
     strict_symbol_match: bool = True
     price_tolerance_points: int = 50

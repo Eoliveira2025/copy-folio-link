@@ -17,16 +17,25 @@ router = APIRouter()
 @router.get("/settings", response_model=ReconciliationSettingsResponse)
 async def get_reconciliation_settings(
     db: AsyncSession = Depends(deps.get_db),
-    current_admin: User = Depends(deps.get_current_admin)
+    current_admin: User = Depends(deps.require_admin)
 ):
     service = PositionReconciliationService(db)
     return await service.get_settings()
 
-@router.patch("/settings", response_model=ReconciliationSettingsResponse)
-async def update_reconciliation_settings(
+@router.post("/settings", response_model=ReconciliationSettingsResponse)
+async def update_reconciliation_settings_post(
     settings_data: ReconciliationSettingsBase,
     db: AsyncSession = Depends(deps.get_db),
-    current_admin: User = Depends(deps.get_current_admin)
+    current_admin: User = Depends(deps.require_admin)
+):
+    service = PositionReconciliationService(db)
+    return await service.update_settings(settings_data.model_dump())
+
+@router.patch("/settings", response_model=ReconciliationSettingsResponse)
+async def update_reconciliation_settings_patch(
+    settings_data: ReconciliationSettingsBase,
+    db: AsyncSession = Depends(deps.get_db),
+    current_admin: User = Depends(deps.require_admin)
 ):
     service = PositionReconciliationService(db)
     return await service.update_settings(settings_data.model_dump())
@@ -35,16 +44,27 @@ async def update_reconciliation_settings(
 async def list_reconciliation_events(
     status: Optional[str] = None,
     db: AsyncSession = Depends(deps.get_db),
-    current_admin: User = Depends(deps.get_current_admin)
+    current_admin: User = Depends(deps.require_admin)
 ):
     service = PositionReconciliationService(db)
     return await service.get_events(status=status)
+
+@router.post("/scan", status_code=202)
+async def trigger_reconciliation_scan(
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(deps.get_db),
+    current_admin: User = Depends(deps.require_admin)
+):
+    """Manually trigger reconciliation process."""
+    service = PositionReconciliationService(db)
+    background_tasks.add_task(service.detect_all_orphans)
+    return {"message": "Reconciliation process (scan) started in background"}
 
 @router.post("/events/{event_id}/approve-close", response_model=PositionReconciliationEventResponse)
 async def approve_close_orphan(
     event_id: UUID,
     db: AsyncSession = Depends(deps.get_db),
-    current_admin: User = Depends(deps.get_current_admin)
+    current_admin: User = Depends(deps.require_admin)
 ):
     service = PositionReconciliationService(db)
     try:
@@ -56,21 +76,10 @@ async def approve_close_orphan(
 async def ignore_orphan(
     event_id: UUID,
     db: AsyncSession = Depends(deps.get_db),
-    current_admin: User = Depends(deps.get_current_admin)
+    current_admin: User = Depends(deps.require_admin)
 ):
     service = PositionReconciliationService(db)
     try:
         return await service.ignore_orphan(event_id, current_admin.id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-@router.post("/run", status_code=202)
-async def run_reconciliation(
-    background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(deps.get_db),
-    current_admin: User = Depends(deps.get_current_admin)
-):
-    """Manually trigger reconciliation process."""
-    service = PositionReconciliationService(db)
-    background_tasks.add_task(service.detect_all_orphans)
-    return {"message": "Reconciliation process started in background"}

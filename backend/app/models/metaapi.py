@@ -114,6 +114,7 @@ class MetaApiReconciliationSettings(Base):
     auto_close_orphan_positions: Mapped[bool] = mapped_column(Boolean, default=True)
     orphan_auto_close_loss_limit: Mapped[float] = mapped_column(Float, default=-2.00)
     orphan_auto_close_profit_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    max_minutes_orphan: Mapped[int] = mapped_column(Integer, default=60)
     lot_tolerance: Mapped[float] = mapped_column(Float, default=0.01)
     strict_symbol_match: Mapped[bool] = mapped_column(Boolean, default=True)
     price_tolerance_points: Mapped[int] = mapped_column(Integer, default=50)
