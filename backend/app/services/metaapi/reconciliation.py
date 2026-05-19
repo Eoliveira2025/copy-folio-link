@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class PositionReconciliationService:
     def __init__(self, db: AsyncSession):
         self.db = db
-        self.client = MetaApiClient()
+        self.client = HttpMetaApiClient()
 
     async def get_settings(self) -> MetaApiReconciliationSettings:
         stmt = select(MetaApiReconciliationSettings)
