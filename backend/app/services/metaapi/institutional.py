@@ -12,7 +12,7 @@ from app.models.metaapi import (
     StrategySwitchRequest, MetaApiAccountMetric, MetaApiEvent,
     MetaApiMonitorEvent
 )
-from app.services.metaapi.client import MetaApiClient
+from app.services.metaapi.http_client import HttpMetaApiClient
 from app.services.metaapi.copyfactory import CopyFactoryService
 
 settings = get_settings()
