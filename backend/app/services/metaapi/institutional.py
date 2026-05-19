@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class MetaApiAccountSyncService:
     def __init__(self, db: AsyncSession):
         self.db = db
-        self.client = MetaApiClient()
+        self.client = HttpMetaApiClient()
 
     async def sync_account(self, account: MetaApiAccount):
         """Sync status, metrics and positions for a MetaApi account."""
