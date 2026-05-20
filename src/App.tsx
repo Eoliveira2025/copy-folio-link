@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AdminRoute } from "@/components/AdminRoute";
+import { AffiliateRoute } from "@/components/AffiliateRoute";
+
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -25,7 +27,10 @@ import AdminBilling from "./pages/admin/AdminBilling";
 import Provisioning from "./pages/admin/Provisioning";
 import MetaApiAdmin from "./pages/admin/MetaApiAdmin";
 import PerformanceBilling from "./pages/admin/PerformanceBilling";
+import AffiliateAdmin from "./pages/admin/AffiliateAdmin";
+import AffiliateDashboard from "./pages/affiliate/AffiliateDashboard";
 import NotFound from "./pages/NotFound";
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -111,8 +116,25 @@ const App = () => (
                   </AdminRoute>
                 }
               />
+              <Route
+                path="/admin/affiliates"
+                element={
+                  <AdminRoute>
+                    <AffiliateAdmin />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/affiliate/dashboard"
+                element={
+                  <AffiliateRoute>
+                    <AffiliateDashboard />
+                  </AffiliateRoute>
+                }
+              />
             </Route>
             <Route path="*" element={<NotFound />} />
+
           </Routes>
         </BrowserRouter>
       </TooltipProvider>

@@ -178,7 +178,8 @@ async def get_profile(
         is_active=user.is_active,
         created_at=user.created_at.isoformat(),
         is_superuser=is_admin,
-        role="ADMIN" if is_admin else "USER",
+        role=user_role.role.value if user_role else "user",
+
     )
 
 

@@ -791,7 +791,40 @@ class ApiClient {
   async adminPerformanceGetSummary() {
     return this.request<PerformanceBillingDashboard>("/admin/performance-billing/summary");
   }
+
+  // ── Affiliate ────────────────────────────────────────
+  async adminListAffiliates() {
+    return this.get<AffiliateResponse[]>("/admin/affiliates/");
+  }
+
+  async adminCreateAffiliate(data: any) {
+    return this.post<AffiliateResponse>("/admin/affiliates/", data);
+  }
+
+  async adminUpdateAffiliate(affiliateId: string, data: any) {
+    return this.request<AffiliateResponse>(`/admin/affiliates/${affiliateId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminResetAffiliatePassword(affiliateId: string) {
+    return this.post<{ message: string }>(`/admin/affiliates/${affiliateId}/reset-password`, {});
+  }
+
+  async adminAssignReferral(data: { affiliate_id: string; user_id: string }) {
+    return this.post<{ message: string }>("/admin/affiliates/assign-referral", data);
+  }
+
+  async adminGetAffiliateDashboard(affiliateId: string) {
+    return this.get<AffiliateDashboard>(`/admin/affiliates/${affiliateId}/dashboard`);
+  }
+
+  async affiliateGetDashboard() {
+    return this.get<AffiliateDashboard>("/affiliate/dashboard");
+  }
 }
+
 
 // ── Error class ───────────────────────────────────────
 export class ApiError extends Error {
@@ -1264,6 +1297,41 @@ export interface PerformanceBillingDashboard {
   profitable_cycles: number;
   negative_cycles: number;
 }
+
+export interface AffiliateResponse {
+  id: string;
+  user_id?: string;
+  name: string;
+  email: string;
+  commission_percentage: number;
+  commission_base: string;
+  active: boolean;
+  must_change_password: boolean;
+  created_at: string;
+  total_referrals?: number;
+  pending_commission?: number;
+  paid_commission?: number;
+}
+
+export interface AffiliateDashboardUser {
+  user_id: string;
+  email: string;
+  mt5_login?: number;
+  strategy_name?: string;
+  balance?: number;
+  weekly_profit?: number;
+  affiliate_commission?: number;
+  commission_status?: string;
+}
+
+export interface AffiliateDashboard {
+  total_pending: number;
+  total_paid: number;
+  active_referrals_count: number;
+  referrals: AffiliateDashboardUser[];
+  recent_commissions: any[];
+}
+
 
 // Singleton
 export const api = new ApiClient();

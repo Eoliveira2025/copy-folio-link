@@ -1,4 +1,4 @@
-import { LayoutDashboard, Link2, BarChart3, CreditCard, Settings, TrendingUp, Shield, Activity, DollarSign, Package, MonitorSmartphone, Cloud } from "lucide-react";
+import { LayoutDashboard, Link2, BarChart3, CreditCard, Settings, TrendingUp, Shield, Activity, DollarSign, Package, MonitorSmartphone, Cloud, Users } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -15,7 +15,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-export function DashboardSidebar({ isAdmin }: { isAdmin?: boolean }) {
+export function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin?: boolean; isAffiliate?: boolean }) {
   const { t } = useTranslation();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
@@ -38,7 +38,13 @@ export function DashboardSidebar({ isAdmin }: { isAdmin?: boolean }) {
     { title: "Performance Billing", url: "/admin/performance-billing", icon: TrendingUp },
     { title: t("nav.provisioning"), url: "/admin/provisioning", icon: MonitorSmartphone },
     { title: "MetaApi V3", url: "/admin/metaapi", icon: Cloud },
+    { title: "Afiliados", url: "/admin/affiliates", icon: Users },
   ];
+
+  const affiliateItems = [
+    { title: "Dashboard Afiliado", url: "/affiliate/dashboard", icon: LayoutDashboard },
+  ];
+
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border">
@@ -87,7 +93,28 @@ export function DashboardSidebar({ isAdmin }: { isAdmin?: boolean }) {
             </SidebarGroupContent>
           </SidebarGroup>
         )}
+
+        {isAffiliate && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Afiliado</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {affiliateItems.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                      <NavLink to={item.url} end activeClassName="bg-sidebar-accent text-primary font-medium">
+                        <item.icon className="mr-2 h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
+
 
       <SidebarFooter className="p-4">
         {!collapsed && (

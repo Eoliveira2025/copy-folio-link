@@ -13,6 +13,9 @@ from app.models.risk import SystemSettings, RiskIncident
 from app.models.copy_recovery import TradeCopyRecovery
 from app.models.bridge import BridgeSignal, BridgeExecutionOrder
 from app.models.bridge_audit import BridgeAudit
+from app.models.affiliate import Affiliate, AffiliateReferral, AffiliateCommission
+from app.models.performance_billing import BillingMethod, PerformanceBillingCycle
+
 
 from app.models.metaapi import (
     MetaApiAccount, 
@@ -45,6 +48,12 @@ __all__ = [
     "BridgeSignal",
     "BridgeExecutionOrder",
     "BridgeAudit",
+    "Affiliate",
+    "AffiliateReferral",
+    "AffiliateCommission",
+    "BillingMethod",
+    "PerformanceBillingCycle",
+
     "MetaApiAccount",
     "MetaApiSubscription",
     "MetaApiEvent",
