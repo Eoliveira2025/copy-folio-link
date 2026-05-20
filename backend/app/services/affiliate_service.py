@@ -18,17 +18,31 @@ logger = logging.getLogger("app.affiliate")
 class AffiliateService:
     @staticmethod
     async def create_affiliate(db: AsyncSession, data: dict, created_by_id: uuid.UUID):
-        # 1. Create User
-        user = User(
-            email=data["email"],
-            hashed_password=hash_password("copy123"),
-            full_name=data["name"]
-        )
-        db.add(user)
-        await db.flush()
+        # Prevent auto-referral or existing affiliate user mismatch
+        # Check if email already exists
+        stmt_check = select(User).where(User.email == data["email"])
+        existing_user = (await db.execute(stmt_check)).scalar_one_or_none()
+        
+        if existing_user:
+            # Check if already an affiliate
+            stmt_aff = select(Affiliate).where(Affiliate.user_id == existing_user.id)
+            if (await db.execute(stmt_aff)).scalar_one_or_none():
+                raise HTTPException(status_code=400, detail="User already has an affiliate profile")
+            user = existing_user
+        else:
+            # 1. Create User
+            user = User(
+                email=data["email"],
+                hashed_password=hash_password("copy123"),
+                full_name=data["name"]
+            )
+            db.add(user)
+            await db.flush()
 
-        # 2. Add Affiliate Role
-        db.add(UserRoleMapping(user_id=user.id, role=UserRole.AFFILIATE))
+        # 2. Add Affiliate Role if not present
+        stmt_role = select(UserRoleMapping).where(UserRoleMapping.user_id == user.id, UserRoleMapping.role == UserRole.AFFILIATE)
+        if not (await db.execute(stmt_role)).scalar_one_or_none():
+            db.add(UserRoleMapping(user_id=user.id, role=UserRole.AFFILIATE))
 
         # 3. Create Affiliate Profile
         affiliate = Affiliate(
@@ -99,6 +113,12 @@ class AffiliateService:
 
     @staticmethod
     async def assign_referral(db: AsyncSession, affiliate_id: uuid.UUID, user_id: uuid.UUID, created_by_id: uuid.UUID):
+        # Impedir auto indicação
+        stmt_aff = select(Affiliate).where(Affiliate.id == affiliate_id)
+        affiliate = (await db.execute(stmt_aff)).scalar_one_or_none()
+        if affiliate and affiliate.user_id == user_id:
+            raise HTTPException(status_code=400, detail="An affiliate cannot refer themselves")
+
         # Deactivate previous active referral for this user
         await db.execute(
             update(AffiliateReferral)

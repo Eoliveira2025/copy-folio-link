@@ -823,6 +823,32 @@ class ApiClient {
   async affiliateGetDashboard() {
     return this.get<AffiliateDashboard>("/affiliate/dashboard");
   }
+
+  async adminListCommissions(filters: { affiliate_id?: string; status?: string; date_from?: string; date_to?: string } = {}) {
+    const params = new URLSearchParams();
+    if (filters.affiliate_id) params.set("affiliate_id", filters.affiliate_id);
+    if (filters.status) params.set("status", filters.status);
+    if (filters.date_from) params.set("date_from", filters.date_from);
+    if (filters.date_to) params.set("date_to", filters.date_to);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return this.get<AffiliateCommission[]>(`/admin/affiliates/commissions${qs}`);
+  }
+
+  async adminApproveCommission(commissionId: string) {
+    return this.post<AffiliateCommission>(`/admin/affiliates/commissions/${commissionId}/approve`, {});
+  }
+
+  async adminMarkCommissionPaid(commissionId: string) {
+    return this.post<AffiliateCommission>(`/admin/affiliates/commissions/${commissionId}/mark-paid`, {});
+  }
+
+  async adminCancelCommission(commissionId: string) {
+    return this.post<AffiliateCommission>(`/admin/affiliates/commissions/${commissionId}/cancel`, {});
+  }
+
+  async affiliateGetMyCommissions() {
+    return this.get<AffiliateCommission[]>("/affiliate/my-commissions");
+  }
 }
 
 
@@ -1332,6 +1358,23 @@ export interface AffiliateDashboard {
   recent_commissions: any[];
 }
 
+export interface AffiliateCommission {
+  id: string;
+  affiliate_id: string;
+  referred_user_id: string;
+  performance_cycle_id?: string;
+  gross_profit: number;
+  company_commission_amount: number;
+  affiliate_percentage: number;
+  commission_base: string;
+  affiliate_commission_amount: number;
+  status: string;
+  paid_at?: string;
+  notes?: string;
+  created_at: string;
+  affiliate_name?: string;
+  referred_user_email?: string;
+}
 
 // Singleton
 export const api = new ApiClient();

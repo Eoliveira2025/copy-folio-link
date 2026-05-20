@@ -58,3 +58,53 @@ export function useMyAffiliateDashboard() {
     queryFn: () => api.affiliateGetDashboard(),
   });
 }
+
+export function useAdminCommissions(filters: any = {}) {
+  return useQuery({
+    queryKey: ["admin", "commissions", filters],
+    queryFn: () => api.adminListCommissions(filters),
+  });
+}
+
+export function useApproveCommission() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.adminApproveCommission(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "commissions"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "affiliates"] });
+      toast.success("Comissão aprovada");
+    },
+  });
+}
+
+export function useMarkCommissionPaid() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.adminMarkCommissionPaid(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "commissions"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "affiliates"] });
+      toast.success("Comissão marcada como paga");
+    },
+  });
+}
+
+export function useCancelCommission() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.adminCancelCommission(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "commissions"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "affiliates"] });
+      toast.success("Comissão cancelada");
+    },
+  });
+}
+
+export function useMyCommissions() {
+  return useQuery({
+    queryKey: ["affiliate", "my-commissions"],
+    queryFn: () => api.affiliateGetMyCommissions(),
+  });
+}

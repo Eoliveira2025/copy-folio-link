@@ -10,7 +10,10 @@ import {
   LayoutDashboard,
   ShieldCheck,
   UserCheck,
-  Clock
+  Clock,
+  CheckCircle,
+  XCircle,
+  CreditCard
 } from "lucide-react";
 
 import { 
@@ -47,10 +50,16 @@ import {
   useAffiliates, 
   useCreateAffiliate, 
   useResetAffiliatePassword,
-  useAssignReferral 
+  useAssignReferral,
+  useAdminCommissions,
+  useApproveCommission,
+  useMarkCommissionPaid,
+  useCancelCommission 
 } from "@/hooks/use-affiliate";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { format } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const AffiliateAdmin = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -71,6 +80,10 @@ const AffiliateAdmin = () => {
   const createAff = useCreateAffiliate();
   const resetPass = useResetAffiliatePassword();
   const assignRef = useAssignReferral();
+  const { data: commissions, isLoading: loadingCommissions } = useAdminCommissions();
+  const approveComm = useApproveCommission();
+  const paidComm = useMarkCommissionPaid();
+  const cancelComm = useCancelCommission();
 
   // Search users for assignment
   const { data: users } = useQuery({
@@ -140,77 +153,160 @@ const AffiliateAdmin = () => {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Parceiros</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome / Email</TableHead>
-                <TableHead>Comissão</TableHead>
-                <TableHead>Base</TableHead>
-                <TableHead>Indicados</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center">Carregando...</TableCell></TableRow>
-              ) : affiliates?.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center">Nenhum afiliado encontrado</TableCell></TableRow>
-              ) : (
-                affiliates?.map((aff) => (
-                  <TableRow key={aff.id}>
-                    <TableCell>
-                      <div className="font-medium">{aff.name}</div>
-                      <div className="text-sm text-muted-foreground">{aff.email}</div>
-                    </TableCell>
-                    <TableCell>{aff.commission_percentage}%</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{aff.commission_base}</Badge>
-                    </TableCell>
-                    <TableCell>{aff.total_referrals}</TableCell>
-                    <TableCell>
-                      {aff.active ? (
-                        <Badge className="bg-green-500">Ativo</Badge>
-                      ) : (
-                        <Badge variant="destructive">Inativo</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => {
-                            setSelectedAffiliate(aff.id);
-                            setIsAssignOpen(true);
-                          }}>
-                            <UserPlus className="mr-2 h-4 w-4" /> Vincular Cliente
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => resetPass.mutate(aff.id)}>
-                            <Key className="mr-2 h-4 w-4" /> Resetar Senha
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive">
-                            Desativar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+      <Tabs defaultValue="partners">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="partners">Parceiros</TabsTrigger>
+          <TabsTrigger value="commissions">Comissões Semanais</TabsTrigger>
+        </TabsList>
+        <TabsContent value="partners" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Lista de Parceiros</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome / Email</TableHead>
+                    <TableHead>Comissão</TableHead>
+                    <TableHead>Base</TableHead>
+                    <TableHead>Indicados</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow><TableCell colSpan={6} className="text-center">Carregando...</TableCell></TableRow>
+                  ) : affiliates?.length === 0 ? (
+                    <TableRow><TableCell colSpan={6} className="text-center">Nenhum afiliado encontrado</TableCell></TableRow>
+                  ) : (
+                    affiliates?.map((aff) => (
+                      <TableRow key={aff.id}>
+                        <TableCell>
+                          <div className="font-medium">{aff.name}</div>
+                          <div className="text-sm text-muted-foreground">{aff.email}</div>
+                        </TableCell>
+                        <TableCell>{aff.commission_percentage}%</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{aff.commission_base}</Badge>
+                        </TableCell>
+                        <TableCell>{aff.total_referrals}</TableCell>
+                        <TableCell>
+                          {aff.active ? (
+                            <Badge className="bg-green-500">Ativo</Badge>
+                          ) : (
+                            <Badge variant="destructive">Inativo</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => {
+                                setSelectedAffiliate(aff.id);
+                                setIsAssignOpen(true);
+                              }}>
+                                <UserPlus className="mr-2 h-4 w-4" /> Vincular Cliente
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => resetPass.mutate(aff.id)}>
+                                <Key className="mr-2 h-4 w-4" /> Resetar Senha
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-destructive">
+                                Desativar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="commissions" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Comissões Geradas por Ciclo</CardTitle>
+              <CardDescription>Aprove e gerencie os pagamentos aos afiliados.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Afiliado</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Lucro Bruto</TableHead>
+                    <TableHead>Comissão</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loadingCommissions ? (
+                    <TableRow><TableCell colSpan={7} className="text-center">Carregando...</TableCell></TableRow>
+                  ) : commissions?.length === 0 ? (
+                    <TableRow><TableCell colSpan={7} className="text-center">Nenhuma comissão encontrada</TableCell></TableRow>
+                  ) : (
+                    commissions?.map((comm: any) => (
+                      <TableRow key={comm.id}>
+                        <TableCell className="text-xs">
+                          {format(new Date(comm.created_at), "dd/MM/yyyy HH:mm")}
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium">{comm.affiliate_name}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm text-muted-foreground">{comm.referred_user_email}</div>
+                        </TableCell>
+                        <TableCell>${comm.gross_profit}</TableCell>
+                        <TableCell className="font-bold text-green-600">${comm.affiliate_commission_amount}</TableCell>
+                        <TableCell>
+                          <Badge className={
+                            comm.status === 'PAID' ? 'bg-green-500' : 
+                            comm.status === 'APPROVED' ? 'bg-blue-500' :
+                            comm.status === 'PENDING' ? 'bg-orange-500' : 'bg-destructive'
+                          }>
+                            {comm.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            {comm.status === 'PENDING' && (
+                              <Button variant="outline" size="sm" onClick={() => approveComm.mutate(comm.id)}>
+                                <CheckCircle className="h-4 w-4 mr-1" /> Aprovar
+                              </Button>
+                            )}
+                            {comm.status === 'APPROVED' && (
+                              <Button variant="outline" size="sm" className="bg-green-50 text-green-700" onClick={() => paidComm.mutate(comm.id)}>
+                                <CreditCard className="h-4 w-4 mr-1" /> Pagar
+                              </Button>
+                            )}
+                            {(comm.status === 'PENDING' || comm.status === 'APPROVED') && (
+                              <Button variant="ghost" size="sm" className="text-destructive" onClick={() => cancelComm.mutate(comm.id)}>
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Add Dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
