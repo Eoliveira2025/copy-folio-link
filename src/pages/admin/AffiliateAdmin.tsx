@@ -79,6 +79,7 @@ const AffiliateAdmin = () => {
   const { data: affiliates, isLoading } = useAffiliates();
   const createAff = useCreateAffiliate();
   const resetPass = useResetAffiliatePassword();
+  const assignRef = useAssignReferral();
   const { data: commissions, isLoading: loadingCommissions } = useAdminCommissions();
   const approveComm = useApproveCommission();
   const paidComm = useMarkCommissionPaid();
