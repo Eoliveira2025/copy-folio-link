@@ -38,7 +38,13 @@ export function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin?: boolean; 
     { title: "Performance Billing", url: "/admin/performance-billing", icon: TrendingUp },
     { title: t("nav.provisioning"), url: "/admin/provisioning", icon: MonitorSmartphone },
     { title: "MetaApi V3", url: "/admin/metaapi", icon: Cloud },
+    { title: "Afiliados", url: "/admin/affiliates", icon: Users },
   ];
+
+  const affiliateItems = [
+    { title: "Dashboard Afiliado", url: "/affiliate/dashboard", icon: LayoutDashboard },
+  ];
+
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border">
