@@ -53,6 +53,21 @@ services:
     networks:
       - ctv3-network
 
+  ct-performance-billing:
+    build:
+      context: .
+      dockerfile: Dockerfile.v3
+    container_name: ct-performance-billing
+    restart: always
+    command: python -m app.workers.performance_billing_worker
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres_v3_pwd}@ctv3-postgres:5432/copytrade_v3
+      - METAAPI_ENABLED=true
+    depends_on:
+      - ctv3-postgres
+    networks:
+      - ctv3-network
+
 networks:
   ctv3-network:
     driver: bridge
