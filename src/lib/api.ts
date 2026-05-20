@@ -749,6 +749,48 @@ class ApiClient {
       method: "POST",
     });
   }
+
+  // ── Performance Billing ──────────────────────────────
+  async adminPerformanceGetUsers() {
+    return this.request<PerformanceUserSummary[]>("/admin/performance-billing/users");
+  }
+
+  async adminPerformanceSetMethod(data: { user_id: string; method: string; performance_percentage: number }) {
+    return this.request<any>("/admin/performance-billing/method", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminPerformanceListCycles(userId?: string, status?: string) {
+    const params = new URLSearchParams();
+    if (userId) params.set("user_id", userId);
+    if (status) params.set("status", status);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return this.request<PerformanceCycle[]>(`/admin/performance-billing/cycles${qs}`);
+  }
+
+  async adminPerformanceStartCycle(userId: string) {
+    return this.request<any>(`/admin/performance-billing/cycles/start?user_id=${userId}`, {
+      method: "POST",
+    });
+  }
+
+  async adminPerformanceCloseCycle(cycleId: string) {
+    return this.request<any>(`/admin/performance-billing/cycles/close?cycle_id=${cycleId}`, {
+      method: "POST",
+    });
+  }
+
+  async adminPerformanceGenerateInvoice(cycleId: string) {
+    return this.request<any>(`/admin/performance-billing/cycles/${cycleId}/generate-invoice`, {
+      method: "POST",
+    });
+  }
+
+  async adminPerformanceGetSummary() {
+    return this.request<PerformanceBillingDashboard>("/admin/performance-billing/summary");
+  }
 }
 
 // ── Error class ───────────────────────────────────────
