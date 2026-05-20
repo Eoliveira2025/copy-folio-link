@@ -10,14 +10,14 @@ logger = logging.getLogger("app.workers.metaapi_reconciliation")
 
 async def run_metaapi_reconciliation_cycle():
     """Run a single reconciliation cycle."""
-    logger.info("[RECON WORKER] Starting reconciliation cycle...")
+    logger.info("[RECON PERIODIC SCAN] Starting reconciliation cycle...")
     async with AsyncSessionLocal() as db:
         service = PositionReconciliationService(db)
         try:
             await service.detect_all_orphans()
-            logger.info("[RECON WORKER] Cycle completed successfully.")
+            logger.info("[RECON PERIODIC DONE] Cycle completed successfully.")
         except Exception as e:
-            logger.error(f"[RECON WORKER] Error during cycle: {e}")
+            logger.error(f"[RECON ERROR] Error during cycle: {e}")
 
 async def metaapi_reconciliation_worker():
     """Continuous worker for MetaApi position reconciliation."""
@@ -25,18 +25,20 @@ async def metaapi_reconciliation_worker():
         logger.warning("[RECON WORKER] V3_COPY_ENABLED is false. Worker will not start.")
         return
 
-    logger.info("[RECON WORKER] Worker started. Interval: 30 seconds.")
+    # Use interval from settings or default to 300 seconds
+    interval = getattr(settings, 'RECONCILIATION_INTERVAL', 300)
+    
+    logger.info(f"[RECON WORKER STARTED] Worker active. Interval: {interval} seconds.")
     
     while True:
         try:
             await run_metaapi_reconciliation_cycle()
         except Exception as e:
-            logger.error(f"[RECON WORKER] Unexpected error in loop: {e}")
+            logger.error(f"[RECON ERROR] Unexpected error in loop: {e}")
         
-        # Wait for 30 seconds as requested
-        await asyncio.sleep(30)
+        # Wait for the configured interval
+        await asyncio.sleep(interval)
 
-def start_reconciliation_worker():
-    """Start the reconciliation worker in a background task."""
-    loop = asyncio.get_event_loop()
-    loop.create_task(metaapi_reconciliation_worker())
+if __name__ == "__main__":
+    # If run directly as a module
+    asyncio.run(metaapi_reconciliation_worker())
