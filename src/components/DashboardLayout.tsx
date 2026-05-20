@@ -9,6 +9,9 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 export function DashboardLayout() {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+  const isAffiliate = user?.role === "affiliate";
+  const isAdmin = user?.role === "admin";
+
 
   const handleLogout = () => {
     logout();
