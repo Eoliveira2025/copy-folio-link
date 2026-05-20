@@ -48,6 +48,12 @@ __all__ = [
     "BridgeSignal",
     "BridgeExecutionOrder",
     "BridgeAudit",
+    "Affiliate",
+    "AffiliateReferral",
+    "AffiliateCommission",
+    "BillingMethod",
+    "PerformanceBillingCycle",
+
     "MetaApiAccount",
     "MetaApiSubscription",
     "MetaApiEvent",
