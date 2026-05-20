@@ -93,7 +93,28 @@ export function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin?: boolean; 
             </SidebarGroupContent>
           </SidebarGroup>
         )}
+
+        {isAffiliate && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Afiliado</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {affiliateItems.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                      <NavLink to={item.url} end activeClassName="bg-sidebar-accent text-primary font-medium">
+                        <item.icon className="mr-2 h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
+
 
       <SidebarFooter className="p-4">
         {!collapsed && (
