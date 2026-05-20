@@ -1226,5 +1226,44 @@ export interface StrategyRequestItem {
   resolved_at: string | null;
 }
 
+// Performance Billing types
+export interface PerformanceUserSummary {
+  user_id: string;
+  full_name?: string;
+  email: string;
+  method?: string;
+  performance_percentage?: number;
+  strategy_code?: string;
+  account_login?: string;
+  current_balance?: number;
+}
+
+export interface PerformanceCycle {
+  id: string;
+  user_id: string;
+  account_source: string;
+  account_login: string;
+  strategy_code?: string;
+  cycle_start: string;
+  cycle_end?: string;
+  start_balance: number;
+  end_balance?: number;
+  gross_profit: number | null;
+  commission_percentage: number;
+  commission_amount: number | null;
+  status: string;
+  invoice_id?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PerformanceBillingDashboard {
+  open_commissions: number;
+  total_invoiced: number;
+  profitable_cycles: number;
+  negative_cycles: number;
+}
+
 // Singleton
 export const api = new ApiClient();
