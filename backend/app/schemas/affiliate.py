@@ -64,3 +64,24 @@ class AffiliateDashboard(BaseModel):
     active_referrals_count: int
     referrals: List[AffiliateDashboardUser]
     recent_commissions: List[dict]
+
+class AffiliateCommissionResponse(BaseModel):
+    id: UUID
+    affiliate_id: UUID
+    referred_user_id: UUID
+    performance_cycle_id: Optional[UUID]
+    gross_profit: float
+    company_commission_amount: float
+    affiliate_percentage: float
+    commission_base: CommissionBase
+    affiliate_commission_amount: float
+    status: CommissionStatus
+    paid_at: Optional[datetime]
+    notes: Optional[str]
+    created_at: datetime
+    
+    affiliate_name: Optional[str] = None
+    referred_user_email: Optional[str] = None
+
+    class Config:
+        from_attributes = True

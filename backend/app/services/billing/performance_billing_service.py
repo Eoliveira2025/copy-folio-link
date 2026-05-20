@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 
 from app.models.user import User
 from app.models.performance_billing import BillingMethod, BillingMethodType, PerformanceBillingCycle, CycleStatus
+from app.services.affiliate_commission_service import AffiliateCommissionService
 from app.models.metaapi import MetaApiAccount, CopyFactorySubscription, CopyFactoryStrategy
 from app.models.mt5_account import MT5Account
 from app.models.invoice import Invoice, InvoiceStatus
@@ -230,6 +231,11 @@ class PerformanceBillingService:
         
         if profit > 0:
             await PerformanceBillingService.generate_invoice(db, cycle.id)
+            # Trigger affiliate commission calculation
+            try:
+                await AffiliateCommissionService.create_from_performance_cycle(db, cycle.id)
+            except Exception as e:
+                logger.error(f"[AFFILIATE COMMISSION ERROR] Failed to create commission for cycle {cycle_id}: {e}")
             
         return cycle
 
