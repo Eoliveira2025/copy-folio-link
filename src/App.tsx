@@ -116,8 +116,25 @@ const App = () => (
                   </AdminRoute>
                 }
               />
+              <Route
+                path="/admin/affiliates"
+                element={
+                  <AdminRoute>
+                    <AffiliateAdmin />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/affiliate/dashboard"
+                element={
+                  <AffiliateRoute>
+                    <AffiliateDashboard />
+                  </AffiliateRoute>
+                }
+              />
             </Route>
             <Route path="*" element={<NotFound />} />
+
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
