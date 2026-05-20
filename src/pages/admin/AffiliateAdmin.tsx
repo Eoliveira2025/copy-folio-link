@@ -9,8 +9,10 @@ import {
   MoreHorizontal,
   LayoutDashboard,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  Clock
 } from "lucide-react";
+
 import { 
   Table, 
   TableBody, 
