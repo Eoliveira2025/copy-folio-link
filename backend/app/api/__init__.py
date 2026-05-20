@@ -29,6 +29,9 @@ api_router.include_router(metaapi_reconciliation.router, prefix="/admin/metaapi/
 api_router.include_router(metaapi_client.router, prefix="/metaapi", tags=["MetaApi V3 Client"])
 api_router.include_router(metaapi_v3.router, prefix="/metaapi", tags=["MetaApi V3 Institutional"])
 api_router.include_router(performance_billing.router)
+api_router.include_router(admin_affiliates.router)
+api_router.include_router(affiliate.router)
+
 
 # Internal endpoints for the isolated ct-metaapi-service
 api_router.include_router(internal_metaapi.router, prefix="/internal/metaapi", tags=["MetaApi Internal"])
