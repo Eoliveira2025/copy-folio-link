@@ -15,7 +15,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-export function DashboardSidebar({ isAdmin }: { isAdmin?: boolean }) {
+export function DashboardSidebar({ isAdmin, isAffiliate }: { isAdmin?: boolean; isAffiliate?: boolean }) {
   const { t } = useTranslation();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
