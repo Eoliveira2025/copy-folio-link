@@ -337,7 +337,7 @@ class PerformanceBillingService:
                         PerformanceBillingCycle.user_id == m.user_id,
                         PerformanceBillingCycle.cycle_start >= today_start
                     )
-                    exists = (await db.execute(stmt_check)).scalar().first() is not None
+                    exists = (await db.execute(stmt_check)).scalars().first() is not None
                     if not exists:
                         await PerformanceBillingService.start_cycle(db, m.user_id)
                 except Exception as e:
