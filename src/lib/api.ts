@@ -791,7 +791,40 @@ class ApiClient {
   async adminPerformanceGetSummary() {
     return this.request<PerformanceBillingDashboard>("/admin/performance-billing/summary");
   }
+
+  // ── Affiliate ────────────────────────────────────────
+  async adminListAffiliates() {
+    return this.get<AffiliateResponse[]>("/admin/affiliates/");
+  }
+
+  async adminCreateAffiliate(data: any) {
+    return this.post<AffiliateResponse>("/admin/affiliates/", data);
+  }
+
+  async adminUpdateAffiliate(affiliateId: string, data: any) {
+    return this.request<AffiliateResponse>(`/admin/affiliates/${affiliateId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminResetAffiliatePassword(affiliateId: string) {
+    return this.post<{ message: string }>(`/admin/affiliates/${affiliateId}/reset-password`, {});
+  }
+
+  async adminAssignReferral(data: { affiliate_id: string; user_id: string }) {
+    return this.post<{ message: string }>("/admin/affiliates/assign-referral", data);
+  }
+
+  async adminGetAffiliateDashboard(affiliateId: string) {
+    return this.get<AffiliateDashboard>(`/admin/affiliates/${affiliateId}/dashboard`);
+  }
+
+  async affiliateGetDashboard() {
+    return this.get<AffiliateDashboard>("/affiliate/dashboard");
+  }
 }
+
 
 // ── Error class ───────────────────────────────────────
 export class ApiError extends Error {
