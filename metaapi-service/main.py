@@ -4,6 +4,7 @@ import logging
 import asyncio
 from typing import List, Dict, Any
 from metaapi_cloud_sdk import MetaApi
+from copy_factory_api_client import CopyFactory
 from datetime import datetime
 
 # Configuração de logs para atender aos requisitos institucionais
@@ -19,8 +20,9 @@ METAAPI_TOKEN = os.getenv("METAAPI_TOKEN")
 if not METAAPI_TOKEN:
     logger.error("[METAAPI INTERNAL] CRITICAL: METAAPI_TOKEN not found in environment")
 
-# Instância global do MetaApi SDK
+# Instâncias globais dos SDKs
 api = MetaApi(METAAPI_TOKEN)
+copy_factory = CopyFactory(METAAPI_TOKEN)
 
 @app.get("/health")
 def health():
@@ -103,16 +105,15 @@ async def close_position(account_id: str, position_id: str):
         logger.info(f"[METAAPI INTERNAL] [RPC CONNECTED] Ready to execute close for {position_id}")
         
         # Executa o fechamento
-        # A MetaApi costuma retornar o trade result
         await connection.close_position(position_id)
         
         logger.info(f"[METAAPI INTERNAL] [CLOSE POSITION] Successfully closed {position_id}")
-        return {"success": true}
+        return {"success": True}
         
     except Exception as e:
         logger.error(f"[METAAPI INTERNAL] [CLOSE POSITION] Error closing position {position_id}: {str(e)}")
         # Se for um erro de "não encontrado", pode ser que já tenha sido fechado
         if "POSITION_NOT_FOUND" in str(e).upper():
-            return {"success": true, "note": "position already closed or not found"}
+            return {"success": True, "note": "position already closed or not found"}
             
         raise HTTPException(status_code=500, detail=str(e))
