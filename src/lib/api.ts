@@ -1298,5 +1298,40 @@ export interface PerformanceBillingDashboard {
   negative_cycles: number;
 }
 
+export interface AffiliateResponse {
+  id: string;
+  user_id?: string;
+  name: string;
+  email: string;
+  commission_percentage: number;
+  commission_base: string;
+  active: boolean;
+  must_change_password: boolean;
+  created_at: string;
+  total_referrals?: number;
+  pending_commission?: number;
+  paid_commission?: number;
+}
+
+export interface AffiliateDashboardUser {
+  user_id: string;
+  email: string;
+  mt5_login?: number;
+  strategy_name?: string;
+  balance?: number;
+  weekly_profit?: number;
+  affiliate_commission?: number;
+  commission_status?: string;
+}
+
+export interface AffiliateDashboard {
+  total_pending: number;
+  total_paid: number;
+  active_referrals_count: number;
+  referrals: AffiliateDashboardUser[];
+  recent_commissions: any[];
+}
+
+
 // Singleton
 export const api = new ApiClient();
