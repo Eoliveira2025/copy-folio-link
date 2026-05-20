@@ -24,6 +24,7 @@ import OperationsDashboard from "./pages/admin/OperationsDashboard";
 import AdminBilling from "./pages/admin/AdminBilling";
 import Provisioning from "./pages/admin/Provisioning";
 import MetaApiAdmin from "./pages/admin/MetaApiAdmin";
+import PerformanceBilling from "./pages/admin/PerformanceBilling";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -99,6 +100,14 @@ const App = () => (
                 element={
                   <AdminRoute>
                     <MetaApiAdmin />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/performance-billing"
+                element={
+                  <AdminRoute>
+                    <PerformanceBilling />
                   </AdminRoute>
                 }
               />

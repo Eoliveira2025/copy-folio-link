@@ -749,6 +749,48 @@ class ApiClient {
       method: "POST",
     });
   }
+
+  // ── Performance Billing ──────────────────────────────
+  async adminPerformanceGetUsers() {
+    return this.request<PerformanceUserSummary[]>("/admin/performance-billing/users");
+  }
+
+  async adminPerformanceSetMethod(data: { user_id: string; method: string; performance_percentage: number }) {
+    return this.request<any>("/admin/performance-billing/method", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminPerformanceListCycles(userId?: string, status?: string) {
+    const params = new URLSearchParams();
+    if (userId) params.set("user_id", userId);
+    if (status) params.set("status", status);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return this.request<PerformanceCycle[]>(`/admin/performance-billing/cycles${qs}`);
+  }
+
+  async adminPerformanceStartCycle(userId: string) {
+    return this.request<any>(`/admin/performance-billing/cycles/start?user_id=${userId}`, {
+      method: "POST",
+    });
+  }
+
+  async adminPerformanceCloseCycle(cycleId: string) {
+    return this.request<any>(`/admin/performance-billing/cycles/close?cycle_id=${cycleId}`, {
+      method: "POST",
+    });
+  }
+
+  async adminPerformanceGenerateInvoice(cycleId: string) {
+    return this.request<any>(`/admin/performance-billing/cycles/${cycleId}/generate-invoice`, {
+      method: "POST",
+    });
+  }
+
+  async adminPerformanceGetSummary() {
+    return this.request<PerformanceBillingDashboard>("/admin/performance-billing/summary");
+  }
 }
 
 // ── Error class ───────────────────────────────────────
@@ -1182,6 +1224,45 @@ export interface StrategyRequestItem {
   admin_note: string | null;
   created_at: string;
   resolved_at: string | null;
+}
+
+// Performance Billing types
+export interface PerformanceUserSummary {
+  user_id: string;
+  full_name?: string;
+  email: string;
+  method?: string;
+  performance_percentage?: number;
+  strategy_code?: string;
+  account_login?: string;
+  current_balance?: number;
+}
+
+export interface PerformanceCycle {
+  id: string;
+  user_id: string;
+  account_source: string;
+  account_login: string;
+  strategy_code?: string;
+  cycle_start: string;
+  cycle_end?: string;
+  start_balance: number;
+  end_balance?: number;
+  gross_profit: number | null;
+  commission_percentage: number;
+  commission_amount: number | null;
+  status: string;
+  invoice_id?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PerformanceBillingDashboard {
+  open_commissions: number;
+  total_invoiced: number;
+  profitable_cycles: number;
+  negative_cycles: number;
 }
 
 // Singleton
