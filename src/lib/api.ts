@@ -1332,6 +1332,23 @@ export interface AffiliateDashboard {
   recent_commissions: any[];
 }
 
+export interface AffiliateCommission {
+  id: string;
+  affiliate_id: string;
+  referred_user_id: string;
+  performance_cycle_id?: string;
+  gross_profit: number;
+  company_commission_amount: number;
+  affiliate_percentage: number;
+  commission_base: string;
+  affiliate_commission_amount: number;
+  status: string;
+  paid_at?: string;
+  notes?: string;
+  created_at: string;
+  affiliate_name?: string;
+  referred_user_email?: string;
+}
 
 // Singleton
 export const api = new ApiClient();
