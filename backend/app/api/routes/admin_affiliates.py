@@ -1,14 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
+from typing import List, Optional
 from uuid import UUID
+from datetime import datetime
 
 from app.core.database import get_db
 from app.api.deps import require_admin
 from app.services.affiliate_service import AffiliateService
+from app.services.affiliate_commission_service import AffiliateCommissionService
 from app.schemas.affiliate import (
     AffiliateCreate, AffiliateUpdate, AffiliateResponse,
-    AssignReferralRequest
+    AssignReferralRequest, AffiliateCommissionResponse, CommissionStatus
 )
 from app.models.affiliate import Affiliate
 
@@ -88,3 +90,53 @@ async def get_affiliate_admin_dashboard(
         raise HTTPException(status_code=404, detail="Affiliate not found")
     
     return await AffiliateService.get_affiliate_dashboard(db, affiliate.user_id)
+
+@router.get("/commissions", response_model=List[AffiliateCommissionResponse])
+async def list_commissions(
+    affiliate_id: Optional[UUID] = None,
+    status: Optional[CommissionStatus] = None,
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
+    db: AsyncSession = Depends(get_db),
+    admin=Depends(require_admin)
+):
+    """List all commissions with filters (Admin only)."""
+    return await AffiliateCommissionService.list_commissions_admin(
+        db, affiliate_id, status, date_from, date_to
+    )
+
+@router.post("/commissions/{commission_id}/approve", response_model=AffiliateCommissionResponse)
+async def approve_commission(
+    commission_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    admin=Depends(require_admin)
+):
+    """Approve a pending commission."""
+    commission = await AffiliateCommissionService.update_status(db, commission_id, CommissionStatus.APPROVED)
+    if not commission:
+        raise HTTPException(status_code=404, detail="Commission not found")
+    return commission
+
+@router.post("/commissions/{commission_id}/mark-paid", response_model=AffiliateCommissionResponse)
+async def mark_paid_commission(
+    commission_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    admin=Depends(require_admin)
+):
+    """Mark a commission as paid."""
+    commission = await AffiliateCommissionService.update_status(db, commission_id, CommissionStatus.PAID)
+    if not commission:
+        raise HTTPException(status_code=404, detail="Commission not found")
+    return commission
+
+@router.post("/commissions/{commission_id}/cancel", response_model=AffiliateCommissionResponse)
+async def cancel_commission(
+    commission_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    admin=Depends(require_admin)
+):
+    """Cancel a commission."""
+    commission = await AffiliateCommissionService.update_status(db, commission_id, CommissionStatus.CANCELLED)
+    if not commission:
+        raise HTTPException(status_code=404, detail="Commission not found")
+    return commission
