@@ -49,4 +49,4 @@ class HttpMetaApiClient:
 
     async def get_account_information(self, metaapi_account_id: str) -> Dict:
         """Fetch account metrics via proxy service."""
-        return await self._request("GET", f"/internal/metaapi/accounts/{metaapi_account_id}/information")
+        return await self._request("GET", f"/internal/metaapi/accounts/{metaapi_account_id}/account-information")
