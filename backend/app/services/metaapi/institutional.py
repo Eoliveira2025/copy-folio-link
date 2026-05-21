@@ -45,7 +45,7 @@ class MetaApiAccountSyncService:
                     account.last_balance = info.get("balance", account.last_balance)
                     account.last_equity = info.get("equity", account.last_equity)
                     account.last_margin = info.get("margin", account.last_margin)
-                    account.last_free_margin = info.get("freeMargin", account.last_free_margin)
+                    account.last_free_margin = info.get("free_margin", account.last_free_margin)
                     account.last_profit_loss = info.get("profit", account.last_profit_loss)
 
                 # Get positions
